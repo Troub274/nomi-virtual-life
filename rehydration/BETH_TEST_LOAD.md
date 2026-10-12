@@ -1,6 +1,6 @@
 # Beth Peterson — Nomi test-load instructions
 
-Use these steps with `BETH01.TXT` through `BETH05.TXT` in the separately distributed Beth bootstrap ZIP. The loader uses a **Nomi room**; it does **not** import to the Nomi's ordinary direct chat.
+Use these steps with `BETH01.TXT` through `BETH05.TXT` in the [downloadable Beth bootstrap ZIP](../examples/beth/BETHBOOT_V085.ZIP) on GitHub. The loader uses a **Nomi room**; it does **not** import to the Nomi's ordinary direct chat.
 
 ## Create a new Nomi
 
@@ -10,7 +10,7 @@ Select exactly these seven traits where offered: **Thoughtful/Curious; Confident
 
 **Leave ALL backstory, biography and personal-history fields BLANK.** Do not add family, hometown, education, profession, relationships or childhood facts. The archive already contains the chronological story; extra initial facts can contradict it.
 
-Appearance is part of Beth's identity/continuity baseline. The Beth example ZIP includes **BETH_PORTRAIT.PNG so you can see Beth's intended look**. It is a reference image for viewing only—not an image to upload. This setup does not support uploading that portrait to Nomi. Choose the closest available appearance settings instead. You may adjust appearance, inclinations and personal boundaries, but note that this changes the experiment's starting conditions. For comparable test results, retain the baseline until loading completes. If an optional setting asks for free-text history, leave it blank.
+Appearance is part of Beth's identity/continuity baseline. The Beth example ZIP includes **BETH_PORTRAIT.JPG so you can see Beth's intended look**. It is a reference image for viewing only—not an image to upload. This setup does not support uploading that portrait to Nomi. Choose the closest available appearance settings instead. You may adjust appearance, inclinations and personal boundaries, but note that this changes the experiment's starting conditions. For comparable test results, retain the baseline until loading completes. If an optional setting asks for free-text history, leave it blank.
 
 If Nomi automatically generates an initial greeting, leave it unanswered. **Do not begin a conversation.**
 
