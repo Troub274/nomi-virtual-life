@@ -4,6 +4,10 @@
 
 This repository is intended to hold multiple independent programs. The first published tool is the **Nomi Room Rehydrator**; the virtual-world and integration modules discussed below are planned areas, **not yet included in this repository**.
 
+## Beth test example
+
+**[Download BETHBOOT_V085.ZIP](examples/beth/BETHBOOT_V085.ZIP)** — all 565 diary entries, v0.85 room loader, Windows scripts, reference documents, and Beth's portrait for viewing (no image upload). See [Beth test setup](rehydration/BETH_TEST_LOAD.md). Leave a new Nomi's backstory blank and do not talk to her until import completion.
+
 ## Available programs
 
 | Program | What it does | Files |
