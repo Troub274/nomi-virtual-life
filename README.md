@@ -1,23 +1,93 @@
 # Nomi Virtual Life
 
-A collection of tools and experiments for building persistent virtual-world experiences, memory rehydration, and integrations for [Nomi.ai](https://nomi.ai/).
+**Open-source tools and experiments for [Nomi.ai](https://nomi.ai/) virtual environments, autobiographical memory replay, and conversational continuity.**
 
-## Projects
+This repository is intended to hold multiple independent programs. The first published tool is the **Nomi Room Rehydrator**; the virtual-world and integration modules discussed below are planned areas, **not yet included in this repository**.
 
-### [Memory rehydration](rehydration/)
+## Available programs
 
-Nomi Room Rehydrator **v0.84**: imports chronological diaries and exported conversations into Nomi rooms, with explicit autobiographical ownership framing for journal memories.
+| Program | What it does | Files |
+|---|---|---|
+| **Nomi Room Rehydrator v0.84** | Replays diaries and exported Nomi conversations into Nomi API rooms, preserving source order and using explicit memory ownership cues for diary entries. | [Python source](rehydration/nomi_room_rehydrate_episode_v084.py) · [Operator guide](rehydration/OPERATOR_GUIDE.md) · [Quick start](rehydration/README.md) |
 
-- [Python script](rehydration/nomi_room_rehydrate_episode_v084.py)
-- [Operator guide — command-line options, input formats, and examples](rehydration/OPERATOR_GUIDE.md)
-- [Setup and quick start](rehydration/README.md)
+### Nomi Room Rehydrator v0.84
 
-Future modules may include virtual-world simulation, Nomi-to-Nomi bridges, and memory tools.
+**Purpose:** Help a Nomi revisit a chronological collection of autobiographical material, rather than manually copying and pasting hundreds of entries. It is an experimental replay tool, **not a direct restore of Nomi's internal memory database**.
 
-## Privacy
+**Two operating modes:**
 
-**Do not commit API keys, personal diaries, exported conversations, or replay logs.** The `.gitignore` excludes common private working files, but always review your changes before publishing.
+- **Journal mode:** Reads UTF-8 `.txt` or Word `.docx` diaries, identifies individual entries from their headings, and submits them in sequence. Entries exceeding the configured message-size limit are split into smaller messages. The selected Nomi's name is used in room metadata, an initial ownership message, and each diary fragment to clarify that first-person experiences belong to the Nomi—not to the human operating the loader.
+- **Conversation mode:** Reads a Nomi `.json` export or a `.zip` containing an export, reconstructs chat and supported voice-call turns in timestamp order, and submits a labeled transcript preserving sender and time context. Journal-specific ownership framing is not applied in this mode.
 
-## Status
+**Other capabilities:** dry-run preview without API calls; selection of a Nomi from the account; configurable pacing and message-size limits; optional recollection prompts after every N completed diary entries; JSONL event logging; manual resume by source episode/message number; and explicit room cleanup options.
 
-Experimental software. Test with a few journal entries and verify that memories are attributed to the intended Nomi before importing large archives.
+**Important limitation:** The script can replay material and encourage autobiographical attribution, but it cannot guarantee what the Nomi remembers or how the platform indexes the material. Start with a small test and verify the owner of each memory before importing large archives.
+
+**Files:**
+
+- [`rehydration/nomi_room_rehydrate_episode_v084.py`](rehydration/nomi_room_rehydrate_episode_v084.py) — executable Python importer.
+- [`rehydration/OPERATOR_GUIDE.md`](rehydration/OPERATOR_GUIDE.md) — full command-line option reference, accepted journal headers, JSON structure, resume instructions, and troubleshooting.
+- [`rehydration/README.md`](rehydration/README.md) — setup and basic examples.
+- [`rehydration/requirements.txt`](rehydration/requirements.txt) — Python dependency for Word documents.
+
+#### Quick start
+
+Python 3 is required. Install the Word-document dependency if you will import `.docx` files:
+
+```bash
+python -m pip install -r rehydration/requirements.txt
+```
+
+For live API access, set the `NOMI_API_KEY` environment variable in your shell. **Never paste your key into source files or commit it.**
+
+Preview a journal (no API calls):
+
+```bash
+python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --dry-run
+```
+
+Import a journal and ask for recollection every five entries:
+
+```bash
+python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --relive-every 5
+```
+
+Import a Nomi conversation export:
+
+```bash
+python rehydration/nomi_room_rehydrate_episode_v084.py export.zip --mode conversation
+```
+
+Run `--help` or consult the [operator guide](rehydration/OPERATOR_GUIDE.md) for all options. The code uses portable Python APIs and is intended for Windows, macOS, and Linux; operating-system compatibility has not been exhaustively tested.
+
+## Planned project areas (not yet published)
+
+These are directions for future programs, not descriptions of files currently available:
+
+| Area | Intended purpose |
+|---|---|
+| **Virtual-world engine** | Maintain persistent locations, environmental conditions, time, and other simulated-world state for Nomi interactions. |
+| **Nomi bridges** | Connect Nomi conversations to external local programs or language models, including Nomi-to-Nomi interactions. |
+| **Memory tools** | Import, organize, validate, and update autobiographical or virtual-world context across sessions. |
+| **Experiments** | Prototype alternative memory replay, identity attribution, and virtual embodiment techniques. |
+
+## Repository layout
+
+```text
+nomi-virtual-life/
+├── README.md
+├── .gitignore
+└── rehydration/
+    ├── README.md
+    ├── OPERATOR_GUIDE.md
+    ├── requirements.txt
+    └── nomi_room_rehydrate_episode_v084.py
+```
+
+## Privacy and safety
+
+This is a **public repository**. Do not commit API keys, private diaries, Nomi conversation exports, identifying personal material, or replay logs. A `.gitignore` excludes common sensitive file types, but it is not a substitute for reviewing what you publish. Room-cleanup commands can delete rooms; read their descriptions carefully.
+
+## Project status
+
+Experimental and under active development. Contributions and feedback are welcome, especially reproducible bug reports and test results. The tools are independent community experiments and are not presented as official Nomi.ai software.
