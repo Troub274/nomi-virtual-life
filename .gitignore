@@ -10,6 +10,8 @@
 *.jsonl
 *.zip
 nomi_rehydration_journal*
+nomi_rehydration_completed.json
+*_rehydration_completed.json
 
 # Python generated files
 __pycache__/

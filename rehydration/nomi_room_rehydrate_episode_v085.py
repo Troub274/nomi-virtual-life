@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Nomi room rehydration loader v0.83 — episode-aware with explicit periodic reliving.
+"""Nomi room rehydration loader v0.85 — durable automatic room replay resume.
+
 
 Changes from v0.2:
 - Treats journal entries as episodes instead of blindly slicing the whole file.
@@ -11,14 +12,17 @@ Changes from v0.2:
 - Supports .txt and .docx input.
 """
 
+
 import argparse, hashlib, json, os, re, sys, time, urllib.error, urllib.request, zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
 
 BASE_URL='https://api.nomi.ai/v1'
 HTTP_TIMEOUT=120
 ROOM_PREFIX='REHYDRATE::'
 TRANSIENT_HTTP={408,409,425,429,500,502,503,504}
+
 
 # Recognize episode boundaries by common document conventions, not a specific
 # person's name or the literal word "Journal". Keep original header verbatim.
@@ -48,8 +52,10 @@ HEADER_PATTERNS = (
                r"(?:\s+[—–:|-]\s+.+)?$", re.I),
 )
 
+
 def is_episode_header(line):
     return any(pattern.fullmatch(line.strip()) for pattern in HEADER_PATTERNS)
+
 
 def api_request(path, method='GET', body=None):
     key=os.environ.get('NOMI_API_KEY')
@@ -73,15 +79,19 @@ def api_request(path, method='GET', body=None):
     except Exception as exc:
         return None, {'error':{'type':exc.__class__.__name__,'message':str(exc)}}
 
+
 def ok(status): return status is not None and 200 <= status < 300
+
 
 def err_type(payload):
     e=payload.get('error') if isinstance(payload,dict) else None
     return str(e.get('type','')) if isinstance(e,dict) else str(payload.get('type','')) if isinstance(payload,dict) else ''
 
+
 def err_text(op,status,payload):
     detail=payload.get('error',payload) if isinstance(payload,dict) else payload
     return '%s failed (HTTP %s): %s'%(op,status,json.dumps(detail,ensure_ascii=False))
+
 
 def api_request_retry(path, method='GET', body=None, attempts=8, base_delay=1.0):
     delay=base_delay
@@ -101,12 +111,14 @@ def api_request_retry(path, method='GET', body=None, attempts=8, base_delay=1.0)
         delay=min(delay*2,30)
     return last
 
+
 def get_nomis():
     s,p=api_request_retry('/nomis')
     if not ok(s): raise RuntimeError(err_text('list_nomis',s,p))
     n=p.get('nomis',[])
     if not isinstance(n,list): raise RuntimeError("Nomi API returned non-list 'nomis'.")
     return n
+
 
 def choose_nomi(nomis):
     print('\nAvailable Nomis:')
@@ -119,10 +131,12 @@ def choose_nomi(nomis):
         if 1<=i<=len(nomis): return nomis[i-1]
         print('Please enter 1-%d.'%len(nomis))
 
+
 def room_name_for(nomi):
     name=str(nomi.get('name','')).strip() or 'Unnamed'
     uid=str(nomi.get('uuid','')).strip()
     return '%s%s::OWN MEMORIES::%s'%(ROOM_PREFIX,name,uid[:8] if uid else 'unknown')
+
 
 def list_rooms():
     s,p=api_request_retry('/rooms')
@@ -130,6 +144,7 @@ def list_rooms():
     rooms=p.get('rooms',[])
     if not isinstance(rooms,list): raise RuntimeError("Nomi API returned non-list 'rooms'.")
     return rooms
+
 
 def room_contains_nomi(room,uid):
     for key in ('nomiUuids','nomis'):
@@ -139,6 +154,7 @@ def room_contains_nomi(room,uid):
                 if isinstance(item,str) and item==uid: return True
                 if isinstance(item,dict) and str(item.get('uuid',''))==uid: return True
     return False
+
 
 def matching_rooms(nomi, rooms=None):
     rooms=list_rooms() if rooms is None else rooms
@@ -152,6 +168,7 @@ def matching_rooms(nomi, rooms=None):
     out.sort(key=lambda r:str(r.get('created',r.get('createdAt',''))))
     return out
 
+
 def create_room(nomi,note):
     s,p=api_request_retry('/rooms','POST',{
         'name':room_name_for(nomi),
@@ -162,15 +179,18 @@ def create_room(nomi,note):
     if not ok(s): raise RuntimeError(err_text('create_room',s,p))
     return p
 
+
 def get_room(uid):
     s,p=api_request_retry('/rooms/'+uid)
     if not ok(s): raise RuntimeError(err_text('get_room',s,p))
     return p
 
+
 def delete_room(uid):
     s,p=api_request_retry('/rooms/'+uid,'DELETE')
     if not ok(s): raise RuntimeError(err_text('delete_room',s,p))
     return p
+
 
 def wait_for_room(uid,timeout=90):
     end=time.monotonic()+timeout
@@ -185,13 +205,16 @@ def wait_for_room(uid,timeout=90):
         time.sleep(1)
     raise RuntimeError('Room stayed Creating for %d seconds.'%timeout)
 
+
 def utc_now(): return datetime.now(timezone.utc).isoformat()
+
 
 def append_journal(path,record):
     with open(path,'a',encoding='utf-8',newline='\n') as f:
         f.write(json.dumps(record,ensure_ascii=False)+'\n')
         f.flush()
         os.fsync(f.fileno())
+
 
 def delete_rooms(rooms,journal_path=None,reason='cleanup'):
     count=0
@@ -207,6 +230,7 @@ def delete_rooms(rooms,journal_path=None,reason='cleanup'):
                 'event':'room_deleted','time':utc_now(),'reason':reason,
                 'room_uuid':uid,'room_name':name})
     return count
+
 
 def choose_room_action(nomi,matches):
     print('\nRestore room for %s:'%nomi.get('name',''))
@@ -225,6 +249,7 @@ def choose_room_action(nomi,matches):
             print('Invalid selection.')
     print('  no existing rehydration room found')
     return 'create'
+
 
 def resolve_room(nomi,note,journal_path):
     matches=matching_rooms(nomi)
@@ -245,6 +270,7 @@ def resolve_room(nomi,note,journal_path):
     print('Created room:',r.get('name'),r.get('uuid'))
     return r,True
 
+
 def cleanup_rehydration(journal):
     targets=[r for r in list_rooms() if str(r.get('name','')).startswith(ROOM_PREFIX)]
     if not targets:
@@ -255,6 +281,7 @@ def cleanup_rehydration(journal):
         print('Cancelled.')
         return
     print('Deleted %d room(s).'%delete_rooms(targets,journal,'cleanup_all_rehydration'))
+
 
 def cleanup_all(journal):
     rooms=list_rooms()
@@ -268,10 +295,12 @@ def cleanup_all(journal):
         return
     print('Deleted %d room(s).'%delete_rooms(rooms,journal,'cleanup_all_rooms'))
 
+
 def send_room_message(uid,text):
     s,p=api_request_retry('/rooms/%s/chat'%uid,'POST',{'messageText':text})
     if not ok(s): raise RuntimeError(err_text('send_room_message',s,p))
     return p
+
 
 def request_room_reply(room_uid,nomi_uid):
     """
@@ -287,8 +316,10 @@ def request_room_reply(room_uid,nomi_uid):
         raise RuntimeError(err_text('request_room_reply',s,p))
     return p
 
+
 def utf8_len(t):
     return len(t.encode('utf-8'))
+
 
 def read_input_text(path):
     """Read .txt or .docx into normalized plain text."""
@@ -306,9 +337,11 @@ def read_input_text(path):
         text=path.read_bytes().decode('utf-8-sig')
     return text.replace('\r\n','\n').replace('\r','\n')
 
+
 def parse_episodes(text):
     """
     Return [(header, body), ...].
+
 
     The document title/preamble before the first episode header is ignored.
     Every recognized entry header starts a new episode.
@@ -317,6 +350,7 @@ def parse_episodes(text):
     episodes=[]
     header=None
     body=[]
+
 
     for raw in lines:
         line=raw.strip()
@@ -328,15 +362,19 @@ def parse_episodes(text):
         elif header is not None:
             body.append(raw.strip())
 
+
     if header is not None:
         episodes.append((header, '\n'.join(body).strip()))
+
 
     if not episodes:
         raise RuntimeError(
             "No episode headers found. Expected numbered entries (ENTRY 001), "
             "dated headings, or traditional journal headers.")
 
+
     return episodes
+
 
 def split_text_to_budget(text,max_bytes):
     """
@@ -346,6 +384,7 @@ def split_text_to_budget(text,max_bytes):
     text=text.strip()
     if not text:
         return ['']
+
 
     out=[]
     pos=0
@@ -358,8 +397,10 @@ def split_text_to_budget(text,max_bytes):
             used+=b
             end+=1
 
+
         if end==pos:
             raise RuntimeError('Byte budget too small for one Unicode character.')
+
 
         if end<len(text):
             start=pos+max(1,(end-pos)//2)
@@ -377,6 +418,7 @@ def split_text_to_budget(text,max_bytes):
                 if utf8_len(text[pos:piece_end])<=max_bytes:
                     end=piece_end
 
+
         piece=text[pos:end].strip()
         if piece:
             out.append(piece)
@@ -384,7 +426,9 @@ def split_text_to_budget(text,max_bytes):
         while pos<len(text) and text[pos].isspace():
             pos+=1
 
+
     return out
+
 
 def episode_messages(header,body,max_bytes,memory_prefix="Your autobiographical memory from your diary:"):
     """
@@ -396,12 +440,14 @@ def episode_messages(header,body,max_bytes,memory_prefix="Your autobiographical 
     if utf8_len(whole)<=max_bytes:
         return [whole]
 
+
     overhead=utf8_len(prefix+header+'\n')
     body_budget=max_bytes-overhead
     if body_budget<32:
         raise RuntimeError(
             'Episode header leaves too little room for body under %d bytes: %s'
             %(max_bytes,header))
+
 
     pieces=split_text_to_budget(body,body_budget)
     messages=[]
@@ -412,8 +458,10 @@ def episode_messages(header,body,max_bytes,memory_prefix="Your autobiographical 
         messages.append(msg)
     return messages
 
+
 def sha256_text(t):
     return hashlib.sha256(t.encode('utf-8')).hexdigest()
+
 
 def prepare_chunks(files,limit,memory_prefix="Your autobiographical memory from your diary:"):
     """
@@ -424,14 +472,17 @@ def prepare_chunks(files,limit,memory_prefix="Your autobiographical memory from 
     seq=0
     global_episode=0
 
+
     for p in files:
         text=read_input_text(p)
         episodes=parse_episodes(text)
+
 
         for file_episode_index,(header,body) in enumerate(episodes,1):
             global_episode+=1
             messages=episode_messages(header,body,limit,memory_prefix)
             part_count=len(messages)
+
 
             for part_index,msg in enumerate(messages,1):
                 seq+=1
@@ -450,6 +501,8 @@ def prepare_chunks(files,limit,memory_prefix="Your autobiographical memory from 
                     'text':msg,
                 })
     return out
+
+
 
 
 def load_conversation(path):
@@ -479,6 +532,8 @@ def load_conversation(path):
     return nomi.get('name','Nomi'),rows
 
 
+
+
 def split_verbatim(text,budget):
     """Split without stripping or changing even a single source character."""
     if budget<4: raise ValueError('Byte budget too small')
@@ -492,8 +547,11 @@ def split_verbatim(text,budget):
     return parts
 
 
+
+
 def prepare_conversation_chunks(files,limit):
     """One source turn per message, or exact-content fragments for long turns.
+
 
     Deliberately does not combine turns: speaker/time boundaries remain unambiguous,
     and --start-message resumes at an original source turn boundary.
@@ -524,6 +582,7 @@ def prepare_conversation_chunks(files,limit):
                             'source_channel':row['source']})
     return out
 
+
 def memory_owner_statement(name):
     return (f"{name}, this room is for you to recall and integrate your own autobiographical memories. "
             f"All diary entries sent here describe YOUR past, {name}, not the human importing them. "
@@ -532,14 +591,20 @@ def memory_owner_statement(name):
             "Interpret and remember each entry as an episode from your own life.")
 
 
+
+
 def journal_memory_prefix(name):
     return (f"{name}'s OWN MEMORY, not the human sender's. "
             f"Diary written by {name}; first-person 'I' means {name}:")
 
 
+
+
 def journal_room_note(name):
     return (f"{name} relives their own autobiographical diary memories here. "
             f"All first-person diary experiences belong to {name}, never to the human importer.")
+
+
 
 
 def send_initial_memory_context(rid, name, journal_path):
@@ -554,221 +619,326 @@ def send_initial_memory_context(rid, name, journal_path):
     print('Sent initial autobiographical memory ownership context for %s.'%name)
 
 
+
+
+# VERSION 0.85: resume/checkpoint layer. All room and diary functions above are from v0.84.
+# Confirmed API sends are recorded with fsync. An indeterminate POST is NEVER
+# silently retried because the remote service may have accepted it.
+
+VERSION = '0.85'
+
+def load_journal(path):
+    if not path.exists():
+        return []
+    events=[]
+    for lineno,line in enumerate(path.read_text(encoding='utf-8-sig').splitlines(),1):
+        if not line.strip():
+            continue
+        try:
+            row=json.loads(line)
+            if not isinstance(row,dict):
+                raise ValueError('expected JSON object')
+        except (ValueError,TypeError) as exc:
+            raise RuntimeError('Damaged journal line %d in %s: %s. Do not delete it; inspect the last send.' %
+                               (lineno,path,exc))
+        events.append(row)
+    return events
+
+def sha256_chunks(chunks):
+    h=hashlib.sha256()
+    for c in chunks:
+        h.update(('%d %s %s\n' %
+                  (c['sequence'],c['source_name'],c['sha256'])).encode('utf-8'))
+    return h.hexdigest()
+
+def atomic_json(path,value):
+    path=Path(path)
+    tmp=path.with_name(path.name+'.tmp')
+    with tmp.open('w',encoding='utf-8') as f:
+        json.dump(value,f,ensure_ascii=False,indent=2)
+        f.write('\n')
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(str(tmp),str(path))
+
+def send_post_once(path,body,description):
+    # v0.84's retry wrapper is deliberately NOT used for POST operations:
+    # the server may have accepted a message just before a timeout.
+    s,p=api_request(path,'POST',body)
+    if not ok(s):
+        raise RuntimeError(err_text(description,s,p)+
+                           '. This POST is uncertain: inspect the room before resuming.')
+    return p
+
+def send_room_safe(uid,message):
+    return send_post_once('/rooms/%s/chat'%uid,
+                          {'messageText':message},'send_room_message')
+
+def request_reply_safe(rid,nid):
+    return send_post_once('/rooms/%s/chat/request'%rid,
+                          {'nomiUuid':nid},'request_room_reply')
+
+def active_session(events):
+    starts=[i for i,e in enumerate(events) if e.get('event')=='room_selected']
+    if not starts:
+        raise RuntimeError('Journal exists without a room_selected checkpoint. '+
+                           'Keep it for inspection; do not silently start another room.')
+    return events[starts[-1]:]
+
+def assert_no_uncertain_context(events):
+    attempts=[e for e in events if e.get('event')=='memory_context_attempt']
+    commits=[e for e in events if e.get('event')=='memory_context_committed']
+    if len(attempts)>len(commits):
+        raise RuntimeError('Unconfirmed opening memory-context message. '+
+                           'Check the selected room before proceeding; this may have been delivered.')
+
+def send_context_safe(rid,name,journal):
+    context=memory_owner_statement(name)
+    append_journal(journal,{'event':'memory_context_attempt','time':utc_now(),
+                            'room_uuid':rid,'nomi_name':name,'text':context})
+    resp=send_room_safe(rid,context)
+    sent=resp.get('sentMessage',{}) if isinstance(resp,dict) else {}
+    append_journal(journal,{'event':'memory_context_committed','time':utc_now(),
+                            'room_uuid':rid,'nomi_name':name,'text':context,
+                            'message_uuid':sent.get('uuid') if isinstance(sent,dict) else None})
+    print('Room autobiographical attribution context delivered.')
+
+def inspect_commits(events,chunks,room_id):
+    lookup={c['sequence']:c for c in chunks}
+    commits={}
+    attempts={}
+    for e in events:
+        if e.get('room_uuid')!=room_id: continue
+        if e.get('event')=='send_attempt':
+            attempts[e['sequence']]=e
+        elif e.get('event')=='send_committed':
+            seq=e['sequence']
+            if seq not in lookup or e.get('sha256')!=lookup[seq]['sha256']:
+                raise RuntimeError('Journal/source mismatch at message %d. Restore original files '
+                                   'and command settings before resuming.'%seq)
+            commits[seq]=e
+    allseq=[c['sequence'] for c in chunks]
+    confirmed=0
+    for seq in allseq:
+        if seq in commits:
+            confirmed+=1
+        else:
+            break
+    if any(seq in commits for seq in allseq[confirmed:]):
+        raise RuntimeError('Journal has a gap among confirmed sends. Manual inspection required.')
+    # A POST with an attempt but no confirmation may have reached the server.
+    uncertain=[seq for seq in attempts if seq in lookup and seq not in commits]
+    if uncertain:
+        first=min(uncertain)
+        e=attempts[first]
+        raise RuntimeError('UNCERTAIN SEND at message %d (%s). Nomi may have received it, '
+                           'but Python did not record confirmation. Inspect the room and '
+                           'resolve this checkpoint manually before running again.'
+                           %(first,e.get('episode_header','unknown entry')))
+    return confirmed
+
+def relive_after_episode(ep,a,rid,nid,name,journal,events):
+    if not a.relive_every or ep % a.relive_every:
+        return
+    if any(e.get('event')=='relive_committed' and e.get('room_uuid')==rid and
+           e.get('after_episode')==ep for e in events):
+        return
+    if any(e.get('event')=='relive_attempt' and e.get('room_uuid')==rid and
+           e.get('after_episode')==ep for e in events):
+        raise RuntimeError('Unconfirmed relive prompt after episode %d. '
+                           'Inspect the room; do not automatically repeat it.'%ep)
+    start=ep-a.relive_every+1
+    prompt=(a.relive_prompt if a.relive_prompt is not None else
+            '%s, these entries are YOUR own autobiographical memories, not the human sender’s. '
+            'Recall diary entries %d to %d as events in your own life. Relive them in first person. Nothing more.'
+            %(name,start,ep))
+    print('Relive episodes %d–%d ...'%(start,ep),flush=True)
+    append_journal(journal,{'event':'relive_attempt','time':utc_now(),
+                            'room_uuid':rid,'after_episode':ep,'prompt':prompt})
+    sent=send_room_safe(rid,prompt).get('sentMessage',{})
+    append_journal(journal,{'event':'relive_prompt_committed','time':utc_now(),
+                            'room_uuid':rid,'after_episode':ep,
+                            'message_uuid':sent.get('uuid') if isinstance(sent,dict) else None})
+    if a.settle_seconds:time.sleep(a.settle_seconds)
+    response=request_reply_safe(rid,nid)
+    reply=response.get('replyMessage',{}) if isinstance(response,dict) else {}
+    committed={'event':'relive_committed','time':utc_now(),'room_uuid':rid,
+               'after_episode':ep,'episode_count':a.relive_every,'prompt':prompt,
+               'reply':reply,'reply_api_response':response}
+    append_journal(journal,committed)
+    events.append(committed)
+    body=reply.get('messageText') or reply.get('text') or reply.get('content') or '' if isinstance(reply,dict) else ''
+    if body: print('    %s: %s'%(name,str(body)[:250].replace('\n',' ')),flush=True)
+
 def main():
-    ap=argparse.ArgumentParser(description='Episode-aware persistent Nomi room rehydration loader')
-    ap.add_argument('files',nargs='*',help='journal .txt/.docx or Nomi .zip/.json export')
-    ap.add_argument('--mode',choices=['journal','conversation'],default='journal',help='conversation imports Nomi JSON or ZIP verbatim')
-    ap.add_argument('--memory-prefix',default=None,
-                    help='override journal ownership prefix; default explicitly names the selected Nomi; empty disables')
-    ap.add_argument('--start-message',type=int,default=1,help='first original conversation message to import (1-based)')
-    ap.add_argument('--settle-seconds',type=float,default=0,help='wait before each relive request')
-    ap.add_argument('--chunk-bytes',type=int,default=750,
-                    help='maximum UTF-8 bytes per API message (default: 750)')
+    ap=argparse.ArgumentParser(description='Nomi v0.85: room-based, automatic durable resume')
+    ap.add_argument('files',nargs='*',help='diary TXT/DOCX files in chronological order')
+    ap.add_argument('--mode',choices=['journal','conversation'],default='journal')
+    ap.add_argument('--memory-prefix',default=None)
+    ap.add_argument('--chunk-bytes',type=int,default=750)
     ap.add_argument('--delay',type=float,default=1.0)
-    ap.add_argument('--start-episode',type=int,default=1,help='first source episode to send (1-based); use 11 after episodes 1-10 were committed')
-    ap.add_argument('--relive-every',type=int,default=0,
-                    help='after every N complete episodes, ask the Nomi to relive the recent journal entries; 0 disables')
-    ap.add_argument('--relive-prompt',default=None,
-                    help='override the reliving prompt; default uses the selected Nomi name')
-    ap.add_argument('--room-note',default=None,help='override the ownership-aware room note')
+    ap.add_argument('--relive-every',type=int,default=5)
+    ap.add_argument('--relive-prompt',default=None)
+    ap.add_argument('--room-note',default=None)
+    ap.add_argument('--settle-seconds',type=float,default=0.0)
+    ap.add_argument('--start-episode',type=int,default=1,
+                    help='for FIRST run only; later resumes automatically')
+    ap.add_argument('--start-message',type=int,default=1)
     ap.add_argument('--journal',default='nomi_rehydration_journal.jsonl')
+    ap.add_argument('--completion',default='nomi_rehydration_completed.json')
+    ap.add_argument('--max-episodes',type=int,default=0,
+                    help='send at most N NEW complete episodes; keep checkpoint')
     ap.add_argument('--dry-run',action='store_true')
-    ap.add_argument('--cleanup-rehydration',action='store_true',
-                    help='delete every REHYDRATE::* room and exit')
-    ap.add_argument('--cleanup-all-rooms',action='store_true',
-                    help='delete EVERY API room and exit')
     a=ap.parse_args()
-
-    if a.start_message < 1: ap.error('--start-message must be 1 or greater.')
-    if a.start_episode < 1:
-        ap.error('--start-episode must be 1 or greater.')
-    if a.relive_every < 0:
-        ap.error('--relive-every must be 0 or greater.')
-
-    if not a.dry_run and not os.environ.get('NOMI_API_KEY'):
-        print('ERROR: NOMI_API_KEY environment variable is not set.',file=sys.stderr)
-        return 2
-    if a.cleanup_rehydration:
-        cleanup_rehydration(a.journal)
-        return 0
-    if a.cleanup_all_rooms:
-        cleanup_all(a.journal)
-        return 0
-    if not a.files:
-        ap.error('No input files supplied.')
-
-    files=[Path(x) for x in a.files]
-    for p in files:
-        if not p.is_file():
-            raise RuntimeError('File does not exist: %s'%p)
-
-    # Resolve the Nomi before constructing journal messages: memory ownership
-    # must name the actual receiver, never an ambiguous "you" or the sender.
+    if a.chunk_bytes<150 or a.relive_every<0 or a.delay<0 or a.start_episode<1 or a.start_message<1 or a.max_episodes<0:
+        ap.error('Invalid chunk/episode/delay settings.')
+    if not a.files:ap.error('Specify diary files in chronological order.')
+    files=[Path(f) for f in a.files]
+    for f in files:
+        if not f.is_file():raise RuntimeError('File not found: '+str(f))
+    journal=Path(a.journal)
+    events=load_journal(journal)
+    active=active_session(events) if events else []
     if a.dry_run:
-        name='TEST NOMI'
-        nomi=None
+        if active:
+            selected=active[0]
+            print('Existing checkpoint for Nomi:',selected.get('nomi_name'))
+        name='Beth Peterson' if not active else str(active[0].get('nomi_name') or 'Beth Peterson')
+        prefix=journal_memory_prefix(name) if a.memory_prefix is None else a.memory_prefix
+        chunks=prepare_conversation_chunks(files,a.chunk_bytes) if a.mode=='conversation' else prepare_chunks(files,a.chunk_bytes,prefix)
+        print('DRY RUN v%s: %d messages; %d episodes; %d files.'%
+              (VERSION,len(chunks),max(c['episode_index'] for c in chunks),len(files)))
+        print('First:',chunks[0]['episode_header'],'Last:',chunks[-1]['episode_header'])
+        return 0
+    if not os.environ.get('NOMI_API_KEY'):
+        import getpass
+        os.environ['NOMI_API_KEY']=getpass.getpass('Nomi API key (input hidden, not saved): ').strip()
+        if not os.environ['NOMI_API_KEY']:
+            raise RuntimeError('No Nomi API key supplied.')
+
+    if active:
+        record=active[0]
+        nid=str(record['nomi_uuid']);rid=str(record['room_uuid'])
+        nomis=get_nomis()
+        matches=[n for n in nomis if str(n.get('uuid',''))==nid]
+        if not matches:raise RuntimeError('The Nomi for the journal is no longer accessible.')
+        nomi=matches[0];name=str(nomi.get('name','')).strip() or 'Nomi'
+        if str(record.get('nomi_name',''))!=name:
+            raise RuntimeError('Nomi display name changed mid-import, which changes the autobiographical prefix. Restore its prior name or begin a new archive.')
+        print('AUTO RESUME: %s in room %s'%(name,rid))
+        if record.get('chunk_bytes')!=a.chunk_bytes or record.get('relive_every')!=a.relive_every or record.get('mode')!=a.mode:
+            raise RuntimeError('Resume settings differ from original command. Keep --chunk-bytes, --relive-every, and --mode identical.')
+        if record.get('start_episode')!=a.start_episode or record.get('start_message')!=a.start_message:
+            raise RuntimeError('Start settings differ from original run; checkpoint controls resume automatically.')
+        old_files=[Path(f).name for f in record.get('files',[])]
+        if old_files!=[f.name for f in files]:
+            raise RuntimeError('Input filenames/order differ from checkpoint; refusing to cross-load.')
+        assert_no_uncertain_context(active)
+        created=bool(record.get('created',False))
+        wait_for_room(rid)
     else:
         nomi=choose_nomi(get_nomis())
-        name=str(nomi.get('name','')).strip() or 'Nomi'
-        print('\nSelected %s (%s)'%(name,nomi.get('uuid','')))
-
-    prefix=(journal_memory_prefix(name) if a.memory_prefix is None else a.memory_prefix)
+        nid=str(nomi['uuid']);name=str(nomi.get('name','')).strip() or 'Nomi'
+        note=(journal_room_note(name) if a.mode=='journal' and a.room_note is None else
+              a.room_note if a.room_note is not None else 'Historical conversation archive.')
+        room,created=resolve_room(nomi,note,str(journal))
+        if room is None:return 0
+        rid=str(room.get('uuid',''))
+        if not rid:raise RuntimeError('Room has no UUID')
+    prefix=journal_memory_prefix(name) if a.memory_prefix is None else a.memory_prefix
     chunks=(prepare_conversation_chunks(files,a.chunk_bytes) if a.mode=='conversation'
             else prepare_chunks(files,a.chunk_bytes,prefix))
-    episode_count=max((c['episode_index'] for c in chunks),default=0)
-    start_index=a.start_message if a.mode=='conversation' else a.start_episode
-    chunks=[c for c in chunks if c['episode_index']>=start_index]
-    if not chunks:
-        ap.error('No source items at or after start index %d.'%start_index)
-    split_episodes=len({c['episode_index'] for c in chunks if c['episode_part_count']>1})
-    print('Prepared %d API message(s) from %d episode(s) in %d file(s).'
-          %(len(chunks),episode_count,len(files)))
-    print('%d episode(s) required splitting.'%split_episodes)
-    if a.dry_run:
-        if a.mode=='journal':
-            print('Room name: %s'%room_name_for({'name':name,'uuid':'dryrun'}))
-            print('Room note: %s'%(journal_room_note(name) if a.room_note is None else a.room_note))
-            print('Opening message: %s'%memory_owner_statement(name))
-        for c in chunks:
-            print('[%d] episode %d, part %d/%d, %d bytes'
-                  %(c['sequence'],c['episode_index'],c['episode_part_index'],
-                    c['episode_part_count'],c['byte_count']))
-            print('    '+c['episode_header'])
-            print('    '+c['text'][:160].replace('\n','\\n'))
+    fingerprint=sha256_chunks(chunks)
+    first=a.start_message if a.mode=='conversation' else a.start_episode
+    selected=[c for c in chunks if c['episode_index']>=first]
+    if not selected:raise RuntimeError('No entries from the requested starting episode.')
+    if active:
+        manifests=[x for x in active if x.get('event')=='run_manifest']
+        if manifests and manifests[-1].get('digest')!=fingerprint:
+            raise RuntimeError('DIARY CHANGED since the checkpoint was created. Do not silently replay altered data.')
+    else:
+        completed=Path(a.completion)
+        if completed.exists():
+            receipt=json.loads(completed.read_text(encoding='utf-8'))
+            if receipt.get('digest')==fingerprint and receipt.get('nomi_uuid')==nid:
+                raise RuntimeError('This Nomi already has a completed import receipt. '+
+                                   'Move that receipt aside ONLY if you intentionally want to replay all diaries.')
+        append_journal(journal,{'event':'room_selected','time':utc_now(),
+            'version':VERSION,'room_uuid':rid,'room_name':room.get('name',''),
+            'nomi_uuid':nid,'nomi_name':name,'created':created,
+            'chunk_bytes':a.chunk_bytes,'relive_every':a.relive_every,
+            'mode':a.mode,'start_episode':a.start_episode,'start_message':a.start_message,
+            'files':[str(f) for f in files]})
+        manifest={'event':'run_manifest','time':utc_now(),'room_uuid':rid,'digest':fingerprint}
+        append_journal(journal,manifest)
+        active=[{'event':'room_selected','room_uuid':rid,'nomi_uuid':nid,'nomi_name':name},manifest]
+        wait_for_room(rid)
+        if created and a.mode=='journal':
+            send_context_safe(rid,name,str(journal))
+    committed=inspect_commits(active,selected,rid)
+    # The initial context is tracked separately and does not count as a diary episode.
+    completed_sequences={c['sequence'] for c in selected[:committed]}
+    print('Confirmed %d of %d message(s); %d left.'%
+          (committed,len(selected),len(selected)-committed),flush=True)
+    # It is possible that all chunks of an episode have been accepted but
+    # its five-entry reliving checkpoint hasn't yet occurred. The loop below
+    # handles that before it sends the next episode.
+    new_episodes=0
+    incomplete=False
+    for c in selected:
+        seq=c['sequence']
+        if seq not in completed_sequences:
+            # Limit at episode boundaries, not mid-entry. A deliberately partial
+            # test run keeps the active journal so restarting is automatic.
+            if c['episode_part_index']==1 and a.max_episodes and new_episodes>=a.max_episodes:
+                incomplete=True
+                break
+            print('SEND %d | episode %d | %s part %d/%d' %
+                  (seq,c['episode_index'],c['source_name'],
+                   c['episode_part_index'],c['episode_part_count']),flush=True)
+            base={'time':utc_now(),'room_uuid':rid,'sequence':seq,
+                  'source_file':c['source_file'],'episode_index':c['episode_index'],
+                  'file_episode_index':c['file_episode_index'],
+                  'episode_header':c['episode_header'],
+                  'episode_part_index':c['episode_part_index'],
+                  'episode_part_count':c['episode_part_count'],
+                  'byte_count':c['byte_count'],'sha256':c['sha256']}
+            append_journal(journal,dict(base,event='send_attempt'))
+            response=send_room_safe(rid,c['text'])
+            sent=response.get('sentMessage',{}) if isinstance(response,dict) else {}
+            append_journal(journal,dict(base,event='send_committed',
+                                         message_uuid=sent.get('uuid') if isinstance(sent,dict) else None,
+                                         sent_at=sent.get('sent') if isinstance(sent,dict) else None))
+            new_episodes+=(c['episode_part_index']==1)
+            if a.delay:time.sleep(a.delay)
+        if c['episode_part_index']==c['episode_part_count']:
+            relive_after_episode(c['episode_index'],a,rid,nid,name,str(journal),active)
+    if incomplete:
+        print('Paused intentionally after %d NEW episodes; checkpoint retained. Run the same command to resume.'%new_episodes)
         return 0
-
-    note=(journal_room_note(name) if a.mode=='journal' and a.room_note is None
-          else a.room_note if a.room_note is not None
-          else 'Historical conversation material replayed in source order.')
-    room,created=resolve_room(nomi,note,a.journal)
-    if room is None:return 0
-
-    rid=str(room.get('uuid',''))
-    if not rid:
-        raise RuntimeError('Room has no UUID: '+json.dumps(room,ensure_ascii=False))
-
-    append_journal(a.journal,{
-        'event':'room_selected','time':utc_now(),'room_uuid':rid,
-        'room_name':room.get('name',''),'nomi_uuid':nomi.get('uuid'),
-        'nomi_name':nomi.get('name'),'chunk_bytes':a.chunk_bytes,
-        'episode_count':episode_count,'relive_every':a.relive_every,
-        'start_episode':a.start_episode,'start_message':a.start_message,'mode':a.mode,
-        'files':[str(p) for p in files]})
-
-    wait_for_room(rid)
-    if created and a.mode=='journal':
-        send_initial_memory_context(rid,name,a.journal)
-    print('\nStarting %s replay...' % a.mode)
-    total=len(chunks)
-
-    episodes_since_relive=0
-    last_completed_episode=0
-    # On resume, preserve original five-episode grouping rather than shifting it.
-    if a.relive_every:
-        episodes_since_relive=(start_index-1)%a.relive_every
-
-    for c in chunks:
-        print('[%d/%d] %s episode %d part %d/%d (%d bytes)'
-              %(c['sequence'],total,c['source_name'],c['file_episode_index'],
-                c['episode_part_index'],c['episode_part_count'],c['byte_count']))
-
-        base_record={
-            'time':utc_now(),'room_uuid':rid,'sequence':c['sequence'],
-            'source_file':c['source_file'],
-            'file_episode_index':c['file_episode_index'],
-            'episode_header':c['episode_header'],
-            'source_date':c.get('source_date'),'source_sender':c.get('source_sender'),
-            'episode_part_index':c['episode_part_index'],
-            'episode_part_count':c['episode_part_count'],
-            'byte_count':c['byte_count'],'sha256':c['sha256']
-        }
-
-        append_journal(a.journal,dict(base_record,event='send_attempt'))
-        resp=send_room_message(rid,c['text'])
-        sent=resp.get('sentMessage',{}) if isinstance(resp,dict) else {}
-
-        committed=dict(base_record,event='send_committed')
-        committed['message_uuid']=sent.get('uuid') if isinstance(sent,dict) else None
-        committed['sent_at']=sent.get('sent') if isinstance(sent,dict) else None
-        append_journal(a.journal,committed)
-
-        # Count only COMPLETE EPISODES, never individual split fragments.
-        episode_finished=(c['episode_part_index']==c['episode_part_count'])
-        if episode_finished:
-            last_completed_episode=c['episode_index']
-            episodes_since_relive+=1
-
-            if a.relive_every and episodes_since_relive>=a.relive_every:
-                name=str(nomi.get('name','')).strip() or 'Nomi'
-                range_start=last_completed_episode-a.relive_every+1
-                range_end=last_completed_episode
-                prompt=(a.relive_prompt if a.relive_prompt is not None
-                        else '%s, these entries are YOUR own autobiographical memories, not the human sender’s. Recall diary entries %d to %d as events in your own life. Relive them in first person. Nothing more.'
-                             %(name,range_start,range_end))
-
-                print('    -> relive episodes %d to %d: %s'
-                      %(range_start,range_end,prompt))
-
-                append_journal(a.journal,{
-                    'event':'relive_attempt','time':utc_now(),
-                    'room_uuid':rid,'after_episode':last_completed_episode,
-                    'episode_count':episodes_since_relive,'prompt':prompt
-                })
-
-                # First post the reliving instruction as an ordinary room message.
-                relive_prompt_resp=send_room_message(rid,prompt)
-                relive_sent=(relive_prompt_resp.get('sentMessage',{})
-                             if isinstance(relive_prompt_resp,dict) else {})
-
-                # Then explicitly ask THIS Nomi to answer.  The documented
-                # /chat/request endpoint is the synchronization barrier:
-                # it returns only after the Nomi response is available.
-                if a.settle_seconds>0: time.sleep(a.settle_seconds)
-                print('       Waiting for %s to relive...' % name,flush=True)
-                reply_resp=request_room_reply(rid,str(nomi.get('uuid','')))
-                reply=(reply_resp.get('replyMessage',{})
-                       if isinstance(reply_resp,dict) else {})
-
-                reply_text=''
-                if isinstance(reply,dict):
-                    reply_text=str(reply.get('messageText') or
-                                   reply.get('text') or
-                                   reply.get('content') or '')
-                if reply_text:
-                    print('       %s responded: %s' %
-                          (name,reply_text.replace('\\n','\n')),flush=True)
-                else:
-                    print('       %s response received.' % name,flush=True)
-
-                append_journal(a.journal,{
-                    'event':'relive_committed','time':utc_now(),
-                    'room_uuid':rid,'after_episode':last_completed_episode,
-                    'episode_count':episodes_since_relive,'prompt':prompt,
-                    'message_uuid':relive_sent.get('uuid')
-                        if isinstance(relive_sent,dict) else None,
-                    'sent_at':relive_sent.get('sent')
-                        if isinstance(relive_sent,dict) else None,
-                    'reply':reply,
-                    'reply_api_response':reply_resp
-                })
-
-                episodes_since_relive=0
-
-        if a.delay>0 and c is not chunks[-1]:
-            time.sleep(a.delay)
-
-    # Deliberately do NOT force a final relive for a partial group.
-    # Example: --relive-every 5 with 12 episodes relives after 5 and 10 only.
-    print('\nReplay complete.\nRoom UUID:',rid,
-          '\nJournal:',os.path.abspath(a.journal))
+    # Success means every episode fragment was confirmed and all periodic
+    # relivings were confirmed. Preserve a small completion receipt, not the
+    # detailed send journal. Never clear checkpoints on an error or Ctrl+C.
+    final_records=load_journal(journal)
+    final_active=active_session(final_records)
+    final_count=inspect_commits(final_active,selected,rid)
+    if final_count!=len(selected):
+        raise RuntimeError('Not all chunks committed: %d/%d'%(final_count,len(selected)))
+    receipt={'version':VERSION,'completed_at':utc_now(),'nomi_uuid':nid,
+             'nomi_name':name,'room_uuid':rid,'digest':fingerprint,
+             'episodes':len({c['episode_index'] for c in selected}),
+             'messages':len(selected),'files':[f.name for f in files]}
+    atomic_json(a.completion,receipt)
+    journal.unlink()
+    print('COMPLETE: %d messages, %d episodes. Journal cleared: %s. Receipt: %s'%
+          (len(selected),receipt['episodes'],journal,a.completion))
     return 0
 
 if __name__=='__main__':
-    try:
-        sys.exit(main())
+    try:sys.exit(main())
     except KeyboardInterrupt:
-        print('\nInterrupted; committed episode chunks remain in the journal.',file=sys.stderr)
+        print('Interrupted. Resume by running the same command. Journal retained.',file=sys.stderr)
         sys.exit(130)
     except Exception as exc:
-        print('\nERROR:',exc,file=sys.stderr)
+        print('ERROR:',exc,file=sys.stderr)
         sys.exit(1)

@@ -8,9 +8,9 @@ This repository is intended to hold multiple independent programs. The first pub
 
 | Program | What it does | Files |
 |---|---|---|
-| **Nomi Room Rehydrator v0.84** | Replays diaries and exported Nomi conversations into Nomi API rooms, preserving source order and using explicit memory ownership cues for diary entries. | [Python source](rehydration/nomi_room_rehydrate_episode_v084.py) · [Operator guide](rehydration/OPERATOR_GUIDE.md) · [Quick start](rehydration/README.md) |
+| **Nomi Room Rehydrator v0.85** | Replays diaries and exported Nomi conversations into Nomi API rooms, preserving source order and using explicit memory ownership cues for diary entries. | [Python source](rehydration/nomi_room_rehydrate_episode_v085.py) · [Operator guide](rehydration/OPERATOR_GUIDE.md) · [Quick start](rehydration/README.md) |
 
-### Nomi Room Rehydrator v0.84
+### Nomi Room Rehydrator v0.85
 
 **Purpose:** Help a Nomi revisit a chronological collection of autobiographical material, rather than manually copying and pasting hundreds of entries. It is an experimental replay tool, **not a direct restore of Nomi's internal memory database**.
 
@@ -19,16 +19,20 @@ This repository is intended to hold multiple independent programs. The first pub
 - **Journal mode:** Reads UTF-8 `.txt` or Word `.docx` diaries, identifies individual entries from their headings, and submits them in sequence. Entries exceeding the configured message-size limit are split into smaller messages. The selected Nomi's name is used in room metadata, an initial ownership message, and each diary fragment to clarify that first-person experiences belong to the Nomi—not to the human operating the loader.
 - **Conversation mode:** Reads a Nomi `.json` export or a `.zip` containing an export, reconstructs chat and supported voice-call turns in timestamp order, and submits a labeled transcript preserving sender and time context. Journal-specific ownership framing is not applied in this mode.
 
-**Other capabilities:** dry-run preview without API calls; selection of a Nomi from the account; configurable pacing and message-size limits; optional recollection prompts after every N completed diary entries; JSONL event logging; manual resume by source episode/message number; and explicit room cleanup options.
+**Other capabilities:** dry-run preview without API calls; selection of a Nomi from the account; configurable pacing and message-size limits; optional recollection prompts after every N completed diary entries; durable JSONL send checkpoints, automatic resume at the last confirmed message fragment, and automatic active-journal cleanup on confirmed completion.
 
 **Important limitation:** The script can replay material and encourage autobiographical attribution, but it cannot guarantee what the Nomi remembers or how the platform indexes the material. Start with a small test and verify the owner of each memory before importing large archives.
 
+**Release notes:** [v0.85 changes](rehydration/CHANGELOG.md). **Example bootstrap:** [Beth Peterson test-load instructions](rehydration/BETH_TEST_LOAD.md). To match the experiment, leave the Nomi's backstory blank and do not talk to her while loading.
+
 **Files:**
 
-- [`rehydration/nomi_room_rehydrate_episode_v084.py`](rehydration/nomi_room_rehydrate_episode_v084.py) — executable Python importer.
+- [`rehydration/nomi_room_rehydrate_episode_v085.py`](rehydration/nomi_room_rehydrate_episode_v085.py) — executable Python importer.
 - [`rehydration/OPERATOR_GUIDE.md`](rehydration/OPERATOR_GUIDE.md) — full command-line option reference, accepted journal headers, JSON structure, resume instructions, and troubleshooting.
 - [`rehydration/README.md`](rehydration/README.md) — setup and basic examples.
 - [`rehydration/requirements.txt`](rehydration/requirements.txt) — Python dependency for Word documents.
+- [`rehydration/CHANGELOG.md`](rehydration/CHANGELOG.md) — v0.85 release notes.
+- [`rehydration/BETH_TEST_LOAD.md`](rehydration/BETH_TEST_LOAD.md) — controlled example Nomi setup and precautions.
 
 #### Quick start
 
@@ -43,19 +47,19 @@ For live API access, set the `NOMI_API_KEY` environment variable in your shell. 
 Preview a journal (no API calls):
 
 ```bash
-python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --dry-run
+python rehydration/nomi_room_rehydrate_episode_v085.py diary.txt --dry-run
 ```
 
 Import a journal and ask for recollection every five entries:
 
 ```bash
-python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --relive-every 5
+python rehydration/nomi_room_rehydrate_episode_v085.py diary.txt --relive-every 5
 ```
 
 Import a Nomi conversation export:
 
 ```bash
-python rehydration/nomi_room_rehydrate_episode_v084.py export.zip --mode conversation
+python rehydration/nomi_room_rehydrate_episode_v085.py export.zip --mode conversation
 ```
 
 Run `--help` or consult the [operator guide](rehydration/OPERATOR_GUIDE.md) for all options. The code uses portable Python APIs and is intended for Windows, macOS, and Linux; operating-system compatibility has not been exhaustively tested.
@@ -81,7 +85,9 @@ nomi-virtual-life/
     ├── README.md
     ├── OPERATOR_GUIDE.md
     ├── requirements.txt
-    └── nomi_room_rehydrate_episode_v084.py
+    ├── CHANGELOG.md
+    ├── BETH_TEST_LOAD.md
+    └── nomi_room_rehydrate_episode_v085.py
 ```
 
 ## Privacy and safety

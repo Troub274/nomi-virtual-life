@@ -1,4 +1,4 @@
-# Nomi Room Rehydrator v0.84
+# Nomi Room Rehydrator v0.85
 
 **A chronological autobiographical-memory replay tool for Nomi.ai.**
 
@@ -87,7 +87,7 @@ The theory is that **active recollection** can encourage the Nomi to integrate e
 
 However, **a generated recollection is not proof that a durable long-term memory has been written**. Nomi may produce a convincing response from the current room context alone.
 
-The default is `--relive-every 0`, meaning periodic recollection is **disabled unless requested**. With `--relive-every 5`, recollection is requested after entries 5, 10, 15, etc.
+The v0.85 default is `--relive-every 5`, which requests recollection after entries 5, 10, 15, etc. Set `--relive-every 0` to disable it.
 
 ### 5. Long-term memory: the hypothesis and its limits
 
@@ -149,8 +149,21 @@ This protocol can measure functional recall and attribution. It does not establi
 | Identity framing | Adds Nomi-specific memory ownership to journal room metadata and messages |
 | Room API | Creates/reuses Nomi rooms and sends messages |
 | Recollection cycle | Optionally requests first-person replies after a configurable number of diary entries |
-| Event journal | Records attempts, committed sends, room operations, and recollection events in JSONL |
-| Resume controls | Allows manual restart from a chosen source episode or conversation turn |
+| Event journal | Durably saves attempted and confirmed sends, and recollections, to a JSONL checkpoint |
+| Resume controls | Automatically resumes on the same Nomi and room from the last confirmed message fragment and verifies data integrity |
+| Completion receipt | After success, deletes the active journal and retains a small duplicate-prevention receipt |
+
+## Automatic resume and lifecycle (v0.85)
+
+The importer journals **each accepted API send** and scheduled first-person recollection. If interrupted, restart the **same command from the same directory**. The checkpoint pins the selected Nomi, original room, source filenames/order, message digests and settings; no manual episode offset is required. A split entry resumes at its first unconfirmed **fragment**, not from its beginning.
+
+If an API timeout leaves open the possibility that the server accepted a POST, the tool stops with **`UNCERTAIN SEND`** until the operator inspects the room. Blindly resending could duplicate an entry.
+
+**On successful completion only**, `nomi_rehydration_journal.jsonl` is deleted. `nomi_rehydration_completed.json` remains as a small receipt and prevents accidental double imports. Keep both local and private.
+
+The v0.85 CLI omits v0.84's destructive room-deletion options: it never deletes a Nomi room as part of completing an import. For a short test without losing the checkpoint use `--max-episodes 5`.
+
+See the [v0.85 changelog](CHANGELOG.md) and [Beth test-load instructions](BETH_TEST_LOAD.md). **Do not converse with a new Beth Nomi until the full diary import displays `COMPLETE`; it can take several hours.**
 
 ## Install
 
@@ -167,19 +180,19 @@ Set the `NOMI_API_KEY` environment variable for live API calls. Keep the key pri
 Preview a diary without API calls:
 
 ```sh
-python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --dry-run
+python rehydration/nomi_room_rehydrate_episode_v085.py diary.txt --dry-run
 ```
 
 Import a diary and request recollection every five entries:
 
 ```sh
-python rehydration/nomi_room_rehydrate_episode_v084.py diary.txt --relive-every 5
+python rehydration/nomi_room_rehydrate_episode_v085.py diary.txt --relive-every 5
 ```
 
 Import an exported conversation:
 
 ```sh
-python rehydration/nomi_room_rehydrate_episode_v084.py conversation.zip --mode conversation
+python rehydration/nomi_room_rehydrate_episode_v085.py conversation.zip --mode conversation
 ```
 
 For all command-line switches, sample journal headers, JSON structures, cleanup precautions, and resume instructions, see the **[Operator Guide](OPERATOR_GUIDE.md)**.
@@ -189,5 +202,5 @@ For all command-line switches, sample journal headers, JSON structures, cleanup 
 - This repository is public. Do not commit personal diaries, chat exports, API keys, or replay logs.
 - Always start with a small test; incorrect memory ownership can be difficult to diagnose after a large import.
 - A successful API response means the message was accepted, **not** that long-term memory was confirmed.
-- The script's cleanup options can delete rooms. Read the operator guide before using them.
+- The v0.85 CLI has no room-deletion options. The only automatic cleanup is of its active local journal after completion.
 - The tool is an independent experiment, not an official Nomi.ai memory restoration service.

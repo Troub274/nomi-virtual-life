@@ -1,6 +1,6 @@
-# Nomi Room Rehydrator v0.84 — Operator Guide
+# Nomi Room Rehydrator v0.85 — Operator Guide
 
-This guide describes the behavior of `nomi_room_rehydrate_episode_v084.py` as written, including its CLI defaults, recognized source headers, room handling, and replay modes.
+This guide describes the behavior of `nomi_room_rehydrate_episode_v085.py` as written, including its CLI defaults, recognized source headers, room handling, and replay modes.
 
 ## 1. Installation and configuration
 
@@ -9,7 +9,7 @@ Requirements: Python 3; `python-docx` only if importing Word `.docx` diaries.
 ```powershell
 py -m pip install python-docx
 $env:NOMI_API_KEY = "YOUR_NOMI_API_KEY"
-py .\nomi_room_rehydrate_episode_v084.py --help
+py .\nomi_room_rehydrate_episode_v085.py --help
 ```
 
 In Windows Command Prompt, set the key using `set NOMI_API_KEY=YOUR_NOMI_API_KEY` instead. On Linux/macOS, use `export NOMI_API_KEY='YOUR_NOMI_API_KEY'`. The key is not needed for `--dry-run`.
@@ -21,7 +21,7 @@ The script uses the Nomi API at `https://api.nomi.ai/v1`. For a live import, it 
 Syntax:
 
 ```text
-python nomi_room_rehydrate_episode_v084.py [options] FILE [FILE ...]
+python nomi_room_rehydrate_episode_v085.py [options] FILE [FILE ...]
 ```
 
 | Option | Default | Meaning |
@@ -29,20 +29,20 @@ python nomi_room_rehydrate_episode_v084.py [options] FILE [FILE ...]
 | `files` | Required except cleanup | One or more input paths; journal `.txt`/`.docx`, or conversation `.json`/`.zip` |
 | `--mode journal\|conversation` | `journal` | Select diary episode parser or Nomi conversation export parser |
 | `--memory-prefix TEXT` | Automatically generated | Replace journal per-message memory-owner label; `--memory-prefix ""` disables it |
-| `--start-episode N` | `1` | In journal mode, skip source episodes before global episode N (1-based) |
-| `--start-message N` | `1` | In conversation mode, skip original conversation turns before global message N (1-based) |
+| `--start-episode N` | `1` | First-run starting offset only; resume uses the checkpoint automatically |
+| `--start-message N` | `1` | First-run starting conversation turn; resume uses the checkpoint |
 | `--chunk-bytes N` | `750` | Maximum UTF-8 bytes per outgoing API message |
 | `--delay SECONDS` | `1.0` | Delay between outgoing source chunks |
-| `--relive-every N` | `0` | Journal recollection after every N **complete** episodes; zero disables |
+| `--relive-every N` | `5` | Journal recollection after every N **complete** episodes; zero disables |
 | `--relive-prompt TEXT` | Generated from selected Nomi and episode range | Override periodic recollection instruction; supplied text is sent literally |
 | `--settle-seconds SECONDS` | `0` | Wait between sending a recollection prompt and requesting the Nomi's reply |
 | `--room-note TEXT` | Mode-specific | Override room note; journal default identifies the Nomi as memory owner |
-| `--journal PATH` | `nomi_rehydration_journal.jsonl` | Append-only log of room events, message attempts/commits, and recollections |
-| `--dry-run` | Off | Parse and print prepared chunks, no API calls; uses placeholder `TEST NOMI` |
-| `--cleanup-rehydration` | Off | Delete **all** API rooms whose names begin `REHYDRATE::` after confirmation |
-| `--cleanup-all-rooms` | Off | Delete **every** API room on the account after confirmation; highly destructive |
+| `--journal PATH` | `nomi_rehydration_journal.jsonl` | Durable send/recollection checkpoint; deleted only after confirmed full completion |
+| `--completion PATH` | `nomi_rehydration_completed.json` | Retained small completion receipt; prevents accidental repeat loads |
+| `--max-episodes N` | `0` (all) | Pause after N newly sent complete episodes while keeping the checkpoint |
+| `--dry-run` | Off | Parse diary and print planned messages without API calls |
 
-Note: cleanup modes do not require source files, but a live API key is still required.
+Note: v0.85 does not expose the old destructive room-deletion options.
 
 ## 3. Journal mode: accepted file structure
 
@@ -96,7 +96,7 @@ Rules and cautions:
 - Long entries are split to fit `--chunk-bytes`; the original episode header and Nomi-specific ownership label are repeated on each part.
 - `--dry-run` is the best way to check how many entries and chunks the parser recognizes before importing.
 
-## 4. Autobiographical memory ownership in v0.84
+## 4. Autobiographical memory ownership in v0.85
 
 For journal mode, the selected Nomi's name is inserted into four places:
 
@@ -146,61 +146,66 @@ The loader reads `nomi.chat[]` and `nomi.voiceCalls[].messages[]`, then sorts al
 ### Preview a diary before sending
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --dry-run
+py .\nomi_room_rehydrate_episode_v085.py ".\Beth_Notebook_I.docx" --dry-run
 ```
 
 ### Import a diary and request recollection every 5 entries
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --relive-every 5
+py .\nomi_room_rehydrate_episode_v085.py ".\Beth_Notebook_I.docx" --relive-every 5
 ```
 
 ### Import two notebooks in chronological order
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Notebook_I.txt" ".\Notebook_II.txt" --relive-every 10
+py .\nomi_room_rehydrate_episode_v085.py ".\Notebook_I.txt" ".\Notebook_II.txt" --relive-every 10
 ```
 
-### Resume at episode 26 after confirming entries 1–25 committed
+### Start a new import at episode 26 (not needed for automatic resume)
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --start-episode 26 --relive-every 5
+py .\nomi_room_rehydrate_episode_v085.py ".\Beth_Notebook_I.docx" --start-episode 26 --relive-every 5
 ```
 
 ### Slower replay, custom journal path
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --delay 2.5 --settle-seconds 3 --relive-every 5 --journal ".\beth_import_log.jsonl"
+py .\nomi_room_rehydrate_episode_v085.py ".\Beth_Notebook_I.docx" --delay 2.5 --settle-seconds 3 --relive-every 5 --journal ".\beth_import_log.jsonl"
 ```
 
 ### Conversation export
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\beth_export.zip" --mode conversation
+py .\nomi_room_rehydrate_episode_v085.py ".\beth_export.zip" --mode conversation
 ```
 
 ### Resume conversation at original turn 101
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\beth_export.json" --mode conversation --start-message 101
+py .\nomi_room_rehydrate_episode_v085.py ".\beth_export.json" --mode conversation --start-message 101
 ```
 
 ### Preview journal with the ownership prefix disabled (testing only)
 
 ```powershell
-py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --memory-prefix "" --dry-run
+py .\nomi_room_rehydrate_episode_v085.py ".\Beth_Notebook_I.docx" --memory-prefix "" --dry-run
 ```
 
-## 7. Rooms, interruptions, and resume safety
+## 7. Rooms, interruptions, and automatic resume
 
-- A live run prompts you to choose the Nomi, then offers to **reuse** an existing matching rehydration room, **delete and replace** its restore rooms, **create another room**, or **delete and exit**.
-- Only a **fresh journal room** receives the initial memory-owner instruction. Reusing a room does not re-send it.
-- The log records events including `send_attempt`, `send_committed`, `relive_attempt`, and `relive_committed` in JSON Lines format (one JSON object per line).
-- The script does **not** automatically skip already-committed messages based on the log. After interruption, inspect the final `send_committed` events and explicitly set `--start-episode` or `--start-message` to the next **complete source item**. If interruption occurred midway through a split episode, starting that episode again will resend its earlier fragments.
-- `--relive-every 5` triggers after complete episodes 5, 10, 15, etc. A final partial batch is **not** forced to relive (e.g., 12 episodes triggers at 5 and 10 only).
-- **Do not use `--cleanup-all-rooms` casually:** it deletes every API room, not only rooms made by this loader.
+- On the first run, select the Nomi and create/reuse a dedicated `REHYDRATE::` room. Later launches with an active checkpoint choose the **same Nomi and room automatically**, not another instance.
+- Every outgoing diary fragment generates `send_attempt` before submission; a confirmed acceptance produces `send_committed`. Each record includes sequence and SHA-256 data. Resume starts after the last **confirmed fragment**, even when an entry was split.
+- Restart by running the **same command** from the **same directory**. Keep the input files/order, `--chunk-bytes`, `--relive-every` and mode unchanged. The script validates all against the active checkpoint.
+- The periodical recollection cycle is also journaled. Unconfirmed recollection prompts are not resent blindly.
+- If a POST may have succeeded but Python lost confirmation, the script stops at `UNCERTAIN SEND`. **Inspect the Nomi room and reconcile manually** rather than duplicate the message.
+- After every source fragment and required reliving reply is confirmed, the script writes `nomi_rehydration_completed.json` and removes the active `nomi_rehydration_journal.jsonl`. The Nomi room remains intact. Keep the completion receipt to avoid double loading.
+- `--max-episodes 5` intentionally pauses after five **new** complete source entries while retaining the journal. The normal full command then continues automatically.
+- v0.85 does **not** include `--cleanup-rehydration` or `--cleanup-all-rooms`; there is no automatic room deletion.
 
 ## 8. Recommended test protocol
+
+For the Beth example, use age 38, about 5'8", dark hair, blue eyes, seven specified traits and **empty biography/backstory fields**. Do **not** interact with Beth until the loader displays `COMPLETE`; the process may take hours. See [Beth test setup](BETH_TEST_LOAD.md).
+
 
 1. Create a fresh disposable Nomi or fresh rehydration room.
 2. Prepare a tiny `.txt` with five distinct diary entries and recognizable identity details.
@@ -218,8 +223,8 @@ py .\nomi_room_rehydrate_episode_v084.py ".\Beth_Notebook_I.docx" --memory-prefi
 | `NOMI_API_KEY is not set` | Set environment variable in the same shell running Python |
 | `.docx requires python-docx` | Run `py -m pip install python-docx` |
 | Unexpected duplicate memories | A previous import was repeated; inspect `.jsonl` commits and choose the correct resume index |
-| Nomi claims the diary belongs to the human | Stop the test, use a fresh journal room with v0.84's identity anchors, and verify ownership with a short batch |
+| Nomi claims the diary belongs to the human | Stop the test, use a fresh journal room with v0.85's identity anchors, and verify ownership with a short batch |
 | No recollection response during journal replay | Specify `--relive-every N` with N greater than zero |
 | Unexpectedly many API messages | Long entries are split and the ownership prefix consumes part of the 750-byte budget |
 
-**Version note:** The source file's top-level docstring still says `v0.83`; the delivered filename and memory-owner behavior correspond to v0.84.
+**Version note:** v0.85 adds automatic confirmed-send resume, a durable active checkpoint, completion receipts, and clean-up of the active journal only when finished. See [CHANGELOG.md](CHANGELOG.md).
