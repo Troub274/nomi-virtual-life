@@ -1,0 +1,24 @@
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Personal diaries, chat exports, and replay logs (keep local)
+*.docx
+*.jsonl
+*.zip
+nomi_rehydration_journal*
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local working directories
+private/
+input/
+exports/
+logs/
