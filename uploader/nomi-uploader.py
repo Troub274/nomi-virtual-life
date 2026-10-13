@@ -21,7 +21,7 @@ except ImportError:
 VERSION = "1.0"
 TYPES = {"knowledge", "instructions", "journal", "chat"}
 HEADING = re.compile(r"^\[([^\]\n]+)\]\s*$")
-META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode):\s*(.*)$", re.I)
+META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every):\s*(.*)$", re.I)
 ENTRY = re.compile(r"^(?:ENTRY|EPISODE|JOURNAL ENTRY|DIARY ENTRY)\s*#?\s*(\d+)\b.*$", re.I)
 SPEAKER = re.compile(r"^([^:\n]{1,70}):\s+(.+)$")
 MONTHS = {m.lower():i for i,m in enumerate(("January","February","March","April","May","June","July","August","September","October","November","December"),1)}
@@ -107,7 +107,7 @@ def parse_sections(text, filename):
         if match:
             if current: sections.append(current)
             current={"title":match.group(1),"type":"knowledge","source":None,"date":None,
-                     "prompts":[],"mode":"add","lines":[]}
+                     "prompts":[],"mode":"add","process_every":None,"lines":[]}
             in_header=True
             continue
         if current is None:
@@ -123,6 +123,9 @@ def parse_sections(text, filename):
             elif k=="source": current["source"]=v
             elif k=="date": current["date"]=v
             elif k=="nomi": current["prompts"].append(v)
+            elif k=="process every":
+                current["process_every"]=int(v)
+                if current["process_every"]<0: raise ValueError("Process Every must be >= 0")
             elif k=="nomi mode":
                 if v.lower() not in ("add","replace"): raise ValueError("Nomi Mode must be Add or Replace")
                 current["mode"]=v.lower()
@@ -213,7 +216,9 @@ def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
             messages.append({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
-            if process_every<0: raise ValueError("process_every cannot be negative")
+            interval=section.get("process_every")
+            if interval is None: interval=process_every
+            if interval<0: raise ValueError("process_every cannot be negative")
             for idx,unit in enumerate(units,1):
                 label=unit.get("label") or str(idx)
                 prefix="Section: %s\nType: %s\nSource: %s\nEntry: %s"%(section["title"],kind.title(),source,label)
@@ -226,8 +231,8 @@ def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
                         raise ValueError("Chunk exceeds byte limit; increase --chunk-bytes")
                     messages.append({"text":body,"kind":"content","file":filename,"section":section["title"],"entry":idx})
                 # Automatic type-aware processing is separate from custom Nomi: instructions.
-                if process_every and (idx%process_every==0 or idx==len(units)):
-                    first=((idx-1)//process_every)*process_every+1
+                if interval and (idx%interval==0 or idx==len(units)):
+                    first=((idx-1)//interval)*interval+1
                     template=PERIODIC_PROMPTS[default_key]
                     prompt=render_prompt(template.format(first=first,last=idx),nomi,user,source)
                     messages.append({"text":prompt,"kind":"prompt","file":filename,
@@ -314,7 +319,7 @@ def upload(args):
             if not legacy.room_contains_nomi(r,nomi["uuid"]):
                 raise ValueError("Room is not associated with selected Nomi")
         else: room=create_upload_room(nomi)
-        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes})
+        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes,"process_every":args.process_every})
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
@@ -355,18 +360,20 @@ def upload(args):
                            "reply_api_response":response})
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
                 print("%s replied after pass %d message %d: %s"%
-                      (nomi["name"],p,i,str(body)[:300].replace("\\n"," ")))
+                      (nomi["name"],p,i,str(body)[:300].replace("\n"," ")))
     final_events=records(cp)
     reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
     transcript=Path(args.replies)
+    transcript.parent.mkdir(parents=True,exist_ok=True)
     # Derived transcript: durable source of truth remains the append-only checkpoint.
     with open(transcript,"w",encoding="utf-8") as out:
         for row in reply_rows:
             reply=row["reply"]
             body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
             out.write("Pass %d, prompt message %d — %s\\n"%(row["pass"],row["index"],nomi["name"]))
-            out.write("PROMPT: "+row["prompt"]+"\\n")
-            out.write("REPLY: "+str(body)+"\\n\\n")
+            out.write("PROMPT: "+row["prompt"]+"\n")
+            out.write("REPLY: "+str(body)+"\n\n")
+    Path(args.completion).parent.mkdir(parents=True,exist_ok=True)
     Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
