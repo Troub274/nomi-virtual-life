@@ -74,6 +74,50 @@ class StateMachineTests(unittest.TestCase):
              contextlib.redirect_stdout(io.StringIO()):
             u.upload(args)
 
+    def test_noreply_retries_with_visible_backoff(self):
+        calls=[]
+        responses=iter([
+            (500, {"type":"NoReply"}),
+            (500, {"type":"NoReply"}),
+            (200, {"replyMessage":{"messageText":"I remember."}})
+        ])
+        def api(*args):
+            calls.append(args)
+            return next(responses)
+        output=io.StringIO()
+        with patch.object(u.legacy,"api_request",side_effect=api), \
+             patch.object(u.time,"sleep") as sleeping, \
+             contextlib.redirect_stderr(output):
+            status,payload=u.request_reply_with_backoff("room-001","beth-id")
+        self.assertEqual(status,200)
+        self.assertEqual(len(calls),3)
+        self.assertEqual([x.args[0] for x in sleeping.call_args_list],[1.0,2.0])
+        self.assertIn("HTTP 500",output.getvalue())
+        self.assertIn("NoReply",output.getvalue())
+        self.assertIn("retry 2/8 in 1.0s",output.getvalue())
+
+    def test_ambiguous_reply_failure_is_not_retried(self):
+        with patch.object(u.legacy,"api_request",
+                          return_value=(None,{"error":{"type":"TimeoutError"}})) as api, \
+             patch.object(u.time,"sleep") as sleeping, \
+             contextlib.redirect_stderr(io.StringIO()):
+            status,_=u.request_reply_with_backoff("room-001","beth-id")
+        self.assertIsNone(status)
+        api.assert_called_once()
+        sleeping.assert_not_called()
+
+    def test_noreply_exhaustion_reports_error(self):
+        output=io.StringIO()
+        with patch.object(u.legacy,"api_request",
+                          return_value=(500,{"type":"NoReply"})) as api, \
+             patch.object(u.time,"sleep") as sleeping, \
+             contextlib.redirect_stderr(output):
+            status,_=u.request_reply_with_backoff("room-001","beth-id",attempts=3)
+        self.assertEqual(status,500)
+        self.assertEqual(api.call_count,3)
+        self.assertEqual(sleeping.call_count,2)
+        self.assertIn("retries exhausted",output.getvalue())
+
     def test_complete_upload_captures_all_replies(self):
         fake = FakeNomi()
         self.run_upload(fake, self.args())
