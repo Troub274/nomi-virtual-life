@@ -284,7 +284,7 @@ def records(path):
     return [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
 
 def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
-    """Wait for a reply through explicit NoReply responses; stop on ambiguous errors."""
+    """Wait through explicit Nomi not-ready responses; stop on ambiguous errors."""
     delay=base_delay
     n=0
     while True:
@@ -294,13 +294,14 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
         if legacy.ok(status):
             return status,payload
         error=legacy.err_text("request reply",status,payload)
-        if status==500 and legacy.err_type(payload)=="NoReply":
+        if (status is not None and legacy.err_type(payload) in
+                ("NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests")):
             if attempts is not None and n>=attempts:
                 print("Nomi API error: %s; test retry limit reached"%error,
                       file=sys.stderr,flush=True)
                 return status,payload
             print("Nomi API error: %s; NoReply attempt %d; retry in %.1fs"%
-                  (error,n,delay),file=sys.stderr,flush=True)
+                  (error,legacy.err_type(payload),n,delay),file=sys.stderr,flush=True)
             time.sleep(delay)
             delay=min(delay*2,30)
             continue
@@ -389,16 +390,29 @@ def upload(args):
         if key not in reply_attempts or key not in confirmed or key in reply_committed:
             raise ValueError("No pending confirmed reflection at %s"%token)
         if any(r.get("event")=="reply_uncertain" and
-               (r.get("pass"),r.get("index"))==key for r in old):
+               (r.get("pass"),r.get("index"))==key and
+               legacy.err_type(r.get("api_response")) not in
+               ("NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests") for r in old):
             raise ValueError("Cannot recover ambiguous reply outcome at %s"%token)
         recovery.add(key)
+    # Earlier versions incorrectly treated explicit Nomi readiness errors as
+    # ambiguous. The recorded HTTP response proves the request was rejected.
+    known_wait_errors={"NoReply","RoomNomiNotReadyForMessage",
+                       "RoomStillCreating","TooManyRequests"}
+    retryable_previous={
+        (r["pass"],r["index"]) for r in old
+        if r.get("event")=="reply_uncertain"
+        and r.get("http_status") is not None
+        and legacy.err_type(r.get("api_response")) in known_wait_errors
+    }
+    recovery |= retryable_previous & reply_attempts & confirmed
     uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-recovery)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
     for p,i in sorted(recovery):
         record(cp,{"event":"reply_recovery_authorized","pass":p,"index":i,
-                   "reason":"operator confirmed previous explicit NoReply"})
-        print("Resuming reflection after confirmed NoReply: pass %d message %d"%(p,i),flush=True)
+                   "reason":"explicit Nomi not-ready response or operator-verified NoReply"})
+        print("Resuming reflection after explicit Nomi not-ready response: pass %d message %d"%(p,i),flush=True)
     for p in range(1,passes+1):
         for i,m in enumerate(messages,1):
             key=(p,i)
