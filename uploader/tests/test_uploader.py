@@ -63,10 +63,10 @@ class UploaderTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("beth_prepare_regression", script)
         prep = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(prep)
-        diary = ("BETH PETERSON\\nPRIVATE DIARY — VOLUME 2\\n"
-                 "THIS DIARY IS FICTIONAL BACKSTORY, NOT THE UPLOADER'S BIOGRAPHY.\\n\\n"
-                 "ENTRY 101 — 2005-02-20 — Nobody Asked Me\\n"
-                 "I like when Mom doesn't try to repair me.\\n")
+        diary = ("BETH PETERSON\nPRIVATE DIARY — VOLUME 2\n"
+                 "THIS DIARY IS FICTIONAL BACKSTORY, NOT THE UPLOADER'S BIOGRAPHY.\n\n"
+                 "ENTRY 101 — 2005-02-20 — Nobody Asked Me\n"
+                 "I like when Mom doesn't try to repair me.\n")
         converted, numbers = prep.convert_document("BETH02.TXT", diary)
         self.assertEqual(numbers, [101])
         self.assertNotIn("FICTIONAL BACKSTORY", converted)
@@ -81,13 +81,13 @@ class UploaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = pathlib.Path(tmp) / "beth.txt"
             entries = "".join(
-                f"ENTRY {i:03d} — 2005-02-{i:02d}\\nMemory {i}.\\n"
+                f"ENTRY {i:03d} — 2005-02-{i:02d}\nMemory {i}.\n"
                 for i in range(1, 13)
             )
             path.write_text(
-                "[Beth diary]\\nType: Journal\\nSource: Beth Peterson\\n"
-                "Process Every: 5\\n"
-                "Nomi: [nomi], custom reflection for episodes {first}-{last}.\\n\\n"
+                "[Beth diary]\nType: Journal\nSource: Beth Peterson\n"
+                "Process Every: 5\n"
+                "Nomi: [nomi], custom reflection for episodes {first}-{last}.\n\n"
                 + entries, encoding="utf-8")
             plan = u.plan_text([str(path)], "Beth Peterson", "Tester", "US", 2026, 750)
             prompts = [m for m in plan if m["kind"] == "prompt"]
