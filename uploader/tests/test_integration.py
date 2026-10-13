@@ -204,6 +204,28 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(len(fake.calls_to("/chat")),len(plan)-first_prompt)
         self.assertEqual(sum(e["event"]=="reply_committed" for e in u.records(self.checkpoint)),2)
 
+    def test_explicit_legacy_noreply_recovery(self):
+        plan=u.plan_text([str(self.diary)],"Beth","Tester","US",2026,750)
+        first_prompt=next(i for i,m in enumerate(plan,1) if m["kind"]=="prompt")
+        self.run_upload(FakeNomi(),self.args())
+        original=u.records(self.checkpoint)
+        events=[e for e in original if not
+                (e.get("pass")==1 and e.get("index")>first_prompt) and not
+                (e.get("pass")==1 and e.get("index")==first_prompt and
+                 e["event"]=="reply_committed")]
+        self.checkpoint.write_text("".join(json.dumps(e)+"\\n" for e in events),
+                                   encoding="utf-8")
+        self.completion.unlink()
+        with self.assertRaisesRegex(RuntimeError,"Uncertain"):
+            self.run_upload(FakeNomi(),self.args(resume=True))
+        args=self.args(resume=True)
+        args.recover_noreply=["1:%d"%first_prompt]
+        fake=FakeNomi()
+        self.run_upload(fake,args)
+        self.assertEqual(len(fake.calls_to("/chat/request")),2)
+        self.assertEqual(len(fake.calls_to("/chat")),len(plan)-first_prompt)
+        self.assertTrue(self.completion.exists())
+
     def test_modified_input_refuses_resume(self):
         fake = FakeNomi(fail_at=3)
         with self.assertRaises(RuntimeError):
