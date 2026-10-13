@@ -212,8 +212,16 @@ def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
         if path.suffix.lower() in (".zip",".json"):
             # Existing export parser is retained verbatim in legacy_v085.
             rows=legacy.prepare_conversation_chunks([path],chunk_bytes)
-            for row in rows:
-                messages.append({"text":row["text"],"kind":"content","file":filename,"section":"Nomi export"})
+            messages.append({"text":render_prompt(DEFAULT_PROMPTS["chat"],nomi,user,"Nomi export"),
+                             "kind":"intro","file":filename,"section":"Nomi export"})
+            for idx,row in enumerate(rows,1):
+                messages.append({"text":row["text"],"kind":"content","file":filename,
+                                 "section":"Nomi export","entry":idx})
+                if process_every and (idx%process_every==0 or idx==len(rows)):
+                    first=((idx-1)//process_every)*process_every+1
+                    prompt=PERIODIC_PROMPTS["chat"].format(first=first,last=idx)
+                    messages.append({"text":render_prompt(prompt,nomi,user,"Nomi export"),
+                                     "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
         for section in parse_sections(read_text(path),filename):
             source=section["source"] or (nomi if section["type"]=="journal" else "System")
@@ -275,10 +283,10 @@ def records(path):
 
 def create_upload_room(nomi):
     name="UPLOADER::%s::%s"%(nomi["name"],dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    s,p=legacy.api_request_retry("/rooms","POST",{"name":name,"note":"Nomi Uploader v1.0 — persistent processing room","backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
-    if not legacy.ok(s): raise RuntimeError(legacy.err_text("create room",s,p))
+    s,p=legacy.api_request("/rooms","POST",{"name":name,"note":"Nomi Uploader v1.0 — persistent processing room","backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
+    if not legacy.ok(s): raise RuntimeError("Room creation outcome uncertain; inspect room list before retry: "+legacy.err_text("create room",s,p))
     rid=p.get("uuid") or p.get("room",{}).get("uuid")
-    if not rid: raise RuntimeError("Room create returned no UUID")
+    if not rid: raise RuntimeError("Room creation returned no UUID; inspect room list before retry")
     legacy.wait_for_room(rid)
     return rid
 
@@ -312,7 +320,10 @@ def upload(args):
             prevstart=previous[0] if previous else {}
             confirmed_count=sum(1 for r in previous if r.get("event")=="confirmed")
             expected=prevstart.get("passes",0)*len(messages)
-            if not prevstart or confirmed_count!=expected:
+            reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
+                               r.get("kind")=="prompt")
+            reply_count=sum(1 for r in previous if r.get("event")=="reply_committed")
+            if not prevstart or confirmed_count!=expected or reply_count<reply_expected:
                 raise ValueError("Unfinished checkpoint exists; use --resume or a different --checkpoint")
             stamp=dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
             cp.rename(cp.with_name(cp.name+"."+stamp+".archive"))
@@ -348,7 +359,7 @@ def upload(args):
                 if not legacy.ok(s):
                     raise RuntimeError("POST outcome uncertain: "+legacy.err_text("send",s,response))
                 record(cp,{"event":"confirmed","pass":p,"index":i,
-                           "api_response":response})
+                           "kind":m["kind"],"api_response":response})
                 print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
                 if args.delay: time.sleep(args.delay)
             if m["kind"]=="prompt" and key not in reply_committed:
