@@ -6,7 +6,7 @@ This repository is intended to hold multiple independent programs. The current u
 
 ## Current uploader
 
-See the [Nomi Uploader v1.0 operator documentation](uploader/README.md) for input syntax, dry runs, reflection intervals, indefinite `NoReply` backoff, reply capture, and checkpoint recovery. The Beth live test has successfully recovered a reflection at message 9 and continued uploading; full-pass completion has not yet been confirmed.
+See the [Nomi Uploader v1.0 operator documentation](uploader/README.md) for input syntax, dry runs, reflection intervals, indefinite backoff for explicit Nomi readiness errors, reply capture, and checkpoint recovery. The Beth live test has successfully recovered a reflection at message 9 and continued uploading; full-pass completion has not yet been confirmed.
 
 ## Beth test example
 
@@ -86,17 +86,23 @@ These are directions for future programs, not descriptions of files currently av
 
 ## Repository layout
 
+The repository contains both the current uploader and the retained v0.85 implementation:
+
 ```text
 nomi-virtual-life/
 ├── README.md
-├── .gitignore
-└── rehydration/
-    ├── README.md
-    ├── OPERATOR_GUIDE.md
-    ├── requirements.txt
-    ├── CHANGELOG.md
-    ├── BETH_TEST_LOAD.md
-    └── nomi_room_rehydrate_episode_v085.py
+├── uploader/
+│   ├── README.md
+│   ├── nomi-uploader.py
+│   ├── legacy_v085.py
+│   └── tests/
+├── rehydration/
+│   ├── README.md
+│   ├── OPERATOR_GUIDE.md
+│   ├── CHANGELOG.md
+│   └── nomi_room_rehydrate_episode_v085.py
+└── examples/
+    └── beth/
 ```
 
 ## Privacy and safety
