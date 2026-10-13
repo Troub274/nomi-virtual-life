@@ -145,7 +145,8 @@ def split_units(section, order, session_year):
             heading_date=DATE_RX.search(line) if (em or dm or legacy.is_episode_header(line)) else None
             if em or dm or (legacy.is_episode_header(line) and heading_date):
                 if date or label: flush()
-                else: buf=[]  # Ignore diary cover/preamble before first dated entry\n                label=em.group(1) if em else str(len(units)+1)
+                else: buf=[]  # Ignore diary cover/preamble before first dated entry
+                label=em.group(1) if em else str(len(units)+1)
                 if dm: date=dm.group(1)
                 elif heading_date: date=heading_date.group()
             buf.append(line)
@@ -286,7 +287,10 @@ def upload(args):
             cp.rename(cp.with_name(cp.name+"."+stamp+".archive"))
             done=Path(args.completion)
             if done.exists():
-                done.rename(done.with_name(done.name+"."+stamp+".archive"))\n            replies=Path(args.replies)\n            if replies.exists():\n                replies.rename(replies.with_name(replies.name+"."+stamp+".archive"))
+                done.rename(done.with_name(done.name+"."+stamp+".archive"))
+            replies=Path(args.replies)
+            if replies.exists():
+                replies.rename(replies.with_name(replies.name+"."+stamp+".archive"))
         if args.room:
             room=args.room
             r=legacy.get_room(room)
@@ -387,7 +391,8 @@ def main(argv=None):
     parser.add_argument("--date-format",choices=["AUTO","US","EU"],default="AUTO")
     parser.add_argument("--delay",type=float,default=1)
     parser.add_argument("--checkpoint",default="nomi_uploader_checkpoint.jsonl")
-    parser.add_argument("--completion",default="nomi_uploader_completed.json")\n    parser.add_argument("--replies",default="nomi_uploader_replies.txt")
+    parser.add_argument("--completion",default="nomi_uploader_completed.json")
+    parser.add_argument("--replies",default="nomi_uploader_replies.txt")
     args=parser.parse_args(argv)
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
     if args.utility: utilities()
