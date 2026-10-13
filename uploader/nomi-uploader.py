@@ -409,8 +409,9 @@ def active_room_ids(checkpoint_dir="."):
             events=records(path)
             if not events or events[0].get("event")!="start": continue
             start=events[0]
-            complete=(path.with_name("nomi_uploader_completed.json").exists())
-            if not complete: protected.add(start["room_uuid"])
+            # A completion marker is not proof that it belongs to this run.
+            # Protect any room with a checkpoint unless explicitly detached.
+            protected.add(start["room_uuid"])
         except (OSError,ValueError,KeyError):
             continue
     return protected
