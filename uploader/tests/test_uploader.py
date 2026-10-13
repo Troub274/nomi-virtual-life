@@ -32,6 +32,19 @@ class UploaderTests(unittest.TestCase):
     def test_chat(self):
         section = u.parse_sections("[Talk]\nType: Chat\nDate: 10/13/2026\n\nBeth: Hello\nSam: Hi", "x.txt")[0]
         self.assertEqual(len(u.split_units(section, "US", 2026)), 1)
+    def test_beth_diary_100_entries(self):
+        fixture = ROOT / "tests" / "fixtures" / "beth_diary_v1_test.txt"
+        sections = u.parse_sections(fixture.read_text(encoding="utf-8"), str(fixture))
+        self.assertEqual(len(sections), 1)
+        self.assertEqual(sections[0]["source"], "Beth Peterson")
+        units = u.split_units(sections[0], "US", 2026)
+        self.assertEqual(len(units), 100)
+        self.assertEqual(units[0]["date"], "1998-10-11")
+        self.assertEqual(units[-1]["date"], "2005-02-06")
+        messages = u.plan_text([str(fixture)], "Beth Peterson", "", "US", 2026, 750)
+        prompts = [m for m in messages if m["kind"] == "prompt"]
+        self.assertEqual(len(prompts), 4)
+        self.assertTrue(any("episodes 76-100" in p["text"] for p in prompts))
     def test_legacy(self):
         self.assertTrue(callable(u.legacy.main))
         self.assertTrue(callable(u.legacy.prepare_conversation_chunks))
