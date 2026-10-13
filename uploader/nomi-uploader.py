@@ -349,7 +349,7 @@ def upload(args):
             expected=prevstart.get("passes",0)*len(messages)
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
-            reply_count=sum(1 for r in previous if r.get("event")=="reply_committed")
+            reply_count=sum(1 for r in previous if r.get("event") in ("reply_committed","reply_no_reply"))
             if not prevstart or confirmed_count!=expected or reply_count<reply_expected or \
                any(r.get("event") in ("attempt","reply_attempt") and
                    (r.get("pass"),r.get("index")) not in
@@ -376,7 +376,17 @@ def upload(args):
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
     reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
-    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed)
+    reply_no_reply={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_no_reply"}
+    # An older run may have stopped on an explicit NoReply without recording
+    # the result. A confirmed prompt plus an outstanding reply_attempt is
+    # recoverable as a missing response, not as an unsent diary message.
+    legacy_no_reply=(reply_attempts-reply_committed-reply_no_reply) & confirmed
+    for p,i in sorted(legacy_no_reply):
+        record(cp,{"event":"reply_no_reply","pass":p,"index":i,
+                   "reason":"legacy reply attempt ended with explicit NoReply; no response recorded"})
+        print("Recovering pass %d message %d: prior NoReply; continuing without resending"%(p,i),flush=True)
+    reply_no_reply |= legacy_no_reply
+    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-reply_no_reply)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
     for p in range(1,passes+1):
@@ -393,12 +403,20 @@ def upload(args):
                            "kind":m["kind"],"api_response":response})
                 print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
                 if args.delay: time.sleep(args.delay)
-            if m["kind"]=="prompt" and key not in reply_committed:
+            if m["kind"]=="prompt" and key not in reply_committed and key not in reply_no_reply:
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 s,response=request_reply_with_backoff(room,nomi["uuid"])
                 if not legacy.ok(s):
+                    if s==500 and legacy.err_type(response)=="NoReply":
+                        record(cp,{"event":"reply_no_reply","pass":p,"index":i,
+                                   "http_status":s,"api_response":response})
+                        print("Pass %d message %d: NoReply after retries; prompt delivered, continuing"%(p,i),flush=True)
+                        reply_no_reply.add(key)
+                        continue
+                    record(cp,{"event":"reply_uncertain","pass":p,"index":i,
+                               "http_status":s,"api_response":response})
                     raise RuntimeError("Reply request outcome uncertain: "+
                                        legacy.err_text("request reply",s,response))
                 reply=response.get("replyMessage") if isinstance(response,dict) else None
