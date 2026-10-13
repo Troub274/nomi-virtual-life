@@ -112,7 +112,7 @@ def parse_sections(text, filename):
             continue
         if current is None:
             current={"title":Path(filename).stem,"type":"knowledge","source":None,
-                     "date":None,"prompts":[],"mode":"add","lines":[]}
+                     "date":None,"prompts":[],"mode":"add","process_every":None,"lines":[]}
             in_header=True
         meta=META.match(line.strip()) if in_header else None
         if meta:
@@ -164,7 +164,7 @@ def split_units(section, order, session_year):
             dm=re.match(r"^Date:\s*(.+)$",line.strip(),re.I)
             heading_date=DATE_RX.search(line) if (em or dm or legacy.is_episode_header(line)) else None
             if em or dm or (legacy.is_episode_header(line) and heading_date):
-                if date or label: flush()
+                if label is not None or (date and buf): flush()
                 else: buf=[]  # Ignore diary cover/preamble before first dated entry
                 label=em.group(1) if em else str(len(units)+1)
                 if dm: date=dm.group(1)
@@ -176,7 +176,8 @@ def split_units(section, order, session_year):
         for line in lines:
             dm=re.match(r"^Date:\s*(.+)$",line.strip(),re.I)
             if dm:
-                flush(); date=dm.group(1); label=str(len(units)+1)
+                if buf and any(x.strip() for x in buf): flush()
+                date=dm.group(1); label=str(len(units)+1)
             else: buf.append(line)
         flush()
         for unit in units:
@@ -323,7 +324,11 @@ def upload(args):
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
             reply_count=sum(1 for r in previous if r.get("event")=="reply_committed")
-            if not prevstart or confirmed_count!=expected or reply_count<reply_expected:
+            if not prevstart or confirmed_count!=expected or reply_count<reply_expected or \
+               any(r.get("event") in ("attempt","reply_attempt") and
+                   (r.get("pass"),r.get("index")) not in
+                   {(x.get("pass"),x.get("index")) for x in previous if x.get("event")==("confirmed" if r.get("event")=="attempt" else "reply_committed")}
+                   for r in previous):
                 raise ValueError("Unfinished checkpoint exists; use --resume or a different --checkpoint")
             stamp=dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
             cp.rename(cp.with_name(cp.name+"."+stamp+".archive"))
@@ -390,7 +395,7 @@ def upload(args):
         for row in reply_rows:
             reply=row["reply"]
             body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
-            out.write("Pass %d, prompt message %d — %s\\n"%(row["pass"],row["index"],nomi["name"]))
+            out.write("Pass %d, prompt message %d — %s\n"%(row["pass"],row["index"],nomi["name"]))
             out.write("PROMPT: "+row["prompt"]+"\n")
             out.write("REPLY: "+str(body)+"\n\n")
     Path(args.completion).parent.mkdir(parents=True,exist_ok=True)
@@ -459,7 +464,7 @@ def utilities():
 
 def interactive_menu():
     while True:
-        print("\\nNomi Uploader 1.0\\n 1 Upload files\\n 2 Resume checkpoint\\n 3 Dry-run\\n 4 Manage rooms\\n 5 Quit")
+        print("\nNomi Uploader 1.0\n 1 Upload files\n 2 Resume checkpoint\n 3 Dry-run\n 4 Manage rooms\n 5 Quit")
         action=input("Select: ").strip()
         if action in ("5","q","Q",""): return
         if action=="4": utilities(); continue
