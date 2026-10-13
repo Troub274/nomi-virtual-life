@@ -62,14 +62,14 @@ class UploaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p=pathlib.Path(tmp)/"source.txt"
             p.write_text(
-                "[Beth memories]\\nType: Journal\\nSource: Beth\\nProcess Every: 2\\n\\n"
-                "ENTRY 001 - 10/11/1998\\nI turned ten.\\n"
-                "ENTRY 002 - 10/12/1998\\nI went home.\\n"
-                "ENTRY 003 - 10/13/1998\\nI met Maya.\\n"
-                "[Other person's memories]\\nType: Journal\\nSource: Maya\\nProcess Every: 1\\n\\n"
-                "ENTRY 001 - 10/11/1998\\nMaya remembered school.\\n"
-                "[Facts]\\nType: Knowledge\\nSource: System\\nProcess Every: 1\\n\\n"
-                "The Earth orbits the Sun.\\n", encoding="utf-8")
+                "[Beth memories]\nType: Journal\nSource: Beth\nProcess Every: 2\n\n"
+                "ENTRY 001 - 10/11/1998\nI turned ten.\n"
+                "ENTRY 002 - 10/12/1998\nI went home.\n"
+                "ENTRY 003 - 10/13/1998\nI met Maya.\n"
+                "[Other person's memories]\nType: Journal\nSource: Maya\nProcess Every: 1\n\n"
+                "ENTRY 001 - 10/11/1998\nMaya remembered school.\n"
+                "[Facts]\nType: Knowledge\nSource: System\nProcess Every: 1\n\n"
+                "The Earth orbits the Sun.\n", encoding="utf-8")
             messages=u.plan_text([str(p)],"Beth","Yehoshua","US",2026,750,0)
             prompts=[m["text"] for m in messages if m["kind"]=="prompt"]
             self.assertEqual(len(prompts),4)
@@ -83,9 +83,9 @@ class UploaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p=pathlib.Path(tmp)/"source.txt"
             p.write_text(
-                "[One]\\nType: Knowledge\\nProcess Every: 0\\n"
-                "Nomi Mode: Replace\\nNomi: [nomi], test [source].\\n\\n"
-                "A factual statement.\\n",encoding="utf-8")
+                "[One]\nType: Knowledge\nProcess Every: 0\n"
+                "Nomi Mode: Replace\nNomi: [nomi], test [source].\n\n"
+                "A factual statement.\n",encoding="utf-8")
             messages=u.plan_text([str(p)],"Beth","User","US",2026,750,1)
             prompts=[m for m in messages if m["kind"]=="prompt"]
             self.assertEqual(len(prompts),1)
