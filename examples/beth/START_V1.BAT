@@ -1,8 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+set "RELIVE_EVERY=%~1"
+if "%RELIVE_EVERY%"=="" set "RELIVE_EVERY=5"
 if not exist beth_v1\manifest.json (
-  py -3 prepare_v1.py BETHBOOT_V085.ZIP --output beth_v1
+  py -3 prepare_v1.py BETHBOOT_V085.ZIP --output beth_v1 --relive-every %RELIVE_EVERY%
   if errorlevel 1 exit /b 1
 )
 if "%NOMI_API_KEY%"=="" (
