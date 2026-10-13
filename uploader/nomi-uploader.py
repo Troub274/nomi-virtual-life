@@ -283,6 +283,31 @@ def records(path):
     if not path.exists(): return []
     return [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
 
+def request_reply_with_backoff(room, nomi_uuid, attempts=8, base_delay=1.0):
+    """Retry only explicit NoReply responses, never ambiguous transport failures."""
+    delay=base_delay
+    for n in range(1,attempts+1):
+        status,payload=legacy.api_request("/rooms/"+room+"/chat/request","POST",
+                                          {"nomiUuid":nomi_uuid})
+        if legacy.ok(status):
+            return status,payload
+        error=legacy.err_text("request reply",status,payload)
+        # A server-side NoReply is an explicit non-reply; other POST failures
+        # may have succeeded and are unsafe to repeat automatically.
+        if status==500 and legacy.err_type(payload)=="NoReply" and n<attempts:
+            print("Nomi API error: %s; retry %d/%d in %.1fs"%
+                  (error,n+1,attempts,delay),file=sys.stderr,flush=True)
+            time.sleep(delay)
+            delay=min(delay*2,30)
+            continue
+        print("Nomi API error: %s; %s"%
+              (error,"NoReply retries exhausted" if status==500 and
+               legacy.err_type(payload)=="NoReply" else
+               "request outcome uncertain; not retrying"),file=sys.stderr,flush=True)
+        return status,payload
+    raise AssertionError("unreachable")
+
+
 def create_upload_room(nomi):
     name="UPLOADER::%s::%s"%(nomi["name"],dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     s,p=legacy.api_request("/rooms","POST",{"name":name,"note":"Nomi Uploader v1.0 — persistent processing room","backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
@@ -372,8 +397,7 @@ def upload(args):
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
-                s,response=legacy.api_request("/rooms/"+room+"/chat/request","POST",
-                                              {"nomiUuid":nomi["uuid"]})
+                s,response=request_reply_with_backoff(room,nomi["uuid"])
                 if not legacy.ok(s):
                     raise RuntimeError("Reply request outcome uncertain: "+
                                        legacy.err_text("request reply",s,response))
