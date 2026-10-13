@@ -35,6 +35,14 @@ DEFAULT_PROMPTS = {
  "chat": "[nomi], please review this conversation, preserving speakers, sequence, and context."
 }
 
+PERIODIC_PROMPTS = {
+ "knowledge": "[nomi], please analyze and summarize information items {first}-{last}; connect the ideas without treating them as your personal experiences.",
+ "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
+ "journal_self": "[nomi], please recollect your own journal episodes {first}-{last} in chronological order and reflect on their meaning.",
+ "journal_other": "[nomi], please reflect on [source]'s journal episodes {first}-{last} while keeping those experiences attributed to [source], not yourself.",
+ "chat": "[nomi], please analyze conversation episodes {first}-{last}, keeping each speaker's words and perspective distinct."
+}
+
 def regional_order(override="AUTO"):
     if override != "AUTO": return override
     try:
@@ -185,7 +193,7 @@ def split_budget(text, budget):
 def render_prompt(prompt, nomi, user, source):
     return prompt.replace("[nomi]",nomi).replace("[user]",user or "the user").replace("[source]",source)
 
-def plan_text(files, nomi, user, order, year, chunk_bytes):
+def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
     messages=[]
     for filename in files:
         path=Path(filename)
@@ -205,6 +213,7 @@ def plan_text(files, nomi, user, order, year, chunk_bytes):
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
             messages.append({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
+            if process_every<0: raise ValueError("process_every cannot be negative")
             for idx,unit in enumerate(units,1):
                 label=unit.get("label") or str(idx)
                 prefix="Section: %s\nType: %s\nSource: %s\nEntry: %s"%(section["title"],kind.title(),source,label)
@@ -216,6 +225,13 @@ def plan_text(files, nomi, user, order, year, chunk_bytes):
                     if len(body.encode("utf-8"))>chunk_bytes:
                         raise ValueError("Chunk exceeds byte limit; increase --chunk-bytes")
                     messages.append({"text":body,"kind":"content","file":filename,"section":section["title"],"entry":idx})
+                # Automatic type-aware processing is separate from custom Nomi: instructions.
+                if process_every and (idx%process_every==0 or idx==len(units)):
+                    first=((idx-1)//process_every)*process_every+1
+                    template=PERIODIC_PROMPTS[default_key]
+                    prompt=render_prompt(template.format(first=first,last=idx),nomi,user,source)
+                    messages.append({"text":prompt,"kind":"prompt","file":filename,
+                                     "section":section["title"],"entry":idx})
                 # Schedule explicitly ranged instructions at their last referenced entry.
                 for prompt in section["prompts"]:
                     nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
@@ -263,12 +279,13 @@ def upload(args):
         files=init["files"]; passes=init["passes"]
         args.user=init.get("user","")
         args.chunk_bytes=init.get("chunk_bytes",750)
+        args.process_every=init.get("process_every",0)
     else:
         nomi=legacy.choose_nomi(legacy.get_nomis()) if not args.dry_run else {"name":args.nomi or "Nomi","uuid":"DRYRUN"}
         year=dt.date.today().year; order=regional_order(args.date_format)
         files=args.files; passes=args.passes; room=None
     if not files: raise ValueError("Specify at least one document")
-    messages=plan_text(files,nomi["name"],args.user,order,year,args.chunk_bytes)
+    messages=plan_text(files,nomi["name"],args.user,order,year,args.chunk_bytes,args.process_every)
     manifest=digest(messages)
     if old and manifest!=init["manifest"]: raise ValueError("Manifest changed: resume requires identical content and options")
     print("Nomi:",nomi["name"],"Date order:",order,"Year:",year,"Messages per pass:",len(messages),"Passes:",passes)
@@ -387,6 +404,7 @@ def main(argv=None):
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
     parser.add_argument("--passes",type=int,default=1)
+    parser.add_argument("--process-every",type=int,default=0,help="Automatic type-aware recollection/analysis after N units; 0 disables")
     parser.add_argument("--chunk-bytes",type=int,default=750)
     parser.add_argument("--date-format",choices=["AUTO","US","EU"],default="AUTO")
     parser.add_argument("--delay",type=float,default=1)
@@ -394,6 +412,7 @@ def main(argv=None):
     parser.add_argument("--completion",default="nomi_uploader_completed.json")
     parser.add_argument("--replies",default="nomi_uploader_replies.txt")
     args=parser.parse_args(argv)
+    if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
     if args.utility: utilities()
     else: upload(args)
