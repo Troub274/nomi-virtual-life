@@ -94,3 +94,30 @@ JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prom
 ### Remaining release gates
 
 The implementation remains **experimental**. The full regression suite has not been executed and a live Nomi disposable-room integration test has not been performed. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
+
+
+## Live operation and recovery (October 2026)
+
+**Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-bytes` limit. The final partial group is processed too.
+
+When the API explicitly returns HTTP 500 `NoReply`, the reply request is repeated with exponential backoff: **1, 2, 4, 8, 16, then 30 seconds, capped at 30 seconds thereafter, until a reply arrives**. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
+
+**Safety:** Successful document sends are checkpointed and are not resent on resume. Ambiguous reply failures (transport timeout, unexpected HTTP errors, malformed successful response) stop the upload rather than automatically repeating a possibly successful POST. `NoReply` is an explicit absence of a returned response; it does not prove the model completed internal processing. Waiting for a returned response is the uploader's configured synchronization rule.
+
+**Recovering an older interrupted `NoReply` run:** If the checkpoint contains a `reply_attempt` without a result, and the operator **knows from the original terminal output** that the failure was explicitly `NoReply`, resume with:
+
+```bash
+python3 uploader/nomi-uploader.py --resume --recover-noreply 1:9
+```
+
+Replace `1:9` with the affected `PASS:INDEX`. This authorizes retrying that reply request without resending the confirmed prompt. **Never use this override for an uncertain network failure.** A normal interruption after a confirmed reply needs only `--resume`.
+
+**Beth live test:** A live run with an existing Beth Nomi and five converted diary volumes reported 765 planned messages. At message 9, the reflection prompt for entries 1–5 was confirmed, but the API returned `NoReply`. Explicit recovery received Beth's reflection and the uploader continued from message 10. This establishes a successful partial live recovery, **not** completion of the full pass or guaranteed durable Nomi memory.
+
+**Tests:** The WSL suite ran 40 tests, with 39 passing and one test-fixture JSONL newline error. The newline was fixed in commit `ae0ee22`; a subsequent full green run has not yet been reported. Run:
+
+```bash
+python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
+```
+
+**Known limitations:** The public API routes exercised here provide room metadata but not a verified room chat-history GET endpoint. Retain the checkpoint as the local send/reply audit record. A durable per-retry event log, long-running reply timeout controls, and full-pass live verification remain future improvements.
