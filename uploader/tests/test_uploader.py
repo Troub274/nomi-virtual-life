@@ -32,19 +32,31 @@ class UploaderTests(unittest.TestCase):
     def test_chat(self):
         section = u.parse_sections("[Talk]\nType: Chat\nDate: 10/13/2026\n\nBeth: Hello\nSam: Hi", "x.txt")[0]
         self.assertEqual(len(u.split_units(section, "US", 2026)), 1)
-    def test_beth_diary_100_entries(self):
-        fixture = ROOT / "tests" / "fixtures" / "beth_diary_v1_test.txt"
-        sections = u.parse_sections(fixture.read_text(encoding="utf-8"), str(fixture))
-        self.assertEqual(len(sections), 1)
-        self.assertEqual(sections[0]["source"], "Beth Peterson")
-        units = u.split_units(sections[0], "US", 2026)
-        self.assertEqual(len(units), 100)
-        self.assertEqual(units[0]["date"], "1998-10-11")
-        self.assertEqual(units[-1]["date"], "2005-02-06")
-        messages = u.plan_text([str(fixture)], "Beth Peterson", "", "US", 2026, 750)
-        prompts = [m for m in messages if m["kind"] == "prompt"]
-        self.assertEqual(len(prompts), 4)
-        self.assertTrue(any("episodes 76-100" in p["text"] for p in prompts))
+    def test_beth_github_archive_converter(self):
+        import importlib.util
+        import tempfile
+        import zipfile
+        script = ROOT.parent / "examples" / "beth" / "prepare_v1.py"
+        spec = importlib.util.spec_from_file_location("beth_prepare", script)
+        prep = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(prep)
+        with tempfile.TemporaryDirectory() as folder:
+            directory = pathlib.Path(folder)
+            archive = directory / "sample.zip"
+            with zipfile.ZipFile(archive, "w") as z:
+                for k in range(1, 6):
+                    content = ("ENTRY %03d — October 11, 1998\n"
+                               "I remembered the day exactly.\n") % k
+                    z.writestr("BETH%02d.TXT" % k, content)
+            report = prep.prepare(archive, directory / "converted",
+                                  reflection_every=5, verify_archive=False)
+            self.assertEqual(len(report["files"]), 5)
+            self.assertEqual(sum(x["entry_count"] for x in report["files"]), 5)
+            first = directory / "converted" / "BETH01_V1.TXT"
+            self.assertIn("Type: Journal", first.read_text())
+            self.assertIn("I remembered the day exactly.", first.read_text())
+            plan = u.plan_text([str(first)], "Beth Peterson", "", "US", 2026, 750)
+            self.assertEqual(sum(m["kind"] == "prompt" for m in plan), 1)
     def test_legacy(self):
         self.assertTrue(callable(u.legacy.main))
         self.assertTrue(callable(u.legacy.prepare_conversation_chunks))
