@@ -57,6 +57,47 @@ class UploaderTests(unittest.TestCase):
             self.assertIn("I remembered the day exactly.", first.read_text())
             plan = u.plan_text([str(first)], "Beth Peterson", "", "US", 2026, 750)
             self.assertEqual(sum(m["kind"] == "prompt" for m in plan), 1)
+    def test_beth_converter_strips_provenance_without_changing_entries(self):
+        import importlib.util
+        script = ROOT.parent / "examples" / "beth" / "prepare_v1.py"
+        spec = importlib.util.spec_from_file_location("beth_prepare_regression", script)
+        prep = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(prep)
+        diary = ("BETH PETERSON\\nPRIVATE DIARY — VOLUME 2\\n"
+                 "THIS DIARY IS FICTIONAL BACKSTORY, NOT THE UPLOADER'S BIOGRAPHY.\\n\\n"
+                 "ENTRY 101 — 2005-02-20 — Nobody Asked Me\\n"
+                 "I like when Mom doesn't try to repair me.\\n")
+        converted, numbers = prep.convert_document("BETH02.TXT", diary)
+        self.assertEqual(numbers, [101])
+        self.assertNotIn("FICTIONAL BACKSTORY", converted)
+        self.assertIn("ENTRY 101 — 2005-02-20", converted)
+        self.assertIn("I like when Mom doesn't try to repair me.", converted)
+        self.assertIn("Process Every: 5", converted)
+        self.assertEqual(converted.count("Nomi:"), 1)
+        self.assertEqual(diary.count("FICTIONAL BACKSTORY"), 1)
+
+    def test_single_custom_reflection_repeats_every_five_entries(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "beth.txt"
+            entries = "".join(
+                f"ENTRY {i:03d} — 2005-02-{i:02d}\\nMemory {i}.\\n"
+                for i in range(1, 13)
+            )
+            path.write_text(
+                "[Beth diary]\\nType: Journal\\nSource: Beth Peterson\\n"
+                "Process Every: 5\\n"
+                "Nomi: [nomi], custom reflection for episodes {first}-{last}.\\n\\n"
+                + entries, encoding="utf-8")
+            plan = u.plan_text([str(path)], "Beth Peterson", "Tester", "US", 2026, 750)
+            prompts = [m for m in plan if m["kind"] == "prompt"]
+            self.assertEqual([m["entry"] for m in prompts], [5, 10, 12])
+            self.assertEqual([m["text"] for m in prompts], [
+                "Beth Peterson, custom reflection for episodes 1-5.",
+                "Beth Peterson, custom reflection for episodes 6-10.",
+                "Beth Peterson, custom reflection for episodes 11-12.",
+            ])
+
     def test_processing_by_source_and_interval(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
