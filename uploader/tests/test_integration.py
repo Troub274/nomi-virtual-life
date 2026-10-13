@@ -88,13 +88,13 @@ class StateMachineTests(unittest.TestCase):
         with patch.object(u.legacy,"api_request",side_effect=api), \
              patch.object(u.time,"sleep") as sleeping, \
              contextlib.redirect_stderr(output):
-            status,payload=u.request_reply_with_backoff("room-001","beth-id")
+            status,payload=u.request_reply_with_backoff("room-001","beth-id",attempts=8)
         self.assertEqual(status,200)
         self.assertEqual(len(calls),3)
         self.assertEqual([x.args[0] for x in sleeping.call_args_list],[1.0,2.0])
         self.assertIn("HTTP 500",output.getvalue())
         self.assertIn("NoReply",output.getvalue())
-        self.assertIn("retry 2/8 in 1.0s",output.getvalue())
+        self.assertIn("NoReply attempt 1; retry in 1.0s",output.getvalue())
 
     def test_ambiguous_reply_failure_is_not_retried(self):
         with patch.object(u.legacy,"api_request",
@@ -116,46 +116,22 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(status,500)
         self.assertEqual(api.call_count,3)
         self.assertEqual(sleeping.call_count,2)
-        self.assertIn("retries exhausted",output.getvalue())
+        self.assertIn("test retry limit reached",output.getvalue())
 
-    def test_noreply_exhaustion_continues_upload(self):
-        fake=FakeNomi()
-        def api(path,method="GET",payload=None):
-            if path.endswith("/chat/request"):
-                fake.calls.append((path,method,payload))
-                return 500,{"type":"NoReply"}
-            return fake.api(path,method,payload)
-        with patch.object(u.legacy,"get_nomis",return_value=[{"uuid":"beth-id","name":"Beth"}]), \
-             patch.object(u.legacy,"choose_nomi",return_value={"uuid":"beth-id","name":"Beth"}), \
-             patch.object(u.legacy,"api_request",side_effect=api), \
-             patch.object(u.legacy,"wait_for_room",return_value={"uuid":"room-001"}), \
-             patch.object(u.time,"sleep"), \
-             contextlib.redirect_stdout(io.StringIO()), \
+    def test_noreply_waits_until_reply(self):
+        calls=[]
+        responses=iter([(500,{"type":"NoReply"}),(500,{"type":"NoReply"}),
+                        (200,{"replyMessage":{"messageText":"Beth remembered"}})])
+        def api(*args):
+            calls.append(args)
+            return next(responses)
+        with patch.object(u.legacy,"api_request",side_effect=api), \
+             patch.object(u.time,"sleep") as sleeping, \
              contextlib.redirect_stderr(io.StringIO()):
-            u.upload(self.args())
-        events=u.records(self.checkpoint)
-        self.assertEqual(sum(e["event"]=="reply_no_reply" for e in events),2)
-        self.assertTrue(self.completion.exists())
-        self.assertEqual(len(fake.calls_to("/chat/request")),16)
-
-    def test_resume_after_noreply_does_not_request_again(self):
-        fake=FakeNomi()
-        def api(path,method="GET",payload=None):
-            if path.endswith("/chat/request"):
-                fake.calls.append((path,method,payload))
-                return 500,{"type":"NoReply"}
-            return fake.api(path,method,payload)
-        with patch.object(u.legacy,"get_nomis",return_value=[{"uuid":"beth-id","name":"Beth"}]), \
-             patch.object(u.legacy,"choose_nomi",return_value={"uuid":"beth-id","name":"Beth"}), \
-             patch.object(u.legacy,"api_request",side_effect=api), \
-             patch.object(u.legacy,"wait_for_room",return_value={"uuid":"room-001"}), \
-             patch.object(u.time,"sleep"), \
-             contextlib.redirect_stdout(io.StringIO()), \
-             contextlib.redirect_stderr(io.StringIO()):
-            u.upload(self.args())
-        resumed=FakeNomi()
-        self.run_upload(resumed,self.args(resume=True))
-        self.assertEqual(resumed.calls,[])
+            status,response=u.request_reply_with_backoff("room-001","beth-id")
+        self.assertEqual(status,200)
+        self.assertEqual(len(calls),3)
+        self.assertEqual(sleeping.call_count,2)
 
     def test_complete_upload_captures_all_replies(self):
         fake = FakeNomi()
