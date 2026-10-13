@@ -377,16 +377,28 @@ def upload(args):
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
     reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
-    reply_no_reply={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_no_reply"}
-    # Recover the known first-run NoReply interruption. Only an explicit
-    # user-verified legacy NoReply may be treated as a retryable wait.
-    legacy_no_reply=(reply_attempts-reply_committed-reply_no_reply) & confirmed
-    if legacy_no_reply:
-        print("Recovering pending reflection request(s): %s"%
-              sorted(legacy_no_reply),flush=True)
-    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-reply_no_reply-legacy_no_reply)
+    # Never infer NoReply from a bare reply_attempt. Require an explicit
+    # operator acknowledgement for legacy checkpoints lacking a result event.
+    recovery=set()
+    for token in getattr(args,"recover_noreply",[]) or []:
+        try:
+            p_str,i_str=token.split(":",1)
+            key=(int(p_str),int(i_str))
+        except (ValueError,TypeError):
+            raise ValueError("--recover-noreply expects PASS:INDEX, e.g. 1:9")
+        if key not in reply_attempts or key not in confirmed or key in reply_committed:
+            raise ValueError("No pending confirmed reflection at %s"%token)
+        if any(r.get("event")=="reply_uncertain" and
+               (r.get("pass"),r.get("index"))==key for r in old):
+            raise ValueError("Cannot recover ambiguous reply outcome at %s"%token)
+        recovery.add(key)
+    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-recovery)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
+    for p,i in sorted(recovery):
+        record(cp,{"event":"reply_recovery_authorized","pass":p,"index":i,
+                   "reason":"operator confirmed previous explicit NoReply"})
+        print("Resuming reflection after confirmed NoReply: pass %d message %d"%(p,i),flush=True)
     for p in range(1,passes+1):
         for i,m in enumerate(messages,1):
             key=(p,i)
@@ -533,6 +545,7 @@ def main(argv=None):
     parser.add_argument("--version",action="version",version=VERSION)
     parser.add_argument("--utility",action="store_true")
     parser.add_argument("--resume",action="store_true")
+    parser.add_argument("--recover-noreply",action="append",default=[],metavar="PASS:INDEX",help="Authorize retry of a legacy checkpoint reply known to have returned NoReply")
     parser.add_argument("--dry-run",action="store_true")
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
@@ -549,6 +562,7 @@ def main(argv=None):
     args=parser.parse_args(argv)
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
+    if args.recover_noreply and not args.resume: parser.error("--recover-noreply requires --resume")
     if args.utility: utilities()
     else: upload(args)
 
