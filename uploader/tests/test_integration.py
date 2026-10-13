@@ -118,6 +118,39 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(sleeping.call_count,2)
         self.assertIn("test retry limit reached",output.getvalue())
 
+    def test_not_ready_waits_until_reply(self):
+        responses=iter([(500,{"type":"NoReply"}),
+                        (400,{"type":"RoomNomiNotReadyForMessage"}),
+                        (200,{"replyMessage":{"messageText":"Ready"}})])
+        with patch.object(u.legacy,"api_request",side_effect=lambda *a: next(responses)) as api, \
+             patch.object(u.time,"sleep") as sleeping, \
+             contextlib.redirect_stderr(io.StringIO()) as output:
+            status,_=u.request_reply_with_backoff("room-001","beth-id")
+        self.assertEqual(status,200)
+        self.assertEqual(api.call_count,3)
+        self.assertEqual([c.args[0] for c in sleeping.call_args_list],[1.0,2.0])
+        self.assertIn("RoomNomiNotReadyForMessage",output.getvalue())
+
+    def test_resume_recorded_not_ready_reply(self):
+        plan=u.plan_text([str(self.diary)],"Beth","Tester","US",2026,750)
+        first_prompt=next(i for i,m in enumerate(plan,1) if m["kind"]=="prompt")
+        self.run_upload(FakeNomi(),self.args())
+        events=[e for e in u.records(self.checkpoint)
+                if not (e.get("pass")==1 and e.get("index")>first_prompt)
+                and not (e.get("pass")==1 and e.get("index")==first_prompt
+                         and e["event"]=="reply_committed")]
+        events.append({"event":"reply_uncertain","pass":1,"index":first_prompt,
+                       "http_status":400,
+                       "api_response":{"type":"RoomNomiNotReadyForMessage"}})
+        self.checkpoint.write_text("".join(json.dumps(e)+"\n" for e in events),
+                                   encoding="utf-8")
+        self.completion.unlink()
+        fake=FakeNomi()
+        self.run_upload(fake,self.args(resume=True))
+        self.assertEqual(len(fake.calls_to("/chat/request")),2)
+        self.assertEqual(len(fake.calls_to("/chat")),len(plan)-first_prompt)
+        self.assertTrue(self.completion.exists())
+
     def test_noreply_waits_until_reply(self):
         calls=[]
         responses=iter([(500,{"type":"NoReply"}),(500,{"type":"NoReply"}),
