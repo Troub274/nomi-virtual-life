@@ -139,7 +139,16 @@ def split_units(section, order, session_year):
     kind=section["type"]
     lines=section["lines"]
     if kind in ("knowledge","instructions"):
-        return [{"text":"\n".join(lines).strip(),"date":parse_date(section["date"],order,session_year) if section["date"] else None}]
+        # Blank-line paragraphs form processable units without rewriting source text.
+        blocks=[]; buf=[]
+        for line in lines:
+            if not line.strip() and buf:
+                blocks.append("\n".join(buf).strip()); buf=[]
+            elif line.strip():
+                buf.append(line)
+        if buf: blocks.append("\n".join(buf).strip())
+        date=parse_date(section["date"],order,session_year) if section["date"] else None
+        return [{"text":block,"date":date,"label":str(i)} for i,block in enumerate(blocks,1)]
     units=[]; buf=[]; date=section["date"]; label=None
     def flush():
         nonlocal buf
