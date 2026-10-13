@@ -285,7 +285,7 @@ def upload(args):
             cp.rename(cp.with_name(cp.name+"."+stamp+".archive"))
             done=Path(args.completion)
             if done.exists():
-                done.rename(done.with_name(done.name+"."+stamp+".archive"))
+                done.rename(done.with_name(done.name+"."+stamp+".archive"))\n            replies=Path(args.replies)\n            if replies.exists():\n                replies.rename(replies.with_name(replies.name+"."+stamp+".archive"))
         if args.room:
             room=args.room
             r=legacy.get_room(room)
@@ -334,6 +334,17 @@ def upload(args):
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
                 print("%s replied after pass %d message %d: %s"%
                       (nomi["name"],p,i,str(body)[:300].replace("\\n"," ")))
+    final_events=records(cp)
+    reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
+    transcript=Path(args.replies)
+    # Derived transcript: durable source of truth remains the append-only checkpoint.
+    with open(transcript,"w",encoding="utf-8") as out:
+        for row in reply_rows:
+            reply=row["reply"]
+            body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
+            out.write("Pass %d, prompt message %d — %s\\n"%(row["pass"],row["index"],nomi["name"]))
+            out.write("PROMPT: "+row["prompt"]+"\\n")
+            out.write("REPLY: "+str(body)+"\\n\\n")
     Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
@@ -375,7 +386,7 @@ def main(argv=None):
     parser.add_argument("--date-format",choices=["AUTO","US","EU"],default="AUTO")
     parser.add_argument("--delay",type=float,default=1)
     parser.add_argument("--checkpoint",default="nomi_uploader_checkpoint.jsonl")
-    parser.add_argument("--completion",default="nomi_uploader_completed.json")
+    parser.add_argument("--completion",default="nomi_uploader_completed.json")\n    parser.add_argument("--replies",default="nomi_uploader_replies.txt")
     args=parser.parse_args(argv)
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
     if args.utility: utilities()
