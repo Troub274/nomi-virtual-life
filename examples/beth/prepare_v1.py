@@ -29,6 +29,12 @@ def diary_sources(archive):
         return [(name,found[name]) for name in required]
 
 def convert_document(name,text,reflection_every=5):
+    # Keep provenance in the manifest, not in content sent to Nomi.
+    text=re.sub(
+        r"(?im)^\\s*THIS DIARY IS FICTIONAL BACKSTORY, NOT THE UPLOADER'S BIOGRAPHY\\.\\s*\\n?",
+        "",
+        text,
+    )
     if reflection_every<1: raise ValueError("reflection_every must be >= 1")
     numbers=[int(m.group(1)) for m in ENTRY_LINE.finditer(text)]
     if not numbers: raise ValueError(name+": no numbered diary entries recognized")
