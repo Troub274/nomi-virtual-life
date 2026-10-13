@@ -109,7 +109,7 @@ class UploaderTests(unittest.TestCase):
         from unittest.mock import patch
         with tempfile.TemporaryDirectory() as tmp:
             cp=pathlib.Path(tmp)/"nomi_uploader_checkpoint.jsonl"
-            cp.write_text(json.dumps({"event":"start","room_uuid":"protected"})+"\\n",
+            cp.write_text(json.dumps({"event":"start","room_uuid":"protected"})+"\n",
                           encoding="utf-8")
             with patch.object(u.legacy,"list_rooms",return_value=[
                     {"uuid":"protected","name":"UPLOADER::Beth","status":"Ready"},
