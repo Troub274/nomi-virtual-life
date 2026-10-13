@@ -92,6 +92,32 @@ class UploaderTests(unittest.TestCase):
             self.assertEqual(prompts[0]["text"],"Beth, test System.")
             self.assertNotIn("learn, summarize",messages[0]["text"])
 
+    def test_export_chat_processing(self):
+        from unittest.mock import patch
+        with patch.object(u.legacy,"prepare_conversation_chunks",return_value=[
+                {"text":"Historical conversation transcript | 2026-01-01 | Beth: Hello"},
+                {"text":"Historical conversation transcript | 2026-01-02 | User: Hi"}]):
+            messages=u.plan_text(["chat.json"],"Beth","User","US",2026,750,1)
+        self.assertEqual([m["kind"] for m in messages],
+                         ["intro","content","prompt","content","prompt"])
+        self.assertTrue(all("conversation episodes" in m["text"]
+                            for m in messages if m["kind"]=="prompt"))
+
+    def test_room_filter_and_protection(self):
+        import tempfile
+        import json
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            cp=pathlib.Path(tmp)/"nomi_uploader_checkpoint.jsonl"
+            cp.write_text(json.dumps({"event":"start","room_uuid":"protected"})+"\\n",
+                          encoding="utf-8")
+            with patch.object(u.legacy,"list_rooms",return_value=[
+                    {"uuid":"protected","name":"UPLOADER::Beth","status":"Ready"},
+                    {"uuid":"other","name":"UPLOADER::Maya","status":"Failed"}]):
+                rooms,protected=u.room_management(abandoned=True,checkpoint_dir=tmp)
+            self.assertEqual([r["uuid"] for r in rooms],["other"])
+            self.assertIn("protected",protected)
+
     def test_legacy(self):
         self.assertTrue(callable(u.legacy.main))
         self.assertTrue(callable(u.legacy.prepare_conversation_chunks))
