@@ -84,3 +84,13 @@ Custom `Nomi:` prompts remain independent of the automatic interval and can be s
 Every processing prompt triggers a separate `/rooms/{room}/chat/request` call. Successful responses are recorded in the append-only checkpoint with the full API payload. At completion, `--replies` (default `nomi_uploader_replies.txt`) receives a readable transcript. A send or reply request with an uncertain outcome halts without retrying the POST. On resume, completed prompt replies are not requested again.
 
 **Release status:** The code has not yet been verified against a live Nomi API. Do not use it for irreplaceable production data until the full mocked API regression suite and a live disposable-Nomi test pass.
+
+## Interactive operation and room management
+
+Running `python uploader/nomi-uploader.py` in an interactive terminal now opens a text menu for upload, resume, dry-run and room management. `--utility` opens the room manager directly. The manager can list all rooms, filter by Nomi, filter abandoned/inactive/failed statuses, inspect individual rooms and delete one or many with explicit confirmation and individual UUID acknowledgement. Incomplete upload checkpoints found in the selected checkpoint directory protect their rooms from deletion. **Protection is directory-scoped:** keep all checkpoint files in that directory and do not use bulk deletion with checkpoints stored elsewhere.
+
+JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prompts as well as the preserved v0.85 conversation turn parsing. Automatic room creation uses a single POST rather than retrying uncertain creation requests.
+
+### Remaining release gates
+
+The implementation remains **experimental**. The full regression suite has not been executed and a live Nomi disposable-room integration test has not been performed. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
