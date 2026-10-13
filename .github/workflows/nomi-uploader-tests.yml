@@ -3,13 +3,18 @@ on:
   push:
     paths:
       - 'uploader/**'
+      - 'examples/beth/**'
       - '.github/workflows/nomi-uploader-tests.yml'
   pull_request:
     paths:
       - 'uploader/**'
+      - 'examples/beth/**'
+      - '.github/workflows/nomi-uploader-tests.yml'
 jobs:
   tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.11', '3.13']
@@ -19,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Regression tests
-        run: python -m unittest discover -s uploader/tests -v
       - name: Syntax check
-        run: python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py
+        run: python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py examples/beth/prepare_v1.py uploader/tests/test_uploader.py uploader/tests/test_integration.py uploader/tests/test_specification.py
+      - name: Offline unit and mocked integration tests
+        run: python -m unittest discover -s uploader/tests -p 'test_*.py' -v
