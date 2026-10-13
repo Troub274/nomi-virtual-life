@@ -190,7 +190,10 @@ def plan_text(files, nomi, user, order, year, chunk_bytes):
         path=Path(filename)
         if path.suffix.lower() in (".zip",".json"):
             # Existing export parser is retained verbatim in legacy_v085.
-            raise ValueError("Nomi ZIP/JSON exports: use --legacy --mode conversation for now; v1 native export adapter is pending")
+            rows=legacy.prepare_conversation_chunks([path],chunk_bytes)
+            for row in rows:
+                messages.append({"text":row["text"],"kind":"content","file":filename,"section":"Nomi export"})
+            continue
         for section in parse_sections(read_text(path),filename):
             source=section["source"] or (nomi if section["type"]=="journal" else "System")
             units=split_units(section,order,year)
@@ -313,7 +316,12 @@ def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
     if "--legacy" in argv:
         argv.remove("--legacy")
-        return legacy.main(argv)
+        saved=sys.argv
+        try:
+            sys.argv=[saved[0]]+argv
+            return legacy.main()
+        finally:
+            sys.argv=saved
     parser=argparse.ArgumentParser(description="Nomi Uploader v1.0")
     parser.add_argument("files",nargs="*")
     parser.add_argument("--version",action="version",version=VERSION)
