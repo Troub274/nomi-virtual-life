@@ -30,10 +30,10 @@ def diary_sources(archive):
 
 def convert_document(name,text,reflection_every=5):
     # Keep provenance in the manifest, not in content sent to Nomi.
-    text=re.sub(
-        r"(?im)^\\s*THIS DIARY IS FICTIONAL BACKSTORY, NOT THE UPLOADER'S BIOGRAPHY\\.\\s*\\n?",
-        "",
-        text,
+    text="\n".join(
+        line for line in text.split("\n")
+        if line.strip().casefold() !=
+        "this diary is fictional backstory, not the uploader's biography."
     )
     if reflection_every<1: raise ValueError("reflection_every must be >= 1")
     numbers=[int(m.group(1)) for m in ENTRY_LINE.finditer(text)]
