@@ -12,10 +12,11 @@ from test_uploader import u
 
 
 class FakeNomi:
-    def __init__(self, fail_at=None, malformed_reply=False):
+    def __init__(self, fail_at=None, malformed_reply=False, fail_reply=False):
         self.calls = []
         self.fail_at = fail_at
         self.malformed_reply = malformed_reply
+        self.fail_reply = fail_reply
         self.counter = 0
 
     def api(self, path, method="GET", payload=None):
@@ -26,6 +27,8 @@ class FakeNomi:
         if path == "/rooms":
             return 200, {"uuid": "room-001"}
         if path.endswith("/chat/request"):
+            if self.fail_reply:
+                return 503, {"error": "synthetic reply transport failure"}
             if self.malformed_reply:
                 return 200, {"unexpected": True}
             return 200, {"replyMessage": {"messageText": "Recollection %d" % self.counter,
@@ -104,9 +107,8 @@ class StateMachineTests(unittest.TestCase):
         self.assertFalse(self.completion.exists())
 
     def test_failed_reply_is_not_retried(self):
-        # Intro + two journal entries + first reply = fifth API call,
-        # accounting for initial room creation.
-        fake = FakeNomi(fail_at=5)
+        # Fail the reply endpoint itself, regardless of preceding API calls.
+        fake = FakeNomi(fail_reply=True)
         with self.assertRaises(RuntimeError):
             self.run_upload(fake, self.args())
         events = u.records(self.checkpoint)
