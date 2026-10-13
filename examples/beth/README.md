@@ -17,3 +17,7 @@ Before import, create a new standard Nomi named Beth, age 38, height 5 feet 8 in
 Read the [Beth setup guide](../../rehydration/BETH_TEST_LOAD.md) and the [operator guide](../../rehydration/OPERATOR_GUIDE.md) before running.
 
 Archive SHA-256: `8139daf9d070120f91b2db27aaa935b639c18f5ba567c799ae987efa7f4fa3af`.
+
+## New v1.0 uploader test
+
+The original v0.85 bootstrap above is unchanged. To prepare and test **the same five GitHub diary files** with the v1.0 uploader, use [README_V1.md](README_V1.md), [prepare_v1.py](prepare_v1.py), and [TEST_V1.BAT](TEST_V1.BAT). `START_V1.BAT` performs a live experimental upload; `RESUME_V1.BAT` resumes its checkpoint.
