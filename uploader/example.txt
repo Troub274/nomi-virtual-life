@@ -1,0 +1,31 @@
+[General Relativity]
+Type: Knowledge
+Source: Research
+Nomi: Please retain this knowledge for future use.
+
+Gravity is described by general relativity as spacetime curvature.
+
+[Preferences]
+Type: Instructions
+Source: Yehoshua
+Date: July 20
+
+Do not call Yehoshua Captain.
+
+[Beth's Childhood]
+Type: Journal
+Source: Beth
+
+ENTRY 001 — October 11, 1998
+I turned ten today. Dad gave me a blue diary.
+
+ENTRY 002 — October 14, 1998
+Maya came over after school.
+
+[Conversation]
+Type: Chat
+Source: Cottage
+Date: 10/13/2026
+
+Yehoshua: Did you finish your book?
+Beth: Almost.
