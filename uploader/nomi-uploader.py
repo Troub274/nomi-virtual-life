@@ -300,7 +300,7 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
                 print("Nomi API error: %s; test retry limit reached"%error,
                       file=sys.stderr,flush=True)
                 return status,payload
-            print("Nomi API error: %s; NoReply attempt %d; retry in %.1fs"%
+            print("Nomi API error: %s; %s attempt %d; retry in %.1fs"%
                   (error,legacy.err_type(payload),n,delay),file=sys.stderr,flush=True)
             time.sleep(delay)
             delay=min(delay*2,30)
