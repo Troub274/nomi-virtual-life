@@ -259,7 +259,9 @@ def upload(args):
         init=old[0]
         nomi={"uuid":init["nomi_uuid"],"name":init["nomi_name"]}
         year=init["year"]; order=init["order"]; room=init["room_uuid"]
-        files=init["files"]; passes=init["passes"]\n        args.user=init.get("user","")\n        args.chunk_bytes=init.get("chunk_bytes",750)
+        files=init["files"]; passes=init["passes"]
+        args.user=init.get("user","")
+        args.chunk_bytes=init.get("chunk_bytes",750)
     else:
         nomi=legacy.choose_nomi(legacy.get_nomis()) if not args.dry_run else {"name":args.nomi or "Nomi","uuid":"DRYRUN"}
         year=dt.date.today().year; order=regional_order(args.date_format)
@@ -273,6 +275,18 @@ def upload(args):
         for i,m in enumerate(messages,1): print("%4d %-8s %s / %s: %s"%(i,m["kind"],m["file"],m["section"],m["text"][:130].replace("\n"," | ")))
         return
     if not old:
+        if cp.exists() and cp.stat().st_size:
+            previous=records(cp)
+            prevstart=previous[0] if previous else {}
+            confirmed_count=sum(1 for r in previous if r.get("event")=="confirmed")
+            expected=prevstart.get("passes",0)*len(messages)
+            if not prevstart or confirmed_count!=expected:
+                raise ValueError("Unfinished checkpoint exists; use --resume or a different --checkpoint")
+            stamp=dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+            cp.rename(cp.with_name(cp.name+"."+stamp+".archive"))
+            done=Path(args.completion)
+            if done.exists():
+                done.rename(done.with_name(done.name+"."+stamp+".archive"))
         if args.room:
             room=args.room
             r=legacy.get_room(room)
