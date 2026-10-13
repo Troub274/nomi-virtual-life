@@ -55,3 +55,32 @@ Type defaults to Knowledge; source defaults to System except Journal (selected N
 Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion. Completion confirms API transmission, **not** long-term memory consolidation.
 
 **Caution:** This is an initial v1.0 implementation. Validate dry runs and use a test Nomi before production. API responses, live room creation, and legacy resume compatibility have not yet been integration-tested against a live Nomi service.
+
+## Type-aware processing and response capture
+
+Use `--process-every N` to ask for an analysis or recollection after every N complete units. A section may override the interval with `Process Every: N`; `0` disables automatic processing for that section. A trailing partial group is also processed. Knowledge and Instructions are grouped by nonempty paragraphs, Journal by dated entries, and Chat by dated conversation episodes. The instruction varies with the type and source: personal journals are autobiographical, third-party journals remain attributed to their authors, conversations preserve speaker attribution, knowledge is summarized, and instructions are reviewed for application.
+
+```text
+[My diary]
+Type: Journal
+Source: Beth
+Process Every: 5
+
+ENTRY 001 — October 11, 1998
+Today I turned ten.
+
+[Reference facts]
+Type: Knowledge
+Source: System
+Process Every: 10
+
+First fact.
+
+Second fact.
+```
+
+Custom `Nomi:` prompts remain independent of the automatic interval and can be scheduled with `episodes 1-5` / `entries 1-5`. `Nomi Mode: Replace` suppresses the default introductory prompt, not explicit periodic processing; use `Process Every: 0` to suppress the latter.
+
+Every processing prompt triggers a separate `/rooms/{room}/chat/request` call. Successful responses are recorded in the append-only checkpoint with the full API payload. At completion, `--replies` (default `nomi_uploader_replies.txt`) receives a readable transcript. A send or reply request with an uncertain outcome halts without retrying the POST. On resume, completed prompt replies are not requested again.
+
+**Release status:** The code has not yet been verified against a live Nomi API. Do not use it for irreplaceable production data until the full mocked API regression suite and a live disposable-Nomi test pass.
