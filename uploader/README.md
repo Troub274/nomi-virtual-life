@@ -11,7 +11,7 @@ python uploader/nomi-uploader.py --passes 3 uploader/example.txt
 python uploader/nomi-uploader.py --resume
 python uploader/nomi-uploader.py --utility
 python uploader/nomi-uploader.py --legacy --mode journal diary.txt
-python -m unittest discover -s uploader/tests -v
+python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
 ```
 
 Each new invocation creates a fresh upload run; repeated documents are intentional. `--resume` continues a specific checkpoint. To begin a new run after completion, use a new checkpoint path (e.g. `--checkpoint second_run.jsonl`), or archive the previous checkpoint. This distinction prevents accidental duplicate sends during recovery.
@@ -54,11 +54,11 @@ Type defaults to Knowledge; source defaults to System except Journal (selected N
 
 Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion. Completion confirms API transmission, **not** long-term memory consolidation.
 
-**Caution:** This is an initial v1.0 implementation. Validate dry runs and use a test Nomi before production. API responses, live room creation, and legacy resume compatibility have not yet been integration-tested against a live Nomi service.
+**Caution:** This remains an experimental v1.0 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
 
 ## Type-aware processing and response capture
 
-Use `--process-every N` to ask for an analysis or recollection after every N complete units. A section may override the interval with `Process Every: N`; `0` disables automatic processing for that section. A trailing partial group is also processed. Knowledge and Instructions are grouped by nonempty paragraphs, Journal by dated entries, and Chat by dated conversation episodes. The instruction varies with the type and source: personal journals are autobiographical, third-party journals remain attributed to their authors, conversations preserve speaker attribution, knowledge is summarized, and instructions are reviewed for application.
+Use `--process-every N` to ask for an analysis or recollection after every N complete units. A section's `Process Every: N` **overrides** the command-line `--process-every N` default; `0` disables automatic processing for that section. A trailing partial group is also processed. Knowledge and Instructions are grouped by nonempty paragraphs, Journal by dated entries, and Chat by dated conversation episodes. The instruction varies with the type and source: personal journals are autobiographical, third-party journals remain attributed to their authors, conversations preserve speaker attribution, knowledge is summarized, and instructions are reviewed for application.
 
 ```text
 [My diary]
@@ -83,7 +83,7 @@ Custom `Nomi:` prompts remain independent of the automatic interval and can be s
 
 Every processing prompt triggers a separate `/rooms/{room}/chat/request` call. Successful responses are recorded in the append-only checkpoint with the full API payload. At completion, `--replies` (default `nomi_uploader_replies.txt`) receives a readable transcript. A send or reply request with an uncertain outcome halts without retrying the POST. On resume, completed prompt replies are not requested again.
 
-**Release status:** The code has not yet been verified against a live Nomi API. Do not use it for irreplaceable production data until the full mocked API regression suite and a live disposable-Nomi test pass.
+**Release status:** Partial live Nomi API integration has been verified through Beth's test upload and recovery. The full-pass result remains pending; do not treat transmission as guaranteed long-term memory retention.
 
 ## Interactive operation and room management
 
@@ -93,14 +93,14 @@ JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prom
 
 ### Remaining release gates
 
-The implementation remains **experimental**. The full regression suite has not been executed and a live Nomi disposable-room integration test has not been performed. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
+The implementation remains **experimental**. The 42-test suite has been executed in WSL, with four retry-logging formatting errors reported and subsequently corrected in commit `8216a8e`; a subsequent green rerun has not been provided. A complete live pass has not been verified. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
 
 
 ## Live operation and recovery (October 2026)
 
 **Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-bytes` limit. The final partial group is processed too.
 
-When the API explicitly returns HTTP 500 `NoReply`, the reply request is repeated with exponential backoff: **1, 2, 4, 8, 16, then 30 seconds, capped at 30 seconds thereafter, until a reply arrives**. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
+When the API explicitly returns `NoReply`, `RoomNomiNotReadyForMessage`, `RoomStillCreating`, or `TooManyRequests`, the reply request is repeated with exponential backoff: **1, 2, 4, 8, 16, then 30 seconds, capped at 30 seconds thereafter, until a reply arrives**. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
 
 **Safety:** Successful document sends are checkpointed and are not resent on resume. Ambiguous reply failures (transport timeout, unexpected HTTP errors, malformed successful response) stop the upload rather than automatically repeating a possibly successful POST. `NoReply` is an explicit absence of a returned response; it does not prove the model completed internal processing. Waiting for a returned response is the uploader's configured synchronization rule.
 
@@ -114,10 +114,12 @@ Replace `1:9` with the affected `PASS:INDEX`. This authorizes retrying that repl
 
 **Beth live test:** A live run with an existing Beth Nomi and five converted diary volumes reported 765 planned messages. At message 9, the reflection prompt for entries 1–5 was confirmed, but the API returned `NoReply`. Explicit recovery received Beth's reflection and the uploader continued from message 10. This establishes a successful partial live recovery, **not** completion of the full pass or guaranteed durable Nomi memory.
 
-**Tests:** The WSL suite ran 40 tests, with 39 passing and one test-fixture JSONL newline error. The newline was fixed in commit `ae0ee22`; a subsequent full green run has not yet been reported. Run:
+**Tests:** The WSL suite ran 42 tests; the latest shared output reported four errors caused by one retry-log format mismatch. That mismatch was corrected in commit `8216a8e`. A subsequent full green test run has not yet been provided. Run:
 
 ```bash
 python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
 ```
 
 **Known limitations:** The public API routes exercised here provide room metadata but not a verified room chat-history GET endpoint. Retain the checkpoint as the local send/reply audit record. A durable per-retry event log, long-running reply timeout controls, and full-pass live verification remain future improvements.
+
+**Checkpoint recovery for recorded readiness errors:** When an earlier run recorded an explicit `reply_uncertain` event whose API payload identifies one of the recognized not-ready error types, the current uploader can recover that request on plain `--resume`. An ambiguous network failure is not eligible for this automatic recovery. `--recover-noreply PASS:INDEX` remains the manual option for older checkpoints with an unclassified pending reply attempt; use it only when the operator knows the earlier response was explicitly `NoReply`.
