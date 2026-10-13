@@ -35,21 +35,14 @@ def convert_document(name,text,reflection_every=5):
     # Keep the original numbering; the uploader's range syntax uses local entry positions.
     if len(numbers)!=len(set(numbers)):
         raise ValueError(name+": duplicate entry numbers")
-    prompts=[]
-    for first in range(1,len(numbers)+1,reflection_every):
-        last=min(first+reflection_every-1,len(numbers))
-        prompts.append(
-            "Nomi: [nomi], please relive your own journal episodes %d-%d "
-            "(original diary entries %d-%d) in chronological order. "
-            "Reflect on the experiences and feelings, and preserve your "
-            "memories as your own."%(first,last,numbers[first-1],numbers[last-1]))
+    # The uploader generates one periodic reflection after every N diary entries.
+    # Do not embed episode-specific prompts in the document.
     header=(
-        "[Beth Peterson — %s]\n"
+        f"[Beth Peterson — {name}]\n"
         "Type: Journal\n"
         "Source: Beth Peterson\n"
-        "Process Every: 0\n"
-        + "\n".join(prompts)+"\n\n"
-    )%name
+        f"Process Every: {reflection_every}\n\n"
+    )
     return header+text, numbers
 
 def prepare(archive, output, reflection_every=5, verify_archive=True):
