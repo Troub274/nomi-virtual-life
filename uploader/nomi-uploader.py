@@ -259,7 +259,7 @@ def upload(args):
         init=old[0]
         nomi={"uuid":init["nomi_uuid"],"name":init["nomi_name"]}
         year=init["year"]; order=init["order"]; room=init["room_uuid"]
-        files=init["files"]; passes=init["passes"]
+        files=init["files"]; passes=init["passes"]\n        args.user=init.get("user","")\n        args.chunk_bytes=init.get("chunk_bytes",750)
     else:
         nomi=legacy.choose_nomi(legacy.get_nomis()) if not args.dry_run else {"name":args.nomi or "Nomi","uuid":"DRYRUN"}
         year=dt.date.today().year; order=regional_order(args.date_format)
@@ -279,7 +279,7 @@ def upload(args):
             if not legacy.room_contains_nomi(r,nomi["uuid"]):
                 raise ValueError("Room is not associated with selected Nomi")
         else: room=create_upload_room(nomi)
-        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest})
+        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes})
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
