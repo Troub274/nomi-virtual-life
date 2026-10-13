@@ -283,29 +283,30 @@ def records(path):
     if not path.exists(): return []
     return [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
 
-def request_reply_with_backoff(room, nomi_uuid, attempts=8, base_delay=1.0):
-    """Retry only explicit NoReply responses, never ambiguous transport failures."""
+def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
+    """Wait for a reply through explicit NoReply responses; stop on ambiguous errors."""
     delay=base_delay
-    for n in range(1,attempts+1):
+    n=0
+    while True:
+        n+=1
         status,payload=legacy.api_request("/rooms/"+room+"/chat/request","POST",
                                           {"nomiUuid":nomi_uuid})
         if legacy.ok(status):
             return status,payload
         error=legacy.err_text("request reply",status,payload)
-        # A server-side NoReply is an explicit non-reply; other POST failures
-        # may have succeeded and are unsafe to repeat automatically.
-        if status==500 and legacy.err_type(payload)=="NoReply" and n<attempts:
-            print("Nomi API error: %s; retry %d/%d in %.1fs"%
-                  (error,n+1,attempts,delay),file=sys.stderr,flush=True)
+        if status==500 and legacy.err_type(payload)=="NoReply":
+            if attempts is not None and n>=attempts:
+                print("Nomi API error: %s; test retry limit reached"%error,
+                      file=sys.stderr,flush=True)
+                return status,payload
+            print("Nomi API error: %s; NoReply attempt %d; retry in %.1fs"%
+                  (error,n,delay),file=sys.stderr,flush=True)
             time.sleep(delay)
             delay=min(delay*2,30)
             continue
-        print("Nomi API error: %s; %s"%
-              (error,"NoReply retries exhausted" if status==500 and
-               legacy.err_type(payload)=="NoReply" else
-               "request outcome uncertain; not retrying"),file=sys.stderr,flush=True)
+        print("Nomi API error: %s; request outcome uncertain; not retrying"%error,
+              file=sys.stderr,flush=True)
         return status,payload
-    raise AssertionError("unreachable")
 
 
 def create_upload_room(nomi):
@@ -349,7 +350,7 @@ def upload(args):
             expected=prevstart.get("passes",0)*len(messages)
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
-            reply_count=sum(1 for r in previous if r.get("event") in ("reply_committed","reply_no_reply"))
+            reply_count=sum(1 for r in previous if r.get("event")=="reply_committed")
             if not prevstart or confirmed_count!=expected or reply_count<reply_expected or \
                any(r.get("event") in ("attempt","reply_attempt") and
                    (r.get("pass"),r.get("index")) not in
@@ -377,16 +378,13 @@ def upload(args):
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
     reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
     reply_no_reply={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_no_reply"}
-    # An older run may have stopped on an explicit NoReply without recording
-    # the result. A confirmed prompt plus an outstanding reply_attempt is
-    # recoverable as a missing response, not as an unsent diary message.
+    # Recover the known first-run NoReply interruption. Only an explicit
+    # user-verified legacy NoReply may be treated as a retryable wait.
     legacy_no_reply=(reply_attempts-reply_committed-reply_no_reply) & confirmed
-    for p,i in sorted(legacy_no_reply):
-        record(cp,{"event":"reply_no_reply","pass":p,"index":i,
-                   "reason":"legacy reply attempt ended with explicit NoReply; no response recorded"})
-        print("Recovering pass %d message %d: prior NoReply; continuing without resending"%(p,i),flush=True)
-    reply_no_reply |= legacy_no_reply
-    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-reply_no_reply)
+    if legacy_no_reply:
+        print("Recovering pending reflection request(s): %s"%
+              sorted(legacy_no_reply),flush=True)
+    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-reply_no_reply-legacy_no_reply)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
     for p in range(1,passes+1):
@@ -403,18 +401,12 @@ def upload(args):
                            "kind":m["kind"],"api_response":response})
                 print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
                 if args.delay: time.sleep(args.delay)
-            if m["kind"]=="prompt" and key not in reply_committed and key not in reply_no_reply:
+            if m["kind"]=="prompt" and key not in reply_committed:
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 s,response=request_reply_with_backoff(room,nomi["uuid"])
                 if not legacy.ok(s):
-                    if s==500 and legacy.err_type(response)=="NoReply":
-                        record(cp,{"event":"reply_no_reply","pass":p,"index":i,
-                                   "http_status":s,"api_response":response})
-                        print("Pass %d message %d: NoReply after retries; prompt delivered, continuing"%(p,i),flush=True)
-                        reply_no_reply.add(key)
-                        continue
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
                                "http_status":s,"api_response":response})
                     raise RuntimeError("Reply request outcome uncertain: "+
