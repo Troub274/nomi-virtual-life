@@ -397,19 +397,85 @@ def upload(args):
     Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
-def utilities():
+def active_room_ids(checkpoint_dir="."):
+    protected=set()
+    for path in Path(checkpoint_dir).glob("*.jsonl"):
+        try:
+            events=records(path)
+            if not events or events[0].get("event")!="start": continue
+            start=events[0]
+            complete=(path.with_name("nomi_uploader_completed.json").exists())
+            if not complete: protected.add(start["room_uuid"])
+        except (OSError,ValueError,KeyError):
+            continue
+    return protected
+
+def room_management(nomi_filter=None, abandoned=False, checkpoint_dir="."):
     rooms=legacy.list_rooms()
+    if nomi_filter:
+        nomis=legacy.get_nomis()
+        matches=[n for n in nomis if nomi_filter.casefold() in n.get("name","").casefold()]
+        ids={n["uuid"] for n in matches}
+        rooms=[r for r in rooms if any(legacy.room_contains_nomi(r,uid) for uid in ids)]
+    if abandoned:
+        rooms=[r for r in rooms if str(r.get("status","")).lower() in
+               ("abandoned","inactive","failed","error")]
+    protected=active_room_ids(checkpoint_dir)
     for i,r in enumerate(rooms,1):
-        print("%3d  %-45s %s"%(i,r.get("name",""),r.get("uuid","")))
-    selection=input("Room number to inspect/delete (Enter to exit): ").strip()
-    if not selection: return
-    i=int(selection)-1
-    if i<0 or i>=len(rooms): raise ValueError("Invalid room number")
-    r=rooms[i]; print(json.dumps(r,indent=2,ensure_ascii=False))
-    if input("Type DELETE to delete this room, or Enter to keep: ").strip()!="DELETE": return
-    if input("Confirm UUID %s: "%r["uuid"]).strip()!=r["uuid"]: return
-    legacy.delete_room(r["uuid"])
-    print("Deleted",r["uuid"])
+        rid=r.get("uuid","")
+        print("%3d  %-42s %-36s %-12s %s"%(i,r.get("name",""),rid,
+              r.get("status",""),"PROTECTED" if rid in protected else ""))
+    return rooms,protected
+
+def utilities():
+    print("Room manager: list, inspect, delete one, or bulk-delete selected rooms.")
+    filt=input("Filter by Nomi name (Enter for all): ").strip()
+    abandoned=input("Show only abandoned/inactive/failed rooms? (y/N): ").strip().lower()=="y"
+    checkpoint_dir=input("Checkpoint directory [.] : ").strip() or "."
+    rooms,protected=room_management(filt,abandoned,checkpoint_dir)
+    if not rooms: return
+    choice=input("Room number to inspect, ALL for bulk deletion, or Enter to exit: ").strip()
+    if not choice: return
+    if choice.upper()=="ALL":
+        targets=rooms
+    else:
+        i=int(choice)-1
+        if not 0<=i<len(rooms): raise ValueError("Invalid room number")
+        targets=[rooms[i]]
+        print(json.dumps(targets[0],indent=2,ensure_ascii=False))
+        if input("Delete this room? (y/N): ").strip().lower()!="y": return
+    blocked=[r for r in targets if r.get("uuid") in protected]
+    if blocked:
+        print("Protected incomplete rooms excluded:",", ".join(r["uuid"] for r in blocked))
+    targets=[r for r in targets if r.get("uuid") not in protected]
+    if not targets: return
+    print("About to DELETE %d room(s). This cannot be undone."%len(targets))
+    if input("Type DELETE %d to confirm: "%len(targets)).strip()!="DELETE %d"%len(targets): return
+    for r in targets:
+        rid=r["uuid"]
+        if input("Confirm room UUID %s (or SKIP): "%rid).strip()!=rid: continue
+        legacy.delete_room(rid)
+        print("Deleted",rid)
+
+def interactive_menu():
+    while True:
+        print("\\nNomi Uploader 1.0\\n 1 Upload files\\n 2 Resume checkpoint\\n 3 Dry-run\\n 4 Manage rooms\\n 5 Quit")
+        action=input("Select: ").strip()
+        if action in ("5","q","Q",""): return
+        if action=="4": utilities(); continue
+        if action not in ("1","2","3"): print("Unknown option"); continue
+        argv=["--resume"] if action=="2" else []
+        if action!="2":
+            files=input("Input files (quoted paths supported): ").strip()
+            if not files: continue
+            import shlex
+            argv+=shlex.split(files,posix=(os.name!="nt"))
+            interval=input("Process every N units [0]: ").strip()
+            if interval: argv+=["--process-every",interval]
+            passes=input("Passes [1]: ").strip()
+            if passes: argv+=["--passes",passes]
+        if action=="3": argv+=["--dry-run"]
+        main(argv)
 
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
@@ -438,6 +504,7 @@ def main(argv=None):
     parser.add_argument("--checkpoint",default="nomi_uploader_checkpoint.jsonl")
     parser.add_argument("--completion",default="nomi_uploader_completed.json")
     parser.add_argument("--replies",default="nomi_uploader_replies.txt")
+    if not argv and sys.stdin.isatty(): return interactive_menu()
     args=parser.parse_args(argv)
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
