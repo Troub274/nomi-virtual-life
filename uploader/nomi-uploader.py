@@ -296,18 +296,44 @@ def upload(args):
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
-    uncertain=attempts-confirmed
-    if uncertain: raise RuntimeError("Uncertain POST(s) %s. Inspect room before manual checkpoint repair; no automatic resend."%sorted(uncertain))
+    reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
+    reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
+    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed)
+    if uncertain:
+        raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
     for p in range(1,passes+1):
         for i,m in enumerate(messages,1):
-            if (p,i) in confirmed: continue
-            record(cp,{"event":"attempt","pass":p,"index":i,"sha256":hashlib.sha256(m["text"].encode()).hexdigest()})
-            s,response=legacy.api_request("/rooms/"+room+"/chat","POST",{"messageText":m["text"]})
-            if not legacy.ok(s):
-                raise RuntimeError("POST outcome uncertain: "+legacy.err_text("send",s,response))
-            record(cp,{"event":"confirmed","pass":p,"index":i})
-            print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
-            if args.delay: time.sleep(args.delay)
+            key=(p,i)
+            if key not in confirmed:
+                record(cp,{"event":"attempt","pass":p,"index":i,
+                           "sha256":hashlib.sha256(m["text"].encode()).hexdigest()})
+                s,response=legacy.api_request("/rooms/"+room+"/chat","POST",
+                                              {"messageText":m["text"]})
+                if not legacy.ok(s):
+                    raise RuntimeError("POST outcome uncertain: "+legacy.err_text("send",s,response))
+                record(cp,{"event":"confirmed","pass":p,"index":i,
+                           "api_response":response})
+                print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
+                if args.delay: time.sleep(args.delay)
+            if m["kind"]=="prompt" and key not in reply_committed:
+                # Reply requests are POSTs too. Never blindly repeat an uncertain request.
+                record(cp,{"event":"reply_attempt","pass":p,"index":i,
+                           "room_uuid":room,"nomi_uuid":nomi["uuid"]})
+                s,response=legacy.api_request("/rooms/"+room+"/chat/request","POST",
+                                              {"nomiUuid":nomi["uuid"]})
+                if not legacy.ok(s):
+                    raise RuntimeError("Reply request outcome uncertain: "+
+                                       legacy.err_text("request reply",s,response))
+                reply=response.get("replyMessage") if isinstance(response,dict) else None
+                if not isinstance(reply,dict):
+                    raise RuntimeError("Reply request returned no replyMessage; inspect room and checkpoint")
+                record(cp,{"event":"reply_committed","pass":p,"index":i,
+                           "room_uuid":room,"nomi_uuid":nomi["uuid"],
+                           "prompt":m["text"],"reply":reply,
+                           "reply_api_response":response})
+                body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
+                print("%s replied after pass %d message %d: %s"%
+                      (nomi["name"],p,i,str(body)[:300].replace("\\n"," ")))
     Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
