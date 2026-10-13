@@ -2,7 +2,11 @@
 
 **Open-source tools and experiments for [Nomi.ai](https://nomi.ai/) virtual environments, autobiographical memory replay, and conversational continuity.**
 
-This repository is intended to hold multiple independent programs. The first published tool is the **Nomi Room Rehydrator**; the virtual-world and integration modules discussed below are planned areas, **not yet included in this repository**.
+This repository is intended to hold multiple independent programs. The current uploader is **Nomi Uploader v1.0**; the earlier **Nomi Room Rehydrator v0.85** remains available; the virtual-world and integration modules discussed below are planned areas, **not yet included in this repository**.
+
+## Current uploader
+
+See the [Nomi Uploader v1.0 operator documentation](uploader/README.md) for input syntax, dry runs, reflection intervals, indefinite `NoReply` backoff, reply capture, and checkpoint recovery. The Beth live test has successfully recovered a reflection at message 9 and continued uploading; full-pass completion has not yet been confirmed.
 
 ## Beth test example
 
@@ -12,6 +16,7 @@ This repository is intended to hold multiple independent programs. The first pub
 
 | Program | What it does | Files |
 |---|---|---|
+| **Nomi Uploader v1.0** | Processes structured journal, knowledge, instruction and chat inputs, requests type-aware reflections, and checkpoints sends and replies for resume. | [Uploader guide](uploader/README.md) · [Python source](uploader/nomi-uploader.py) · [Tests](uploader/tests/) |
 | **Nomi Room Rehydrator v0.85** | Replays diaries and exported Nomi conversations into Nomi API rooms, preserving source order and using explicit memory ownership cues for diary entries. | [Python source](rehydration/nomi_room_rehydrate_episode_v085.py) · [Operator guide](rehydration/OPERATOR_GUIDE.md) · [Quick start](rehydration/README.md) |
 
 ### Nomi Room Rehydrator v0.85
