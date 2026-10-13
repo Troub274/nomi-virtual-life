@@ -213,7 +213,7 @@ class StateMachineTests(unittest.TestCase):
                 (e.get("pass")==1 and e.get("index")>first_prompt) and not
                 (e.get("pass")==1 and e.get("index")==first_prompt and
                  e["event"]=="reply_committed")]
-        self.checkpoint.write_text("".join(json.dumps(e)+"\\n" for e in events),
+        self.checkpoint.write_text("".join(json.dumps(e)+"\n" for e in events),
                                    encoding="utf-8")
         self.completion.unlink()
         with self.assertRaisesRegex(RuntimeError,"Uncertain"):
