@@ -40,8 +40,9 @@ def convert_document(name,text,reflection_every=5):
         last=min(first+reflection_every-1,len(numbers))
         prompts.append(
             "Nomi: [nomi], please relive your own journal episodes %d-%d "
-            "in chronological order. Reflect on the experiences and feelings, "
-            "and preserve your memories as your own."%(first,last))
+            "(original diary entries %d-%d) in chronological order. "
+            "Reflect on the experiences and feelings, and preserve your "
+            "memories as your own."%(first,last,numbers[first-1],numbers[last-1]))
     header=(
         "[Beth Peterson — %s]\n"
         "Type: Journal\n"
