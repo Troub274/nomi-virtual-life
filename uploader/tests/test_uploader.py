@@ -57,6 +57,41 @@ class UploaderTests(unittest.TestCase):
             self.assertIn("I remembered the day exactly.", first.read_text())
             plan = u.plan_text([str(first)], "Beth Peterson", "", "US", 2026, 750)
             self.assertEqual(sum(m["kind"] == "prompt" for m in plan), 1)
+    def test_processing_by_source_and_interval(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            p=pathlib.Path(tmp)/"source.txt"
+            p.write_text(
+                "[Beth memories]\\nType: Journal\\nSource: Beth\\nProcess Every: 2\\n\\n"
+                "ENTRY 001 - 10/11/1998\\nI turned ten.\\n"
+                "ENTRY 002 - 10/12/1998\\nI went home.\\n"
+                "ENTRY 003 - 10/13/1998\\nI met Maya.\\n"
+                "[Other person's memories]\\nType: Journal\\nSource: Maya\\nProcess Every: 1\\n\\n"
+                "ENTRY 001 - 10/11/1998\\nMaya remembered school.\\n"
+                "[Facts]\\nType: Knowledge\\nSource: System\\nProcess Every: 1\\n\\n"
+                "The Earth orbits the Sun.\\n", encoding="utf-8")
+            messages=u.plan_text([str(p)],"Beth","Yehoshua","US",2026,750,0)
+            prompts=[m["text"] for m in messages if m["kind"]=="prompt"]
+            self.assertEqual(len(prompts),4)
+            self.assertTrue(any("your own journal episodes 1-2" in x for x in prompts))
+            self.assertTrue(any("your own journal episodes 3-3" in x for x in prompts))
+            self.assertTrue(any("Maya's journal episodes" in x for x in prompts))
+            self.assertTrue(any("analyze and summarize" in x for x in prompts))
+
+    def test_custom_prompt_and_processing_override(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            p=pathlib.Path(tmp)/"source.txt"
+            p.write_text(
+                "[One]\\nType: Knowledge\\nProcess Every: 0\\n"
+                "Nomi Mode: Replace\\nNomi: [nomi], test [source].\\n\\n"
+                "A factual statement.\\n",encoding="utf-8")
+            messages=u.plan_text([str(p)],"Beth","User","US",2026,750,1)
+            prompts=[m for m in messages if m["kind"]=="prompt"]
+            self.assertEqual(len(prompts),1)
+            self.assertEqual(prompts[0]["text"],"Beth, test System.")
+            self.assertNotIn("learn, summarize",messages[0]["text"])
+
     def test_legacy(self):
         self.assertTrue(callable(u.legacy.main))
         self.assertTrue(callable(u.legacy.prepare_conversation_chunks))
