@@ -144,7 +144,8 @@ def split_units(section, order, session_year):
             dm=re.match(r"^Date:\s*(.+)$",line.strip(),re.I)
             heading_date=DATE_RX.search(line) if (em or dm or legacy.is_episode_header(line)) else None
             if em or dm or (legacy.is_episode_header(line) and heading_date):
-                if date or label: flush()\n                else: buf=[]  # Ignore diary cover/preamble before first dated entry\n                label=em.group(1) if em else str(len(units)+1)
+                if date or label: flush()
+                else: buf=[]  # Ignore diary cover/preamble before first dated entry\n                label=em.group(1) if em else str(len(units)+1)
                 if dm: date=dm.group(1)
                 elif heading_date: date=heading_date.group()
             buf.append(line)
