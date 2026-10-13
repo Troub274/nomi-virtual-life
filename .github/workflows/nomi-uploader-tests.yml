@@ -1,0 +1,25 @@
+name: Nomi Uploader Regression Tests
+on:
+  push:
+    paths:
+      - 'uploader/**'
+      - '.github/workflows/nomi-uploader-tests.yml'
+  pull_request:
+    paths:
+      - 'uploader/**'
+jobs:
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Regression tests
+        run: python -m unittest discover -s uploader/tests -v
+      - name: Syntax check
+        run: python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py
