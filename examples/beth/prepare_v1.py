@@ -46,6 +46,7 @@ def convert_document(name,text,reflection_every=5):
         "[Beth Peterson — %s]\n"
         "Type: Journal\n"
         "Source: Beth Peterson\n"
+        "Process Every: 0\n"
         + "\n".join(prompts)+"\n\n"
     )%name
     return header+text, numbers
