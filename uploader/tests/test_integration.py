@@ -118,6 +118,45 @@ class StateMachineTests(unittest.TestCase):
         self.assertEqual(sleeping.call_count,2)
         self.assertIn("retries exhausted",output.getvalue())
 
+    def test_noreply_exhaustion_continues_upload(self):
+        fake=FakeNomi()
+        def api(path,method="GET",payload=None):
+            if path.endswith("/chat/request"):
+                fake.calls.append((path,method,payload))
+                return 500,{"type":"NoReply"}
+            return fake.api(path,method,payload)
+        with patch.object(u.legacy,"get_nomis",return_value=[{"uuid":"beth-id","name":"Beth"}]), \
+             patch.object(u.legacy,"choose_nomi",return_value={"uuid":"beth-id","name":"Beth"}), \
+             patch.object(u.legacy,"api_request",side_effect=api), \
+             patch.object(u.legacy,"wait_for_room",return_value={"uuid":"room-001"}), \
+             patch.object(u.time,"sleep"), \
+             contextlib.redirect_stdout(io.StringIO()), \
+             contextlib.redirect_stderr(io.StringIO()):
+            u.upload(self.args())
+        events=u.records(self.checkpoint)
+        self.assertEqual(sum(e["event"]=="reply_no_reply" for e in events),2)
+        self.assertTrue(self.completion.exists())
+        self.assertEqual(len(fake.calls_to("/chat/request")),16)
+
+    def test_resume_after_noreply_does_not_request_again(self):
+        fake=FakeNomi()
+        def api(path,method="GET",payload=None):
+            if path.endswith("/chat/request"):
+                fake.calls.append((path,method,payload))
+                return 500,{"type":"NoReply"}
+            return fake.api(path,method,payload)
+        with patch.object(u.legacy,"get_nomis",return_value=[{"uuid":"beth-id","name":"Beth"}]), \
+             patch.object(u.legacy,"choose_nomi",return_value={"uuid":"beth-id","name":"Beth"}), \
+             patch.object(u.legacy,"api_request",side_effect=api), \
+             patch.object(u.legacy,"wait_for_room",return_value={"uuid":"room-001"}), \
+             patch.object(u.time,"sleep"), \
+             contextlib.redirect_stdout(io.StringIO()), \
+             contextlib.redirect_stderr(io.StringIO()):
+            u.upload(self.args())
+        resumed=FakeNomi()
+        self.run_upload(resumed,self.args(resume=True))
+        self.assertEqual(resumed.calls,[])
+
     def test_complete_upload_captures_all_replies(self):
         fake = FakeNomi()
         self.run_upload(fake, self.args())
