@@ -1,0 +1,64 @@
+[Alder Creek Reference Facts]
+Type: Knowledge
+Source: Fictional Reference Archive
+Process Every: 5
+
+Fact 01 — Alder Creek Observatory.
+The fictional Alder Creek Observatory opened in 1987 on North Ridge.
+
+Fact 02 — Clock tower.
+The town clock tower has four faces and was restored in 2011.
+
+Fact 03 — River.
+The Silverbrook River flows east through Alder Creek.
+
+Fact 04 — Library.
+The Alder Creek Public Library occupies a former railway depot.
+
+Fact 05 — Bridge.
+The covered Maple Bridge was rebuilt after a flood in 1996.
+
+Fact 06 — Museum.
+The town museum preserves a 1932 printing press.
+
+Fact 07 — Festival.
+Lantern Night takes place on the first Saturday in November.
+
+Fact 08 — Transit.
+Route 7 connects the library, hospital, and train station.
+
+Fact 09 — Weather station.
+Station AC-04 records rainfall at North Ridge.
+
+Fact 10 — Botanical garden.
+The garden contains a greenhouse called the Glass House.
+
+Fact 11 — Founders.
+Mara Vale and Owen Reed founded Alder Creek in 1894.
+
+Fact 12 — School.
+Alder Creek High School's mascot is the heron.
+
+Fact 13 — Local paper.
+The Alder Creek Ledger publishes on Thursdays.
+
+Fact 14 — Cafe.
+The Blue Finch Cafe opened in 2008.
+
+Fact 15 — Trail.
+The Cedar Loop trail is 4.2 kilometers long.
+
+Fact 16 — Archive.
+Museum box B-17 holds the 1948 flood photographs.
+
+Fact 17 — Radio.
+Community station KACR broadcasts on 91.3 FM in the fictional setting.
+
+Fact 18 — Theater.
+The Oriole Theater has 240 seats.
+
+Fact 19 — Map.
+The fictional town map divides Alder Creek into five districts.
+
+Fact 20 — Test code.
+The archive access phrase for this fictional exercise is SILVER HERON 42.
