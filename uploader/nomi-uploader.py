@@ -251,9 +251,12 @@ def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
                 # Automatic type-aware processing is separate from custom Nomi: instructions.
                 if interval and (idx%interval==0 or idx==len(units)):
                     first=((idx-1)//interval)*interval+1
+                    # Use source journal labels in reflection prompts, not per-file positions.
+                    first_label=(units[first-1].get("label") or str(first)) if kind=="journal" else first
+                    last_label=label if kind=="journal" else idx
                     custom=[p for p in section["prompts"] if not re.search(r"\\b(?:entries|episodes)\\s+\\d+\\s*[-–]\\s*\\d+\\b",p,re.I)]
                     template=custom[0] if len(custom)==1 else PERIODIC_PROMPTS[default_key]
-                    prompt=render_prompt(template.format(first=first,last=idx),nomi,user,source)
+                    prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
                     messages.append({"text":prompt,"kind":"prompt","file":filename,
                                      "section":section["title"],"entry":idx})
                 # Schedule explicitly ranged instructions at their last referenced entry.
