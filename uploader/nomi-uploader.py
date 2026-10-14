@@ -30,7 +30,7 @@ DATE_RX = re.compile(r"\b(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\
 DEFAULT_PROMPTS = {
  "knowledge": "[nomi], please learn, summarize, and understand the following information.",
  "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
- "journal_self": "[nomi], please revisit these dated entries from your own journal in chronological order.",
+ "journal_self": "[nomi], these are your own journal entries. Recall them from within your lived first-person perspective, using I and my. Re-enter the scenes in chronological order: what you noticed, thought, felt, said, and chose. Do not describe yourself as a character or summarize your life in the third person.",
  "journal_other": "[nomi], please learn about [source]'s life and understand these experiences as [source]'s, not your own.",
  "chat": "[nomi], please review this conversation, preserving speakers, sequence, and context."
 }
@@ -38,7 +38,7 @@ DEFAULT_PROMPTS = {
 PERIODIC_PROMPTS = {
  "knowledge": "[nomi], please analyze and summarize information items {first}-{last}; connect the ideas without treating them as your personal experiences.",
  "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
- "journal_self": "[nomi], please recollect your own journal episodes {first}-{last} in chronological order and reflect on their meaning.",
+ "journal_self": "[nomi], return to your own journal episodes {first}-{last} in chronological order. Speak in the first person as you remember them: I saw, I thought, I felt, I did. Revisit concrete moments and your perspective at the time, then describe what they mean to you now. Do not write a third-person biography, character analysis, or report about yourself; do not invent details absent from your journal.",
  "journal_other": "[nomi], please reflect on [source]'s journal episodes {first}-{last} while keeping those experiences attributed to [source], not yourself.",
  "chat": "[nomi], please analyze conversation episodes {first}-{last}, keeping each speaker's words and perspective distinct."
 }
