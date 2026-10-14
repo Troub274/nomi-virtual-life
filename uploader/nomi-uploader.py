@@ -395,6 +395,22 @@ def upload(args):
                ("NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests") for r in old):
             raise ValueError("Cannot recover ambiguous reply outcome at %s"%token)
         recovery.add(key)
+    # Explicit operator-authorized recovery for an ambiguous reply POST, such as
+    # an HTTP 502. This can cause a duplicate reply; never repeat the prompt.
+    for token in getattr(args,"recover_uncertain_reply",[]) or []:
+        try:
+            p_str,i_str=token.split(":",1)
+            key=(int(p_str),int(i_str))
+        except (ValueError,TypeError):
+            raise ValueError("--recover-uncertain-reply expects PASS:INDEX, e.g. 1:559")
+        if key not in confirmed or key not in reply_attempts or key in reply_committed:
+            raise ValueError("No pending confirmed reflection at %s"%token)
+        if not any(r.get("event")=="reply_uncertain" and
+                   (r.get("pass"),r.get("index"))==key for r in old):
+            raise ValueError("No recorded uncertain reply result at %s"%token)
+        recovery.add(key)
+        record(cp,{"event":"reply_operator_override","pass":key[0],"index":key[1],
+                   "reason":"operator authorized retry after ambiguous reply outcome"})
     # Earlier versions incorrectly treated explicit Nomi readiness errors as
     # ambiguous. The recorded HTTP response proves the request was rejected.
     known_wait_errors={"NoReply","RoomNomiNotReadyForMessage",
@@ -560,6 +576,7 @@ def main(argv=None):
     parser.add_argument("--utility",action="store_true")
     parser.add_argument("--resume",action="store_true")
     parser.add_argument("--recover-noreply",action="append",default=[],metavar="PASS:INDEX",help="Authorize retry of a legacy checkpoint reply known to have returned NoReply")
+    parser.add_argument("--recover-uncertain-reply",action="append",default=[],metavar="PASS:INDEX",help="Explicitly authorize retry after ambiguous reply POST; duplicate reply possible")
     parser.add_argument("--dry-run",action="store_true")
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
@@ -576,7 +593,7 @@ def main(argv=None):
     args=parser.parse_args(argv)
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
-    if args.recover_noreply and not args.resume: parser.error("--recover-noreply requires --resume")
+    if (args.recover_noreply or args.recover_uncertain_reply) and not args.resume: parser.error("recovery flags require --resume")
     if args.utility: utilities()
     else: upload(args)
 
