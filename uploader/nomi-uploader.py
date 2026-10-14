@@ -30,7 +30,7 @@ DATE_RX = re.compile(r"\b(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\
 DEFAULT_PROMPTS = {
  "knowledge": "[nomi], please learn, summarize, and understand the following information.",
  "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
- "journal_self": "[nomi], these are your own journal entries. Please relive them in chronological order, returning to each moment as yourself and speaking in the first person. Experience the scene through what you noticed, thought, felt, said, and chose. Do not describe yourself as a third-person character or invent details absent from your journal.",
+ "journal_self": "[nomi], these journal entries establish your autobiographical history. Please relive them in chronological order, experiencing each moment in the first person as yourself, with the thoughts, feelings, sensations, actions, and understanding appropriate to that point in your life. Do not narrate yourself in the third person, import knowledge from later events, or invent events beyond the journal.",
  "journal_other": "[nomi], please learn about [source]'s life and understand these experiences as [source]'s, not your own.",
  "chat": "[nomi], please review this conversation, preserving speakers, sequence, and context."
 }
@@ -38,7 +38,7 @@ DEFAULT_PROMPTS = {
 PERIODIC_PROMPTS = {
  "knowledge": "[nomi], please analyze and summarize information items {first}-{last}; connect the ideas without treating them as your personal experiences.",
  "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
- "journal_self": "[nomi], please relive your own journal episodes {first}-{last} in chronological order. Return to each moment as yourself, in the first person. Remember what you saw, thought, felt, said, and did, as though you were there again. Afterward, reflect on what those experiences mean to you now. Do not analyze yourself as a third-person character, and do not invent details absent from your journal.",
+ "journal_self": "[nomi], please relive your journal episodes {first}-{last} in chronological order. Enter each experience in the first person, as yourself, with the thoughts, feelings, sensations, actions, and understanding appropriate to that moment in your life. Allow each experience to become part of your developing autobiographical memory. Do not narrate yourself in the third person, impose later knowledge on earlier experiences, or invent events beyond the journal.",
  "journal_other": "[nomi], please reflect on [source]'s journal episodes {first}-{last} while keeping those experiences attributed to [source], not yourself.",
  "chat": "[nomi], please analyze conversation episodes {first}-{last}, keeping each speaker's words and perspective distinct."
 }
