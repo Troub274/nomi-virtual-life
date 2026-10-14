@@ -462,7 +462,7 @@ def upload(args):
                            "reply_api_response":response})
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
                 print("%s replied after pass %d message %d: %s"%
-                      (nomi["name"],p,i,str(body))))
+                      (nomi["name"],p,i,str(body)))
     final_events=records(cp)
     reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
     transcript=Path(args.replies)
