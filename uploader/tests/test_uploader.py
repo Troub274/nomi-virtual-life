@@ -93,9 +93,9 @@ class UploaderTests(unittest.TestCase):
             prompts = [m for m in plan if m["kind"] == "prompt"]
             self.assertEqual([m["entry"] for m in prompts], [5, 10, 12])
             self.assertEqual([m["text"] for m in prompts], [
-                "Beth Peterson, custom reflection for episodes 1-5.",
-                "Beth Peterson, custom reflection for episodes 6-10.",
-                "Beth Peterson, custom reflection for episodes 11-12.",
+                "Beth Peterson, custom reflection for episodes 001-005.",
+                "Beth Peterson, custom reflection for episodes 006-010.",
+                "Beth Peterson, custom reflection for episodes 011-012.",
             ])
 
     def test_processing_by_source_and_interval(self):
@@ -114,8 +114,8 @@ class UploaderTests(unittest.TestCase):
             messages=u.plan_text([str(p)],"Beth","Yehoshua","US",2026,750,0)
             prompts=[m["text"] for m in messages if m["kind"]=="prompt"]
             self.assertEqual(len(prompts),4)
-            self.assertTrue(any("your own journal episodes 1-2" in x for x in prompts))
-            self.assertTrue(any("your own journal episodes 3-3" in x for x in prompts))
+            self.assertTrue(any("live and experience the entries 001-002 as yourself" in x for x in prompts))
+            self.assertTrue(any("live and experience the entries 003-003 as yourself" in x for x in prompts))
             self.assertTrue(any("Maya's journal episodes" in x for x in prompts))
             self.assertTrue(any("analyze and summarize" in x for x in prompts))
 
@@ -141,7 +141,7 @@ class UploaderTests(unittest.TestCase):
             messages=u.plan_text(["chat.json"],"Beth","User","US",2026,750,1)
         self.assertEqual([m["kind"] for m in messages],
                          ["intro","content","prompt","content","prompt"])
-        self.assertTrue(all("conversation episodes" in m["text"]
+        self.assertTrue(all("live and experience the conversations" in m["text"]
                             for m in messages if m["kind"]=="prompt"))
 
     def test_room_filter_and_protection(self):
