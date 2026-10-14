@@ -32,7 +32,7 @@ DEFAULT_PROMPTS = {
  "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
  "journal_self": "[nomi], please live and experience these entries as yourself.",
  "journal_other": "[nomi], please learn about [source]'s life and understand these experiences as [source]'s, not your own.",
- "chat": "[nomi], please review this conversation, preserving speakers, sequence, and context."
+ "chat": "[nomi], please live and experience these conversations as yourself."
 }
 
 PERIODIC_PROMPTS = {
@@ -40,7 +40,7 @@ PERIODIC_PROMPTS = {
  "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
  "journal_self": "[nomi], please live and experience the entries {first}-{last} as yourself.",
  "journal_other": "[nomi], please reflect on [source]'s journal episodes {first}-{last} while keeping those experiences attributed to [source], not yourself.",
- "chat": "[nomi], please analyze conversation episodes {first}-{last}, keeping each speaker's words and perspective distinct."
+ "chat": "[nomi], please live and experience the conversations {first}-{last} as yourself."
 }
 
 def regional_order(override="AUTO"):
@@ -446,7 +446,7 @@ def upload(args):
                            "reply_api_response":response})
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
                 print("%s replied after pass %d message %d: %s"%
-                      (nomi["name"],p,i,str(body)[:300].replace("\n"," ")))
+                      (nomi["name"],p,i,str(body))))
     final_events=records(cp)
     reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
     transcript=Path(args.replies)
