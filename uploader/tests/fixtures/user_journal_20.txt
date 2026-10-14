@@ -1,0 +1,64 @@
+[Morgan Personal Journal Test]
+Type: Journal
+Source: Morgan
+Process Every: 5
+
+ENTRY 001 — 2024-01-05 — Morgan's Notebook
+I found my old violin case today. The bow needs new hair, but the instrument still smells of cedar.
+
+ENTRY 002 — 2024-01-08 — Morgan's Notebook
+Taylor called about our school reunion. I said yes before remembering how shy I used to be.
+
+ENTRY 003 — 2024-01-11 — Morgan's Notebook
+I tried watercolor for the first time in months. The first wash ran across the page.
+
+ENTRY 004 — 2024-01-14 — Morgan's Notebook
+Pixel sat in the window while I worked on the photo archive. He supervised badly.
+
+ENTRY 005 — 2024-01-17 — Morgan's Notebook
+I visited Ms. Ellison and thanked her for teaching me to ask better questions.
+
+ENTRY 006 — 2024-01-20 — Morgan's Notebook
+The river cleanup group invited me back. I promised to help organize volunteers.
+
+ENTRY 007 — 2024-01-23 — Morgan's Notebook
+I repaired a broken hinge on my old computer case instead of replacing the case.
+
+ENTRY 008 — 2024-01-26 — Morgan's Notebook
+I made a list of places I want to visit and put Port Larch at the top.
+
+ENTRY 009 — 2024-01-29 — Morgan's Notebook
+I listened to a recording of our seventh-grade orchestra. We were enthusiastically out of tune.
+
+ENTRY 010 — 2024-02-01 — Morgan's Notebook
+I painted Maple Bridge at sunset. The red looked too bright, but I kept it.
+
+ENTRY 011 — 2024-02-04 — Morgan's Notebook
+Taylor and I walked Cedar Loop and argued about which trees were oldest.
+
+ENTRY 012 — 2024-02-07 — Morgan's Notebook
+I found a family photograph labeled 1948 and took it to the museum for context.
+
+ENTRY 013 — 2024-02-10 — Morgan's Notebook
+I practiced the violin for twenty minutes and was surprised how much muscle memory remained.
+
+ENTRY 014 — 2024-02-13 — Morgan's Notebook
+I helped a neighbor scan letters from her grandfather. The handwriting was difficult to read.
+
+ENTRY 015 — 2024-02-16 — Morgan's Notebook
+I read the Alder Creek Ledger at the Blue Finch Cafe and recognized three names.
+
+ENTRY 016 — 2024-02-19 — Morgan's Notebook
+I watched the rain gauge at North Ridge during a thunderstorm.
+
+ENTRY 017 — 2024-02-22 — Morgan's Notebook
+I wrote down the names of people who helped me learn to code.
+
+ENTRY 018 — 2024-02-25 — Morgan's Notebook
+I visited the botanical garden and sketched the greenhouse from the west path.
+
+ENTRY 019 — 2024-02-28 — Morgan's Notebook
+I decided to catalog my paintings by date instead of by subject.
+
+ENTRY 020 — 2024-03-02 — Morgan's Notebook
+I finished the first box of family photos. The last picture was of my grandmother laughing.
