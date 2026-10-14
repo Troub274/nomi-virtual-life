@@ -24,9 +24,9 @@ class SpecificationTests(unittest.TestCase):
         types=[
             ("Knowledge","System","analyze and summarize"),
             ("Instructions","System","review instructions"),
-            ("Journal","Beth","your own journal episodes"),
+            ("Journal","Beth","live and experience the entries 001-001 as yourself"),
             ("Journal","Maya","Maya's journal episodes"),
-            ("Chat","System","analyze conversation episodes")]
+            ("Chat","System","live and experience the conversations 1-1 as yourself")]
         for kind,source,expected in types:
             with self.subTest(kind=kind,source=source):
                 if kind=="Journal":
