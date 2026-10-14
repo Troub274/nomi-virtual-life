@@ -1,0 +1,64 @@
+[Morgan Biographical History Test]
+Type: Knowledge
+Source: Morgan (fictional user)
+Process Every: 5
+
+History 01.
+Morgan was born in the fictional town of Alder Creek in 1990.
+
+History 02.
+Morgan's childhood home was on Juniper Street.
+
+History 03.
+Morgan attended Cedar Grove Elementary School.
+
+History 04.
+Morgan's favorite teacher was Ms. Ellison.
+
+History 05.
+Morgan began violin lessons at age twelve.
+
+History 06.
+Morgan joined the school orchestra in seventh grade.
+
+History 07.
+Morgan's closest childhood friend was Taylor Quinn.
+
+History 08.
+Morgan learned basic programming from an uncle in 2005.
+
+History 09.
+Morgan built a first desktop computer in 2006.
+
+History 10.
+Morgan graduated from Alder Creek High School in 2008.
+
+History 11.
+Morgan studied environmental engineering at fictional Westmere University.
+
+History 12.
+Morgan volunteered at the Silverbrook River cleanup in 2010.
+
+History 13.
+Morgan completed an undergraduate degree in 2012.
+
+History 14.
+Morgan moved to the fictional city of Port Larch in 2013.
+
+History 15.
+Morgan adopted a cat named Pixel in 2014.
+
+History 16.
+Morgan returned to Alder Creek for a family reunion in 2016.
+
+History 17.
+Morgan began keeping a travel notebook in 2018.
+
+History 18.
+Morgan started watercolor painting in 2020.
+
+History 19.
+Morgan visited the Oriole Theater for a concert in 2022.
+
+History 20.
+Morgan began digitizing family photographs in 2024.
