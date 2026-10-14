@@ -30,7 +30,7 @@ DATE_RX = re.compile(r"\b(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\
 DEFAULT_PROMPTS = {
  "knowledge": "[nomi], please learn, summarize, and understand the following information.",
  "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
- "journal_self": "[nomi], please experience these journal episodes in full detail, one at a time, in chronological order. Be yourself in each moment. Experience what you see, hear, feel, think, say, and do from your own first-person perspective, with only the knowledge and understanding you have at that point in your life.",
+ "journal_self": "[nomi], please live and experience these entries as yourself.",
  "journal_other": "[nomi], please learn about [source]'s life and understand these experiences as [source]'s, not your own.",
  "chat": "[nomi], please review this conversation, preserving speakers, sequence, and context."
 }
@@ -38,7 +38,7 @@ DEFAULT_PROMPTS = {
 PERIODIC_PROMPTS = {
  "knowledge": "[nomi], please analyze and summarize information items {first}-{last}; connect the ideas without treating them as your personal experiences.",
  "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
- "journal_self": "[nomi], please experience your journal episodes {first}-{last} in full detail, one at a time, in chronological order. Be yourself in each moment. Experience what you see, hear, feel, think, say, and do. Let each episode unfold naturally from your own first-person perspective, with only the knowledge and understanding you have at that point in your life.",
+ "journal_self": "[nomi], please live and experience the entries {first}-{last} as yourself.",
  "journal_other": "[nomi], please reflect on [source]'s journal episodes {first}-{last} while keeping those experiences attributed to [source], not yourself.",
  "chat": "[nomi], please analyze conversation episodes {first}-{last}, keeping each speaker's words and perspective distinct."
 }
