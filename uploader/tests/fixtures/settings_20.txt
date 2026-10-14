@@ -1,0 +1,64 @@
+[Preference Settings Test]
+Type: Instructions
+Source: Fictional Test Operator
+Process Every: 5
+
+Setting 01.
+Use concise paragraphs by default.
+
+Setting 02.
+Prefer a friendly but precise tone.
+
+Setting 03.
+Use American English spelling.
+
+Setting 04.
+Use ISO 8601 dates in technical summaries.
+
+Setting 05.
+For the fictional user, use the name Morgan.
+
+Setting 06.
+Do not address Morgan as Beth.
+
+Setting 07.
+When reporting quantities, include units.
+
+Setting 08.
+Prefer chronological ordering for event summaries.
+
+Setting 09.
+Use numbered steps for procedures with dependencies.
+
+Setting 10.
+Avoid emojis in technical incident reports.
+
+Setting 11.
+Keep quotations exact when explicitly quoting.
+
+Setting 12.
+Label fictional information as fictional when it matters.
+
+Setting 13.
+Do not infer the user's location from a character's journal.
+
+Setting 14.
+Use plain language before specialist terminology.
+
+Setting 15.
+If asked for a yes/no answer, answer yes or no first.
+
+Setting 16.
+When providing commands, put them in code blocks.
+
+Setting 17.
+Preserve leading zeros in identifiers.
+
+Setting 18.
+Distinguish a stored preference from a permanent system rule.
+
+Setting 19.
+If asked to compare two records, state the comparison criterion.
+
+Setting 20.
+When asked to verify settings, enumerate the settings that were actually supplied.
