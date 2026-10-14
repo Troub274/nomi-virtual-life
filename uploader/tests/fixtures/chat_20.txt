@@ -1,0 +1,124 @@
+[Morgan and Taylor Conversations Test]
+Type: Chat
+Source: Morgan and Taylor (fictional)
+Process Every: 5
+
+Date: 2024-02-01
+Morgan: I was thinking about the old violin today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-03
+Morgan: I was thinking about the library today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-05
+Morgan: I was thinking about the river cleanup today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-07
+Morgan: I was thinking about the photo archive today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-09
+Morgan: I was thinking about the school reunion today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-11
+Morgan: I was thinking about the watercolor kit today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-13
+Morgan: I was thinking about Pixel the cat today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-15
+Morgan: I was thinking about the clock tower today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-17
+Morgan: I was thinking about Maple Bridge today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-19
+Morgan: I was thinking about the theater concert today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-21
+Morgan: I was thinking about the Cedar Loop trail today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-23
+Morgan: I was thinking about the museum box today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-25
+Morgan: I was thinking about the printing press today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-27
+Morgan: I was thinking about the greenhouse today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-02-29
+Morgan: I was thinking about the old computer today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-03-02
+Morgan: I was thinking about the travel notebook today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-03-04
+Morgan: I was thinking about the radio station today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-03-06
+Morgan: I was thinking about the family reunion today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-03-08
+Morgan: I was thinking about the weather station today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
+
+Date: 2024-03-10
+Morgan: I was thinking about the town festival today. Do you remember it?
+Taylor: Yes, but I remember it differently. What stood out to you?
+Morgan: Mostly how it connects to our years in Alder Creek.
+Taylor: Let's compare our memories rather than assume they are identical.
