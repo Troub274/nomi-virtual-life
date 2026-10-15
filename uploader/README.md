@@ -52,7 +52,14 @@ Type defaults to Knowledge; source defaults to System except Journal (selected N
 
 `Nomi:` instructions are additive by default; `Nomi Mode: Replace` suppresses the type-specific default. Range prompts like `entries 1-24` execute after entry 24. Nomi JSON/ZIP exports use the preserved v0.85 export parser.
 
-Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion. Completion confirms API transmission, **not** long-term memory consolidation.
+Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion.
+
+### Room reuse and deletion (v1.0)
+
+For a new upload, the uploader finds existing rooms for the chosen Nomi (using the Nomi UUID) and offers **reuse as choice 1 (the default)**, as in v0.85. Select another room by number, or explicitly choose to create a new room. `--room UUID` directly reuses a verified room; `--resume` keeps the room and manifest from the original checkpoint. Rooms associated with checkpoints in the selected checkpoint directory are excluded from automatic reuse.
+
+In `--utility`, enter a room number or `ALL`. The room manager shows the exact eligible rooms, excludes rooms protected by checkpoints in the selected directory, and asks **once**: `Delete these N room(s)? [y/N]`. `y`, `Y`, or `yes` (any capitalization) confirms; anything else cancels. No `DELETE N` or per-room UUID entry is required. Room deletion is permanent, so examine the filtered list and use the appropriate checkpoint directory.
+ Completion confirms API transmission, **not** long-term memory consolidation.
 
 **Caution:** This remains an experimental v1.0 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
 

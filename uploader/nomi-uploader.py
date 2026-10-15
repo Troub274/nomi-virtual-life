@@ -322,6 +322,61 @@ def create_upload_room(nomi):
     legacy.wait_for_room(rid)
     return rid
 
+
+def select_or_create_room(nomi, checkpoint_dir="."):
+    """Reuse a suitable existing room by Nomi UUID, as in the v0.85 workflow."""
+    uid = str(nomi["uuid"])
+    rooms = legacy.list_rooms()
+    candidates = legacy.matching_rooms(nomi, rooms)
+    seen = {str(r.get("uuid", "")) for r in candidates}
+    for room in rooms:
+        rid = str(room.get("uuid", ""))
+        if (rid and rid not in seen
+                and str(room.get("name", "")).startswith("UPLOADER::")
+                and legacy.room_contains_nomi(room, uid)):
+            candidates.append(room)
+            seen.add(rid)
+
+    protected = active_room_ids(checkpoint_dir)
+    eligible = [
+        r for r in candidates
+        if r.get("uuid") and str(r["uuid"]) not in protected
+        and str(r.get("status", "")).lower() not in (
+            "creating", "waiting", "failed", "error",
+            "abandoned", "inactive", "deleting")
+    ]
+    eligible.sort(key=lambda r: str(r.get("created", r.get("createdAt", ""))), reverse=True)
+    if not eligible:
+        if candidates:
+            raise RuntimeError(
+                "Existing rooms for %s are protected or unavailable. "
+                "Inspect the checkpoints before using --room UUID." % nomi["name"])
+        print("No existing processing room for %s; creating one." % nomi["name"])
+        return create_upload_room(nomi)
+
+    print("\nExisting processing rooms for %s:" % nomi["name"])
+    for index, room in enumerate(eligible, 1):
+        print("  %d. Reuse %s [%s] (%s)" % (
+            index, room.get("name", ""), room["uuid"], room.get("status", "")))
+    new_option = len(eligible) + 1
+    print("  %d. Create a new room" % new_option)
+    while True:
+        answer = input("Room choice [1 = reuse, recommended]: ").strip() or "1"
+        try:
+            choice = int(answer)
+        except ValueError:
+            choice = 0
+        if 1 <= choice <= len(eligible):
+            rid = str(eligible[choice - 1]["uuid"])
+            full_room = legacy.get_room(rid)
+            if not legacy.room_contains_nomi(full_room, uid):
+                raise ValueError("Room is not associated with selected Nomi")
+            print("Reusing room:", eligible[choice - 1].get("name", ""), rid)
+            return rid
+        if choice == new_option:
+            return create_upload_room(nomi)
+        print("Enter a number from 1 through %d." % new_option)
+
 def upload(args):
     cp=Path(args.checkpoint)
     old=records(cp) if args.resume else []
@@ -374,7 +429,7 @@ def upload(args):
             r=legacy.get_room(room)
             if not legacy.room_contains_nomi(r,nomi["uuid"]):
                 raise ValueError("Room is not associated with selected Nomi")
-        else: room=create_upload_room(nomi)
+        else: room=select_or_create_room(nomi, cp.parent)
         record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes,"process_every":args.process_every})
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
@@ -515,33 +570,49 @@ def room_management(nomi_filter=None, abandoned=False, checkpoint_dir="."):
 
 def utilities():
     print("Room manager: list, inspect, delete one, or bulk-delete selected rooms.")
-    filt=input("Filter by Nomi name (Enter for all): ").strip()
-    abandoned=input("Show only abandoned/inactive/failed rooms? (y/N): ").strip().lower()=="y"
-    checkpoint_dir=input("Checkpoint directory [.] : ").strip() or "."
-    rooms,protected=room_management(filt,abandoned,checkpoint_dir)
-    if not rooms: return
-    choice=input("Room number to inspect, ALL for bulk deletion, or Enter to exit: ").strip()
-    if not choice: return
-    if choice.upper()=="ALL":
-        targets=rooms
+    filt = input("Filter by Nomi name (Enter for all): ").strip()
+    abandoned = input("Show only abandoned/inactive/failed rooms? (y/N): ").strip().lower() == "y"
+    checkpoint_dir = input("Checkpoint directory [.] : ").strip() or "."
+    rooms, protected = room_management(filt, abandoned, checkpoint_dir)
+    if not rooms:
+        return
+    choice = input("Room number to inspect, ALL for bulk deletion, or Enter to exit: ").strip()
+    if not choice:
+        return
+    if choice.upper() == "ALL":
+        targets = rooms
     else:
-        i=int(choice)-1
-        if not 0<=i<len(rooms): raise ValueError("Invalid room number")
-        targets=[rooms[i]]
-        print(json.dumps(targets[0],indent=2,ensure_ascii=False))
-        if input("Delete this room? (y/N): ").strip().lower()!="y": return
-    blocked=[r for r in targets if r.get("uuid") in protected]
+        try:
+            index = int(choice) - 1
+        except ValueError:
+            print("Invalid room number.")
+            return
+        if not 0 <= index < len(rooms):
+            print("Invalid room number.")
+            return
+        targets = [rooms[index]]
+        print(json.dumps(targets[0], indent=2, ensure_ascii=False))
+
+    blocked = [r for r in targets if str(r.get("uuid", "")) in protected]
     if blocked:
-        print("Protected incomplete rooms excluded:",", ".join(r["uuid"] for r in blocked))
-    targets=[r for r in targets if r.get("uuid") not in protected]
-    if not targets: return
-    print("About to DELETE %d room(s). This cannot be undone."%len(targets))
-    if input("Type DELETE %d to confirm: "%len(targets)).strip()!="DELETE %d"%len(targets): return
-    for r in targets:
-        rid=r["uuid"]
-        if input("Confirm room UUID %s (or SKIP): "%rid).strip()!=rid: continue
+        print("Protected rooms excluded:", ", ".join(str(r["uuid"]) for r in blocked))
+    targets = [r for r in targets if str(r.get("uuid", "")) not in protected]
+    if not targets:
+        print("No eligible rooms to delete.")
+        return
+
+    print("\nRooms to delete:")
+    for room in targets:
+        print("  %s  %s" % (room.get("name", ""), room["uuid"]))
+    print("This action cannot be undone.")
+    answer = input("Delete these %d room(s)? [y/N]: " % len(targets)).strip().lower()
+    if answer not in ("y", "yes"):
+        print("Deletion cancelled.")
+        return
+    for room in targets:
+        rid = str(room["uuid"])
         legacy.delete_room(rid)
-        print("Deleted",rid)
+        print("Deleted", rid)
 
 def interactive_menu():
     while True:
