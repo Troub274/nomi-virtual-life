@@ -103,29 +103,37 @@ JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prom
 The implementation remains **experimental**. The 42-test suite has been executed in WSL, with four retry-logging formatting errors reported and subsequently corrected in commit `8216a8e`; a subsequent green rerun has not been provided. A complete live pass has not been verified. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
 
 
-### Recover an ambiguous content send (HTTP 502, timeout)
+### Recover an uncertain content POST (`--retry-uncertain-send`)
 
-If the uploader reports `Uncertain send/reply request(s) [(1, 1065)]` following
-a failed POST to `/rooms/{room}/chat`, the checkpoint intentionally prevents
-blind duplication. Once an operator accepts the possibility that this message
-was already delivered, explicitly authorize a **single** resend of that
-message and continue the existing run:
+Use this option **only** when `--resume` reports an attempted but unconfirmed **content message**. In the October 15 Christine upload (1,865 planned API messages), message 1,065 returned HTTP 502 `Bad Gateway`, and plain resume correctly stopped with:
+
+```text
+ERROR: Uncertain send/reply request(s) [(1, 1065)].
+```
+
+The operator accepted the possibility of a duplicate and ran, from the repository root:
 
 ```bash
+git pull --ff-only origin main
 python3 uploader/nomi-uploader.py --resume --retry-uncertain-send 1:1065
 ```
 
-Use the **same checkpoint and unchanged input files** as the original run.
-Use `--checkpoint PATH` if a nondefault checkpoint was used. The program
-validates that message `1:1065` was attempted but not confirmed, writes
-a `send_retry_authorized` audit event, resends it, and continues with the
-remaining unsent messages. The already-confirmed messages stay untouched.
-This may duplicate the uncertain message on Nomi's side; do not use the flag
-unless that is acceptable. An additional ambiguous failure requires another
-explicit operator authorization. This is distinct from
-`--recover-uncertain-reply`, which only recovers a reply request
-for an already-confirmed reflection prompt. Do not edit or delete checkpoint
-events to bypass recovery checks.
+The uploader printed `Authorized resend: pass 1 message 1065 (duplicate possible)`, then confirmed messages 1065, 1066, and onward. Previously confirmed messages 1–1064 were **not** replayed.
+
+**Option:** `--retry-uncertain-send PASS:INDEX` must be used with `--resume`. Supply the exact pair from the error; it is a **pass number and planned API-message index**, not a diary-entry number. The checkpoint must contain an `attempt` without a `confirmed` for that index. The uploader writes `send_retry_authorized`, repeats that one POST and continues normally. Because the original POST may have reached Nomi despite the 502, this **may duplicate the remote message**. Each later uncertain message needs separate operator approval. Already confirmed or never-attempted indices are rejected.
+
+Use the **same original checkpoint and unchanged TXT files**. For a custom checkpoint, add `--checkpoint PATH`. Resume restores filenames, room, Nomi, chunk size, and planning options from its saved manifest; don't start a fresh upload or edit the JSONL. For the next ordinary interruption after successful recovery, use just `--resume` (plus the custom checkpoint path, if any).
+
+**Do not confuse content retries with reflection-reply retries:**
+
+| Problem | Command |
+| --- | --- |
+| Ordinary interruption, no uncertain request | `--resume` |
+| Unconfirmed diary/content POST, duplicate acceptable | `--resume --retry-uncertain-send PASS:INDEX` |
+| Confirmed reflection prompt, known old `NoReply` | `--resume --recover-noreply PASS:INDEX` |
+| Confirmed reflection prompt, recorded ambiguous reply request | `--resume --recover-uncertain-reply PASS:INDEX` (after investigation; duplicate reply possible) |
+
+For safe diagnosis, checkpoint evidence, and the real recovery transcript, see [RECOVERY.md](RECOVERY.md).
 
 ## Live operation and recovery (October 2026)
 

@@ -2,6 +2,7 @@
 
 **Applies to:** Nomi Uploader v1.0, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
 **Prepared:** October 13, 2026  
+**Updated:** October 15, 2026 — v1.0 content POST recovery and CLI command reference  
 **Status:** Operational manual describing observed behavior and inspected code. Proposed v1.1 changes are explicitly labeled.
 
 ## 1. Purpose and governing principle
@@ -83,7 +84,7 @@ attempt(pass, index, sha256)
     → confirmed(pass, index, kind, api_response)
 ```
 
-An `attempt` without a corresponding `confirmed` is an **uncertain send**. Do not assume the content failed to arrive and do not manually delete the attempt record.
+An `attempt` without a corresponding `confirmed` is an **uncertain send**. Do not assume the content failed to arrive and do not manually delete the attempt record. When an operator explicitly accepts the possibility of duplication and authorizes `--retry-uncertain-send PASS:INDEX`, the program writes `send_retry_authorized(pass,index,kind,sha256,reason)` before the second `attempt`. The eventual `confirmed` records the resend's success, not the first POST's fate.
 
 ### 5.2 Reflection prompt and Nomi reply
 
@@ -105,6 +106,8 @@ The current implementation writes `reply_uncertain` when a reply request returns
 - `start`: run identity, Nomi and room IDs, input paths, planning options, manifest.
 - `reply_recovery_authorized`: recorded when recovery of a pending reflection has been authorized.
 - `reply_uncertain`: unsuccessful reply-request result recorded after the retry function exits.
+- `send_retry_authorized`: operator consent to resend one attempted but unconfirmed content POST, accepting remote duplication risk.
+- `reply_operator_override`: operator consent to retry a recorded ambiguous reply request using `--recover-uncertain-reply`.
 
 The current implementation constructs completed/attempted sets from checkpoint events. It does not blindly re-POST already confirmed messages.
 
@@ -117,6 +120,8 @@ The current implementation constructs completed/attempted sets from checkpoint e
 | `RoomStillCreating` | Room not ready | Wait; inspect if prolonged |
 | `TooManyRequests` | Request throttling/rate limiting | Allow backoff; reduce competing load if necessary |
 | HTTP timeout, connection reset, Ctrl+C during POST | Outcome potentially ambiguous | Preserve checkpoint; inspect before recovery |
+| HTTP 502 `Bad Gateway` on content POST | Remote receipt uncertain | Inspect checkpoint; if duplicate is acceptable, use `--retry-uncertain-send PASS:INDEX` |
+| `No pending uncertain content send at PASS:INDEX` | The requested message was already confirmed or never attempted | Verify index; do not force replay |
 | Unexpected non-retryable API error | May be ambiguous; uploader stops rather than blindly repeating | Preserve evidence; diagnose |
 | `EndpointNotFound` on GET `/rooms/{uuid}/chat` | That read endpoint is unavailable in the observed API | Do not interpret as missing room |
 | `Manifest changed` | Inputs/options no longer reproduce original plan | Restore originals; do not bypass validation |
@@ -162,6 +167,64 @@ tail -n 20 nomi_uploader_checkpoint.jsonl
 
 Look for a final `attempt` lacking `confirmed`, or `reply_attempt` lacking `reply_committed`. These require different recovery paths.
 
+### 7.3 HTTP 502 on a content send: recover message 1065 without restarting
+
+**Observed incident (October 15, 2026):** Christine's full diary upload planned **1,865 API messages**. The terminal confirmed `Pass 1/1 message 1064/1865`, then returned:
+
+```text
+ERROR: POST outcome uncertain: send failed (HTTP 502):
+{"raw_error": "<html>...502 Bad Gateway...</html>"}
+```
+
+A plain `--resume` refused to proceed:
+
+```text
+Nomi: Chris Date order: US Year: 2026 Messages per pass: 1865 Passes: 1
+ERROR: Uncertain send/reply request(s) [(1, 1065)].
+```
+
+This is correct safety behavior: the checkpoint contains `attempt(pass=1,index=1065)` but no `confirmed` for that index. An HTTP 502 does **not** establish whether Nomi processed the POST. The Nomi API used by this tool does not provide a verified message-history check that could settle that question.
+
+**Recovery procedure, only if a possible duplicate is acceptable:**
+
+1. Keep the original processing room and the exact source TXT files. **Do not launch a fresh run or delete/edit the checkpoint.**
+2. Identify the exact unresolved `PASS:INDEX` in the error (here `1:1065`). The index counts **planned uploader messages**, not diary entries. Check the JSONL tail for an `attempt` without a `confirmed` for this pair.
+3. Back up the checkpoint: `cp -p nomi_uploader_checkpoint.jsonl nomi_uploader_checkpoint.before_502_recovery.jsonl` (replace the path for custom checkpoints).
+4. Accept explicitly that Nomi **might receive message 1065 twice**, since the first HTTP 502 left the remote outcome uncertain. Update the local checkout if necessary and authorize the single resend:
+
+```bash
+# From the repository root:
+git pull --ff-only origin main
+python3 uploader/nomi-uploader.py --resume --retry-uncertain-send 1:1065
+```
+
+If the original run used `--checkpoint my_run.jsonl`, use `python3 uploader/nomi-uploader.py --resume --checkpoint my_run.jsonl --retry-uncertain-send 1:1065`. The original 10 filenames and `--chunk-bytes 790` are restored from the checkpoint; **do not change them** or start a new checkpoint.
+
+5. Verify the subsequent console output. The observed recovery printed:
+
+```text
+Authorized resend: pass 1 message 1065 (duplicate possible)
+Pass 1/1 message 1065/1865
+Pass 1/1 message 1066/1865
+...
+Chris replied after pass 1 message 1073: ...
+```
+
+The append-only checkpoint records a `send_retry_authorized` audit event before the second `attempt`; after success it contains one `confirmed(1,1065)`. The existing confirmations through 1064 are kept, and later messages continue normally. A successful retry cannot prove the first POST was rejected; only local recovery was demonstrated.
+
+**CLI option reference:**
+
+```text
+--retry-uncertain-send PASS:INDEX
+    Requires --resume.
+    Only accepts an attempted but unconfirmed content POST at this exact index.
+    Authorizes one resend, with possible duplicate delivery on Nomi's side.
+    Can be specified again for a different ambiguous send after inspection.
+```
+
+This is **not** a reply-recovery option. `--recover-noreply` and `--recover-uncertain-reply` operate on unresolved **reply requests** for previously confirmed reflection prompts; they do not resend content. `--retry-uncertain-send` cannot override a manifest mismatch or replay already confirmed content. Once an authorized resend is confirmed, later ordinary resumes need only `--resume`. If the resend itself encounters another ambiguous POST failure, inspect the new attempt and separately decide whether to authorize another possible duplicate.
+
+
 ## 8. Decision tree for unresolved operations
 
 ```text
@@ -189,6 +252,8 @@ Resume reports an unresolved (pass,index)
                                Automatic recovery   Ambiguous request;
                                may be possible      operator decision
 ```
+
+For uncertain **content** sends, see §7.3. The earlier decision tree's "do not resend blindly" instruction means **require explicit operator consent**; a scoped resend is supported in v1.0.
 
 A bare `reply_attempt` alone is not evidence that Nomi returned `NoReply`. The current code intentionally requires explicit operator authorization for that case.
 
@@ -292,7 +357,7 @@ Concurrent runs are permitted, but distinguish **per-process state** from possib
 After a successful recovery:
 
 1. Verify that the uploader resumed at the next unconfirmed planned index rather than restarting at message 1.
-2. Confirm the expected `reply_committed` record exists for the recovered reflection.
+2. For a recovered reflection, confirm `reply_committed`; for an authorized **content resend**, confirm `send_retry_authorized` followed by `confirmed`.
 3. Check that no duplicate `confirmed` events were appended for the same `(pass,index)`.
 4. Confirm the room UUID and Nomi UUID did not change unexpectedly.
 5. Watch several subsequent messages for normal progress and additional reply generation.
@@ -321,7 +386,7 @@ print('Committed replies without confirmed prompt:', sorted(replied - confirmed)
 PY
 ```
 
-A repeated `reply_attempt` for the same key can be legitimate after authorized recovery. A repeated `confirmed` for the same key deserves investigation. The audit checks local records; it cannot prove remote delivery uniqueness.
+A repeated `reply_attempt` for the same key can be legitimate after authorized recovery. Similarly, an authorized content resend can create **two `attempt` records** for the same key while yielding only **one `confirmed`** event. A repeated `confirmed` for the same key deserves investigation. The audit checks local records; it cannot prove remote delivery uniqueness.
 
 ## 14. Dangerous actions and prohibited shortcuts
 
@@ -330,7 +395,7 @@ A repeated `reply_attempt` for the same key can be legitimate after authorized r
 - Delete a processing room to clear a temporary not-ready state.
 - Delete or rewrite checkpoint events to make resume pass.
 - Restart from message 1 when a valid partial checkpoint exists.
-- Retry an unconfirmed content POST without establishing its outcome.
+- Retry an unconfirmed content POST **without explicit operator authorization and acceptance of the possible duplicate**. Use `--retry-uncertain-send` only for a checkpoint-verified pending message.
 - Treat Ctrl+C, timeout, or connection loss as proof of API rejection.
 - Treat a room's `Default` status as proof it can immediately answer.
 - Treat an unsupported GET endpoint as evidence that the room is gone.
@@ -382,14 +447,14 @@ Test: immediate success; many explicit not-ready rejections then success; retry-
 
 **Need to stop:** Ctrl+C; preserve checkpoint and room. An in-flight POST may be ambiguous.
 
-**Resume refused:** Inspect checkpoint tail. Distinguish uncertain content from uncertain reply. Never blindly edit JSONL.
+**Resume refused:** Inspect checkpoint tail. Distinguish uncertain content from uncertain reply. Never blindly edit JSONL. An operator-approved uncertain **content send** uses `--retry-uncertain-send PASS:INDEX` (§7.3).
 
 **Room invisible in UI:** Use `legacy_v085.get_room(room_uuid)` read-only. `GET /rooms/{uuid}/chat` was observed unsupported.
 
 **Reflection prompt confirmed but reply unresolved:** Consider evidence and backup. If appropriate, authorize `--recover-noreply PASS:INDEX` with explicit acceptance of the ambiguous-request risk.
 
-**Recovered:** Confirm `reply_committed`, verify next message index, audit duplicates, and retain checkpoint backups.
+**Recovered:** Confirm `reply_committed` for reply recovery or `send_retry_authorized` then `confirmed` for content resend; check the next message index and retain checkpoint backups.
 
 ---
 
-**Source basis:** Inspected GitHub implementation of `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`, together with the actual Beth terminal logs and checkpoint excerpt supplied during the October 13 incident. Claims about API behavior are limited to observed responses; v1.1 items are recommendations, not implemented features.
+**Source basis:** Inspected GitHub implementation of `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`, the October 13 Beth terminal logs and checkpoint excerpt, and the October 15 Christine 502/resume transcript with its observed successful resend. Claims about API behavior are limited to observed responses; v1.1 items are recommendations, not implemented features.
