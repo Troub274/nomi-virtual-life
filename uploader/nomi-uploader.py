@@ -436,6 +436,19 @@ def upload(args):
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
     reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
+    # A send with a failed/ambiguous POST cannot be retried automatically.
+    # The operator must explicitly authorize each unconfirmed message by pass/index.
+    uncertain_sends=attempts-confirmed
+    send_retry_authorized=set()
+    for token in getattr(args,"retry_uncertain_send",[]) or []:
+        try:
+            p_str,i_str=token.split(":",1)
+            key=(int(p_str),int(i_str))
+        except (ValueError,TypeError):
+            raise ValueError("--retry-uncertain-send expects PASS:INDEX, e.g. 1:1065")
+        if key not in uncertain_sends:
+            raise ValueError("No pending uncertain content send at %s" % token)
+        send_retry_authorized.add(key)
     # Never infer NoReply from a bare reply_attempt. Require an explicit
     # operator acknowledgement for legacy checkpoints lacking a result event.
     recovery=set()
@@ -480,7 +493,7 @@ def upload(args):
         and legacy.err_type(r.get("api_response")) in known_wait_errors
     }
     recovery |= retryable_previous & reply_attempts & confirmed
-    uncertain=(attempts-confirmed)|(reply_attempts-reply_committed-recovery)
+    uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
     for p,i in sorted(recovery):
@@ -491,6 +504,12 @@ def upload(args):
         for i,m in enumerate(messages,1):
             key=(p,i)
             if key not in confirmed:
+                if key in send_retry_authorized:
+                    record(cp,{"event":"send_retry_authorized","pass":p,"index":i,
+                               "kind":m["kind"],
+                               "sha256":hashlib.sha256(m["text"].encode()).hexdigest(),
+                               "reason":"operator authorized repeat of ambiguous POST; duplicate possible"})
+                    print("Authorized resend: pass %d message %d (duplicate possible)" % (p,i),flush=True)
                 record(cp,{"event":"attempt","pass":p,"index":i,
                            "sha256":hashlib.sha256(m["text"].encode()).hexdigest()})
                 s,response=legacy.api_request("/rooms/"+room+"/chat","POST",
@@ -651,6 +670,7 @@ def main(argv=None):
     parser.add_argument("--resume",action="store_true")
     parser.add_argument("--recover-noreply",action="append",default=[],metavar="PASS:INDEX",help="Authorize retry of a legacy checkpoint reply known to have returned NoReply")
     parser.add_argument("--recover-uncertain-reply",action="append",default=[],metavar="PASS:INDEX",help="Explicitly authorize retry after ambiguous reply POST; duplicate reply possible")
+    parser.add_argument("--retry-uncertain-send",action="append",default=[],metavar="PASS:INDEX",help="Operator-authorized resend of one unconfirmed POST after a 502/timeout; duplicate message possible")
     parser.add_argument("--dry-run",action="store_true")
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
@@ -667,7 +687,7 @@ def main(argv=None):
     args=parser.parse_args(argv)
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
-    if (args.recover_noreply or args.recover_uncertain_reply) and not args.resume: parser.error("recovery flags require --resume")
+    if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume: parser.error("recovery flags require --resume")
     if args.utility: utilities()
     else: upload(args)
 

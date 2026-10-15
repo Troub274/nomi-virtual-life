@@ -103,6 +103,30 @@ JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prom
 The implementation remains **experimental**. The 42-test suite has been executed in WSL, with four retry-logging formatting errors reported and subsequently corrected in commit `8216a8e`; a subsequent green rerun has not been provided. A complete live pass has not been verified. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
 
 
+### Recover an ambiguous content send (HTTP 502, timeout)
+
+If the uploader reports `Uncertain send/reply request(s) [(1, 1065)]` following
+a failed POST to `/rooms/{room}/chat`, the checkpoint intentionally prevents
+blind duplication. Once an operator accepts the possibility that this message
+was already delivered, explicitly authorize a **single** resend of that
+message and continue the existing run:
+
+```bash
+python3 uploader/nomi-uploader.py --resume --retry-uncertain-send 1:1065
+```
+
+Use the **same checkpoint and unchanged input files** as the original run.
+Use `--checkpoint PATH` if a nondefault checkpoint was used. The program
+validates that message `1:1065` was attempted but not confirmed, writes
+a `send_retry_authorized` audit event, resends it, and continues with the
+remaining unsent messages. The already-confirmed messages stay untouched.
+This may duplicate the uncertain message on Nomi's side; do not use the flag
+unless that is acceptable. An additional ambiguous failure requires another
+explicit operator authorization. This is distinct from
+`--recover-uncertain-reply`, which only recovers a reply request
+for an already-confirmed reflection prompt. Do not edit or delete checkpoint
+events to bypass recovery checks.
+
 ## Live operation and recovery (October 2026)
 
 **Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-bytes` limit. The final partial group is processed too.
