@@ -113,6 +113,37 @@ class SpecificationTests(unittest.TestCase):
         (self.root/"nomi_uploader_completed.json").write_text("{}",encoding="utf-8")
         self.assertIn("room-abc",u.active_room_ids(self.root))
 
+    def test_completed_room_is_released_and_incomplete_room_stays_protected(self):
+        import json
+        for name, finished in (("complete", True), ("pending", False)):
+            room = "room-" + name
+            cp = self.root / (name + "_checkpoint.jsonl")
+            u.record(cp, {"event": "start", "room_uuid": room,
+                          "manifest": name, "passes": 1})
+            u.record(cp, {"event": "confirmed", "pass": 1, "index": 1,
+                          "kind": "content"})
+            if finished:
+                (self.root / (name + "_completed.json")).write_text(
+                    json.dumps({"room_uuid": room, "manifest": name,
+                                "passes": 1, "messages_per_pass": 1}),
+                    encoding="utf-8")
+        protected = u.active_room_ids(self.root)
+        self.assertNotIn("room-complete", protected)
+        self.assertIn("room-pending", protected)
+
+    def test_completion_marker_does_not_release_missing_replies(self):
+        import json
+        cp = self.root / "unreplied_checkpoint.jsonl"
+        u.record(cp, {"event": "start", "room_uuid": "unreplied",
+                      "manifest": "unreplied", "passes": 1})
+        u.record(cp, {"event": "confirmed", "pass": 1, "index": 1,
+                      "kind": "prompt"})
+        (self.root / "unreplied_completed.json").write_text(
+            json.dumps({"room_uuid": "unreplied", "manifest": "unreplied",
+                        "passes": 1, "messages_per_pass": 1}),
+            encoding="utf-8")
+        self.assertIn("unreplied", u.active_room_ids(self.root))
+
     def test_export_parser_delegates_to_legacy(self):
         with patch.object(u.legacy,"prepare_conversation_chunks",return_value=[
             {"text":"Turn one"},{"text":"Turn two"},{"text":"Turn three"}]) as mocked:
