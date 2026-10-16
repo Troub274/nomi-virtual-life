@@ -572,16 +572,18 @@ def active_room_ids(checkpoint_dir="."):
             prompt_positions = {(e.get("pass"), e.get("index")) for e in events
                                 if e.get("event") == "confirmed"
                                 and e.get("kind") == "prompt"}
-            expected = start.get("passes", 0) * start.get("messages_per_pass", 0)
             completed = False
-            if expected and len(confirmed) == expected and prompt_positions <= replied:
+            if prompt_positions <= replied:
                 for marker in path.parent.glob("*completed.json"):
                     try:
                         data = json.loads(marker.read_text(encoding="utf-8"))
-                        if (data.get("room_uuid") == start["room_uuid"]
+                        expected = start.get("passes", 0) * data.get("messages_per_pass", 0)
+                        if (expected and len(confirmed) == expected
+                                and data.get("room_uuid") == start["room_uuid"]
                                 and data.get("manifest") == start.get("manifest")
                                 and data.get("passes") == start.get("passes")
-                                and data.get("messages_per_pass") == start.get("messages_per_pass")):
+                                and (not start.get("messages_per_pass") or
+                                     data.get("messages_per_pass") == start["messages_per_pass"])):
                             completed = True
                             break
                     except (OSError, ValueError):
