@@ -430,7 +430,7 @@ def upload(args):
             if not legacy.room_contains_nomi(r,nomi["uuid"]):
                 raise ValueError("Room is not associated with selected Nomi")
         else: room=select_or_create_room(nomi, cp.parent)
-        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes,"process_every":args.process_every})
+        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes,"process_every":args.process_every})
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
@@ -563,9 +563,31 @@ def active_room_ids(checkpoint_dir="."):
             events=records(path)
             if not events or events[0].get("event")!="start": continue
             start=events[0]
-            # A completion marker is not proof that it belongs to this run.
-            # Protect any room with a checkpoint unless explicitly detached.
-            protected.add(start["room_uuid"])
+            # Release only runs with a matching completion marker AND a fully
+            # confirmed checkpoint. Other runs using the same room stay protected.
+            confirmed = {(e.get("pass"), e.get("index")) for e in events
+                         if e.get("event") == "confirmed"}
+            replied = {(e.get("pass"), e.get("index")) for e in events
+                       if e.get("event") == "reply_committed"}
+            prompt_positions = {(e.get("pass"), e.get("index")) for e in events
+                                if e.get("event") == "confirmed"
+                                and e.get("kind") == "prompt"}
+            expected = start.get("passes", 0) * start.get("messages_per_pass", 0)
+            completed = False
+            if expected and len(confirmed) == expected and prompt_positions <= replied:
+                for marker in path.parent.glob("*completed.json"):
+                    try:
+                        data = json.loads(marker.read_text(encoding="utf-8"))
+                        if (data.get("room_uuid") == start["room_uuid"]
+                                and data.get("manifest") == start.get("manifest")
+                                and data.get("passes") == start.get("passes")
+                                and data.get("messages_per_pass") == start.get("messages_per_pass")):
+                            completed = True
+                            break
+                    except (OSError, ValueError):
+                        continue
+            if not completed:
+                protected.add(start["room_uuid"])
         except (OSError,ValueError,KeyError):
             continue
     return protected
