@@ -1,5 +1,7 @@
 # Chris / Christine Sue Norman — uploader package
 
+**[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
+
 The supplied `CHRISTINE_COMPLETE_1000_V1.zip` was already in uploader Journal format.
 Its ten notebooks (1,000 entries) are preserved byte-for-byte in `input/`.
 Original author documentation, source audit and manifest remain in `reference/` as
