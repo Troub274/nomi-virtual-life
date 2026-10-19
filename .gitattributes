@@ -4,3 +4,5 @@ examples/beth/input/* -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
 examples/chris/input/* -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
 examples/chris/reference/* -text whitespace=-blank-at-eol,-blank-at-eof,cr-at-eol
 *.zip binary
+# Imported bridge sources retain original whitespace and stable provenance hashes.
+bridge/** text eol=lf whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
