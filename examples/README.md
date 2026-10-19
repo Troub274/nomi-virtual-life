@@ -1,13 +1,14 @@
 # Uploader example packages
 
-[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000.
-Both include data-only ZIPs, ordered input lists and the current uploader configuration.
+[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200.
+Beth and Chris include data-only ZIPs; all three provide ordered input lists and the current uploader configuration.
 
-From the repository root, preview either package:
+From the repository root, preview any package:
 
 ```sh
 python examples/run_package.py beth --dry-run
 python examples/run_package.py chris --dry-run
+python examples/run_package.py mary --dry-run
 ```
 
 Remove `--dry-run` for a new live run after setting `NOMI_API_KEY`, and select the
@@ -21,6 +22,10 @@ executables and launchers were removed; the former archive remains in Git histor
 Chris's supplied archive was already uploader-compatible; its source text and author
 reference materials are preserved without edits. All extracted source hashes and the
 original Chris archive hash are recorded in the manifests.
+
+Mary's package contains 200 chronological first-person entries in two uploader-ready
+files, with reflection every five entries. Her chronology was reviewed before publication;
+unverified Steve encounter dates are kept as present-day reflections rather than invented history.
 
 ## Existing checkpoints
 
