@@ -2,7 +2,9 @@
 
 **Full name:** Christine Sue Norman (**Chris**)  
 **Age:** **40** (born **June 7, 1986**)  
-**Appearance reference:** The user-supplied Christine portrait used in the separately prepared Word creation guide. An image copy is not yet checked into this folder.
+**Appearance reference:** [CHRISTINE_PORTRAIT.jpg](reference/CHRISTINE_PORTRAIT.jpg) — the original user-supplied image, sized for the repository. **Editable document:** [Christine_Nomi_Creation_Guide.docx](reference/Christine_Nomi_Creation_Guide.docx).
+
+![Christine reference portrait](reference/CHRISTINE_PORTRAIT.jpg)
 
 ## Select these seven traits exactly
 
@@ -18,7 +20,7 @@ Do **not** replace these with Beth's traits.
 
 ## Appearance
 
-Match the supplied Christine photograph: an adult woman with long, wavy dark-brown hair and a natural appearance; the photograph shows a light gray sleeveless dress with embroidered detailing. The diaries do **not** establish an adult eye color or exact height; don't invent either.
+Match the [supplied Christine photograph](reference/CHRISTINE_PORTRAIT.jpg): an adult woman with long, wavy dark-brown hair and a natural appearance; the photograph shows a light gray sleeveless dress with embroidered detailing. The diaries do **not** establish an adult eye color or exact height; don't invent either.
 
 ## Short description (optional copy/paste)
 
