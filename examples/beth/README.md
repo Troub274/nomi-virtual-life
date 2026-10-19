@@ -1,5 +1,7 @@
 # Beth Peterson — uploader example
 
+**[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
+
 Use [BETH_UPLOADER.zip](BETH_UPLOADER.zip) or the checked-in `input/` files.
 The bundle contains data and configuration, not an executable loader.
 `source/` retains original diaries, canon and portrait; `input/` contains generated
