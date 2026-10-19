@@ -1,0 +1,9 @@
+{
+  "nomi": "Tammy",
+  "date_format": "US",
+  "inputs": [
+    "input/TAMMY_JOURNAL_001_100_V2.txt",
+    "input/TAMMY_JOURNAL_101_200_V2.txt",
+    "input/TAMMY_JOURNAL_201_300_V2.txt"
+  ]
+}
