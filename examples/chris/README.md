@@ -2,6 +2,8 @@
 
 **[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
 
+Reference files: [Christine's portrait](reference/CHRISTINE_PORTRAIT.jpg) and [editable Word creation guide](reference/Christine_Nomi_Creation_Guide.docx).
+
 The supplied `CHRISTINE_COMPLETE_1000_V1.zip` was already in uploader Journal format.
 Its ten notebooks (1,000 entries) are preserved byte-for-byte in `input/`.
 Original author documentation, source audit and manifest remain in `reference/` as
