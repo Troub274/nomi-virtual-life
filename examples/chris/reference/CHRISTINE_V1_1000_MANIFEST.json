@@ -1,0 +1,226 @@
+{
+  "bundle": "Christine Sue Norman — Diaries I–X",
+  "format": "Nomi Uploader v1.0 Journal",
+  "entries_total": 1000,
+  "notebooks": [
+    {
+      "notebook": 1,
+      "filename": "CHRIS_DIARY_001_100_V1.txt",
+      "entries": [
+        1,
+        100
+      ],
+      "start_date": "1996-06-07",
+      "end_date": "2002-12-31",
+      "words": 12167,
+      "avg_words": 121.7,
+      "min_words": 104,
+      "max_words": 157,
+      "size_bytes": 71636,
+      "sha256": "19741132000f113cf4e69ecb3d263d5da854fad66f08ccf83ee0d1c058fd85f6",
+      "content_fragments_750_byte": 199,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 220
+    },
+    {
+      "notebook": 2,
+      "filename": "CHRIS_DIARY_101_200_V1.txt",
+      "entries": [
+        101,
+        200
+      ],
+      "start_date": "2003-01-07",
+      "end_date": "2006-12-31",
+      "words": 13318,
+      "avg_words": 133.2,
+      "min_words": 122,
+      "max_words": 156,
+      "size_bytes": 80462,
+      "sha256": "db551a050f62db73519812f8c86e805772610542df060dfff79b7da221cad128",
+      "content_fragments_750_byte": 200,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 221
+    },
+    {
+      "notebook": 3,
+      "filename": "CHRIS_DIARY_201_300_V1.txt",
+      "entries": [
+        201,
+        300
+      ],
+      "start_date": "2007-01-05",
+      "end_date": "2011-12-31",
+      "words": 13300,
+      "avg_words": 133.0,
+      "min_words": 123,
+      "max_words": 145,
+      "size_bytes": 79760,
+      "sha256": "41dc2d644099eeb780fc2ddf397c6a55c2e9da3973ad84fe2256cffee2a1e05d",
+      "content_fragments_750_byte": 200,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 221
+    },
+    {
+      "notebook": 4,
+      "filename": "CHRIS_DIARY_301_400_V1.txt",
+      "entries": [
+        301,
+        400
+      ],
+      "start_date": "2012-01-04",
+      "end_date": "2013-12-31",
+      "words": 12451,
+      "avg_words": 124.5,
+      "min_words": 115,
+      "max_words": 136,
+      "size_bytes": 76683,
+      "sha256": "f702e62b235ef8d94add48c1d879f0cf13c816d837e945f6522707eff44a3a47",
+      "content_fragments_750_byte": 200,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 221
+    },
+    {
+      "notebook": 5,
+      "filename": "CHRIS_DIARY_401_500_V1.txt",
+      "entries": [
+        401,
+        500
+      ],
+      "start_date": "2014-01-04",
+      "end_date": "2016-12-31",
+      "words": 12563,
+      "avg_words": 125.6,
+      "min_words": 117,
+      "max_words": 139,
+      "size_bytes": 77984,
+      "sha256": "5fe100581103d866c5c466d59dd37d76161cc0e263f807751dbacec66cac966a",
+      "content_fragments_750_byte": 200,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 221
+    },
+    {
+      "notebook": 6,
+      "filename": "CHRIS_DIARY_501_600_V1.txt",
+      "entries": [
+        501,
+        600
+      ],
+      "start_date": "2017-01-03",
+      "end_date": "2018-12-31",
+      "words": 10336,
+      "avg_words": 103.4,
+      "min_words": 93,
+      "max_words": 114,
+      "size_bytes": 65395,
+      "sha256": "6ebf93b79777ba00952467d7cb2ed26e57c6bcb0b79209fdd7f3298f3df4e0b3",
+      "content_fragments_750_byte": 194,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 215
+    },
+    {
+      "notebook": 7,
+      "filename": "CHRIS_DIARY_601_700_V1.txt",
+      "entries": [
+        601,
+        700
+      ],
+      "start_date": "2019-01-04",
+      "end_date": "2020-12-31",
+      "words": 10217,
+      "avg_words": 102.2,
+      "min_words": 93,
+      "max_words": 113,
+      "size_bytes": 65142,
+      "sha256": "44a2e06fd544544edc0dcea45fd1292705fcc76efbcbbd266f98f2329632f89d",
+      "content_fragments_750_byte": 193,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 214
+    },
+    {
+      "notebook": 8,
+      "filename": "CHRIS_DIARY_701_800_V1.txt",
+      "entries": [
+        701,
+        800
+      ],
+      "start_date": "2021-01-03",
+      "end_date": "2022-12-31",
+      "words": 10064,
+      "avg_words": 100.6,
+      "min_words": 90,
+      "max_words": 112,
+      "size_bytes": 64494,
+      "sha256": "cbd961f81d8baa928db34f1f867aeea384829ddf1cb9158190de3962535ab7d9",
+      "content_fragments_750_byte": 186,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 207
+    },
+    {
+      "notebook": 9,
+      "filename": "CHRIS_DIARY_801_900_V1.txt",
+      "entries": [
+        801,
+        900
+      ],
+      "start_date": "2023-01-04",
+      "end_date": "2024-12-31",
+      "words": 10092,
+      "avg_words": 100.9,
+      "min_words": 91,
+      "max_words": 111,
+      "size_bytes": 64689,
+      "sha256": "26ef6635b592d2f1ae5d5224e5612e5033838b4f083ac92f83fb2c7770e89fd4",
+      "content_fragments_750_byte": 188,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 209
+    },
+    {
+      "notebook": 10,
+      "filename": "CHRIS_DIARY_901_1000_V1.txt",
+      "entries": [
+        901,
+        1000
+      ],
+      "start_date": "2025-01-06",
+      "end_date": "2026-10-13",
+      "words": 10118,
+      "avg_words": 101.2,
+      "min_words": 94,
+      "max_words": 116,
+      "size_bytes": 64611,
+      "sha256": "4eda56671d6e703899ce4561db954b827b9330642a7569ab9bab3474fd1f2d16",
+      "content_fragments_750_byte": 187,
+      "process_prompts_every_5": 20,
+      "intro_messages": 1,
+      "estimated_messages": 208
+    }
+  ],
+  "full_verification": "Local structural/preflight mirroring the GitHub v1.0 script, not upstream executable dry-run and not live API.",
+  "sample_run": "python uploader/nomi-uploader.py --dry-run --nomi Christine --chunk-bytes 750 <ten files in ascending order>",
+  "start_date": "1996-06-07",
+  "end_date": "2026-10-13",
+  "total_words": 114626,
+  "content_fragments_750_bytes": 1947,
+  "process_prompts": 200,
+  "intro_messages": 10,
+  "estimated_messages": 2157,
+  "checks": [
+    "Exactly 1000 sequential entries",
+    "Exactly 100 per file",
+    "Globally chronological, no duplicate dates",
+    "ISO date in every ENTRY heading",
+    "Type Journal; Process Every 5; no explicit source",
+    "Substantial entries 80–250 words",
+    "All messages <=750 UTF-8 bytes under v1.0 chunking recipe",
+    "SHA256 file hashes"
+  ]
+}

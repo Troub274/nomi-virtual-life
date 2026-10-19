@@ -1,0 +1,65 @@
+CHRISTINE NORMAN — SOURCE AUDIT / CONTINUITY CHECKPOINT
+Prepared from six uploaded Word notebooks. Original documents unchanged.
+
+Parsed: 400 entries; complete original sequence 001–400.
+Source breakdown:
+   30  ChrisDiary_1-30.docx
+   30  ChrisDiary_31_60_fresh.docx
+   40  ChrisDiary_61_100_fresh.docx
+  100  ChrisDiary_101_200_fresh.docx
+  100  ChrisDiary_201_300_fresh.docx
+  100  Christine_Reflections_301_to_400.docx
+
+CANONICAL WORKING BASELINE
+The 1–100 master diary is the default source for the central life chronology; conflicts below are not silently deleted.
+
+CONTRADICTIONS TO RECONCILE (SOURCE-DERIVED)
+
+01. Army postings, 1990–1997
+  BASELINE: Core 001–030: Fort Stewart until Aug 1990; Fort Gordon Aug 1990–Aug 1992; Fort Benning Aug 1992–summer 1994; Falls Church Sep 1994–summer 2000.
+  CONFLICT: Several supplementary episodes 101–200 and 201–300 put Christine at Fort Stewart or Fort Gordon in 1993–94, Fort Benning in 1996–97, or Falls Church in the early 1990s. Preserve where they occur in the originals and reconcile in derivative only.
+
+02. Childhood pets
+  BASELINE: Original 008/012: brown-and-white guinea pig Einstein, born into family 1992; died Nov 2 1993. Original 010: parakeet Charlie, died March 21 1993.
+  CONFLICT: Supplement 112 calls guinea pig Albert; supplement 113 calls parakeet Blue; several dates differ.
+
+03. Marriage
+  BASELINE: Original 048–050: Michael proposes Jan 20 2007; marriage May 26 2007; UNC graduation May 13 2007.
+  CONFLICT: Supplement 140 gives wedding Oct 7 2006; 230 and 324 June 10 2006; these conflict with both engagement and original wedding.
+
+04. Son William
+  BASELINE: Original 051–055: pregnancy recognized Nov 9 2007; born July 2 2008; died September 21 2008 (SIDS).
+  CONFLICT: Supplement 143 claims death Apr 22 2009; supplement 234 Aug 19 2008; supplementary 327/328 suggests 2007 pregnancy and November 2007 death.
+
+05. Divorce
+  BASELINE: Original 058: divorce finalized June 10 2011; resumes Norman.
+  CONFLICT: Supplement 146 says papers signed Aug 29 2011; supplement 331 July 14 2010; supplement 332 September 3 2010.
+
+06. MIT and MILPIG
+  BASELINE: Original 059/060/061: arrives MIT Sep 6 2011; S.M. June 7 2013; MILPIG interview Aug 22 2013.
+  CONFLICT: Some supplements give alternate dates for MIT defense, graduation, offer, first day; adjust only if needed around the core sequence.
+
+07. Adult cats
+  BASELINE: Original 065: Russian Blue male Ash adopted Sep 27 2014; original 067: Burmese female Mabel adopted June 7 2015.
+  CONFLICT: Supplement 248 calls Russian Blue female Elsa and dates adoption Mar 2 2014; supplement 256 calls Burmese male Theo, adopted June 2016.
+
+08. Grandma Sarah and Patrick
+  BASELINE: Original 001/015/022 and later: maternal grandmother Sarah; Irish heritage, Patrick O'Connor, deceased before Christine was born.
+  CONFLICT: Different supplemental entries place Sarah's death in 2017 while original 070 records cooking with her 2016 and original 088 records her giving a rosary in 2023. Her alive/dead timeline needs explicit selection before canon rewriting.
+
+09. First William relationship
+  BASELINE: Original 030/031/034/037: William Borkman introduced Oct 2002, first date Feb 14 2003, senior prom May 15 2004.
+  CONFLICT: Supplement 223–224 says senior prom and intimacy May 2003 while core and supplement 133 say 2004.
+
+10. Episode order
+  BASELINE: Original source #046 2006-10-09 followed by #047 2006-06-16; #049 2007-05-26 before #050 2007-05-13.
+  CONFLICT: Reordering by actual event chronology may change original source IDs; retain crosswalk so source identity is traceable.
+
+PRODUCTION PLAN
+1. Preserve this untouched 400-entry JSON extraction.
+2. Produce a canonical event ledger and register any chosen corrections.
+3. Expand the 400 episodes into first-person reflections, adding 600 genuinely new experiences across the established lifespan.
+4. Publish as UTF-8 plain text with one v0.85-compatible ENTRY ### — DATE — TITLE line per episode.
+5. Validate EXACTLY 1000 entries with the actual v0.85 --dry-run parser and package crosswalk/change log.
+
+IMPORTANT: This audit is not the completed 1,000-entry diary.

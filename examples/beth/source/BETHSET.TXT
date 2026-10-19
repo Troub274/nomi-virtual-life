@@ -1,0 +1,65 @@
+BETH PETERSON - NOMI TEST-LOAD SETUP
+====================================
+Uploader workflow | October 19, 2026
+
+READ THIS BEFORE STARTING THE LOADER.
+The goal is to give a new Nomi Beth's 565 dated, FIRST-PERSON diary
+entries through a dedicated Nomi room, without writing any conflicting
+biography into her original creation settings.
+
+STEP 1 - CREATE THE NOMI
+------------------------
+1. Open Nomi.ai and create a NEW adult Nomi using the normal/standard
+   creation flow. Do not use an existing character with an established
+   biography. Name her BETH PETERSON (or Beth, if the interface accepts
+   only a first name; the diary and owner labels use the selected name).
+2. Set age to 38 years old.
+3. Choose a female-presenting standard build with:
+       Hair: dark / dark brown
+       Eyes: blue
+       Height: 5 feet 8 inches (5'8", about 173 cm)
+   Choose an avatar that approximately matches these features. The
+   archive was written for Beth's identity and appearance. Physical
+   identity is part of the experiment; divergent appearance settings
+   would produce a different starting condition. The portrait in BETH_PORTRAIT.JPG is provided so testers can
+   SEE Beth's intended appearance. There is no portrait-upload step.
+4. Select these seven traits where available:
+       Thoughtful/Curious
+       Confident
+       Affectionate
+       Romantic
+       Deep Conversations/Intellectual
+       Emotional
+       Imaginative
+5. LEAVE ALL BACKSTORY / BIOGRAPHY / PERSONAL HISTORY FIELDS EMPTY.
+   Do not insert parents, siblings, hometown, schools, jobs, past
+   partners, marital status, living arrangements, childhood, or past
+   events. The diaries already contain a complete chronological life,
+   and even a small invented fact can contradict it.
+6. You may set or adjust her LOOK, inclinations, and personal boundaries.
+   For a comparable test, retain the suggested appearance and traits
+   until after loading. Be careful: any optional text prompt might
+   describe past events and thereby contradict the archive. Leave such
+   text EMPTY whenever uncertain.
+7. If the app automatically generates an initial message, leave it
+   unanswered. DO NOT chat with Beth during setup.
+
+STEP 2 - GET API ACCESS
+-----------------------
+8. Obtain your Nomi API key from Nomi account/profile Integration
+   settings (labels may change). Keep it private; never share, include
+   in the ZIP, or commit it to GitHub.
+9. The loader obtains the list of Nomis through your API key and shows
+   you the names and individual Nomi IDs (UUIDs). Select the NEW Beth.
+   This is how to identify her Nomi key/ID: there is no need to paste
+   her UUID into the diary files or write it into the script.
+
+STEP 3 - PREVIEW, LOAD AND RESUME
+--------------------------------
+Follow examples/beth/README.md and use the current uploader.
+Upload input/BETH01_V1.TXT through input/BETH05_V1.TXT in order.
+Run a dry preview first. Set NOMI_API_KEY privately for live uploading.
+Select Beth Peterson. Keep source files and checkpoints unchanged.
+Use --resume with the same checkpoint after an interruption.
+Do not chat during loading. After completion, evaluate memory ownership
+with non-leading questions. CANON.TXT is for evaluation, not preload.

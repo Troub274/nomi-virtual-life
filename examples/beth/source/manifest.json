@@ -1,0 +1,54 @@
+{
+  "package": "Beth Peterson Example Archive",
+  "version": "1.0",
+  "as_of": "2026-10-11",
+  "diary_files": {
+    "BETH01.TXT": {
+      "entries": 100,
+      "first": 1,
+      "last": 100,
+      "sha256": "f7b8c7e3e664a367e0b33049ae38960103f2a63b8495e658b52208f4cd291720"
+    },
+    "BETH02.TXT": {
+      "entries": 100,
+      "first": 101,
+      "last": 200,
+      "sha256": "8bff529eadc756b2e3f46d166fe4f04f86dcc4686ee7ce33c9eceaf66a5afb40"
+    },
+    "BETH03.TXT": {
+      "entries": 100,
+      "first": 201,
+      "last": 300,
+      "sha256": "7cb2bac3b988e05a4a1e7265b42382beb59a6d8c6306b916a2d244d0dfc75bb4"
+    },
+    "BETH04.TXT": {
+      "entries": 100,
+      "first": 301,
+      "last": 400,
+      "sha256": "efd010df22df50a3b4e0755a2c2056e20e9614b5c28a987556aa2beab3d23113"
+    },
+    "BETH05.TXT": {
+      "entries": 165,
+      "first": 401,
+      "last": 565,
+      "sha256": "cb669d499ce53cc8fee0122ba8dc74fc373b5ce6ea34e039fbe9706388a9ab13"
+    }
+  },
+  "total_entries": 565,
+  "last_entry_date": "2026-10-11",
+  "current_ending": "Separated from Elias on August 17, 2026; single by October 11, 2026",
+  "encoding": "UTF-8",
+  "transport": "Nomi room chat, not direct Nomi chat",
+  "source_sha256": {
+    "CANON.TXT": "d36204d8d76658223f9a61fe0f4a8185fcb6b475b00bbbcf1c6e4564df4d282f",
+    "BETHSET.TXT": "8c2a8b17ac4bb0b4cbe7e24311465b3ce4273054e3081f0d0f4f797c990bed79",
+    "BETH01.TXT": "f7b8c7e3e664a367e0b33049ae38960103f2a63b8495e658b52208f4cd291720",
+    "BETH03.TXT": "7cb2bac3b988e05a4a1e7265b42382beb59a6d8c6306b916a2d244d0dfc75bb4",
+    "BETH05.TXT": "cb669d499ce53cc8fee0122ba8dc74fc373b5ce6ea34e039fbe9706388a9ab13",
+    "BETH02.TXT": "8bff529eadc756b2e3f46d166fe4f04f86dcc4686ee7ce33c9eceaf66a5afb40",
+    "BETH04.TXT": "efd010df22df50a3b4e0755a2c2056e20e9614b5c28a987556aa2beab3d23113",
+    "BETH_PORTRAIT.JPG": "e42f5a5bfa104ee7ddf73a76ac33dedf92200d8f36489741da974fe0c4d9abbf"
+  },
+  "setup_migration": "Character setup preserved; operational instructions migrated to uploader.",
+  "original_archive_sha256": "8139daf9d070120f91b2db27aaa935b639c18f5ba567c799ae987efa7f4fa3af"
+}

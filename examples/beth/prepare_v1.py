@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Prepare the original GitHub Beth v0.85 test archive for Nomi Uploader v1.0.
+"""Prepare preserved Beth source diaries for Nomi Uploader.
 
-Reads BETHBOOT_V085.ZIP locally. Never changes its bytes or Beth's diary text.
+Reads source/ locally. Never modifies the source diaries.
 """
 import argparse
 import hashlib
@@ -16,6 +16,10 @@ DIARY_NAME=re.compile(r"^BETH0[1-5]\.TXT$",re.I)
 DIVIDER="\n"
 
 def diary_sources(archive):
+    archive = Path(archive)
+    if archive.is_dir():
+        return [(name, (archive/name).read_text(encoding="utf-8-sig"))
+                for name in ["BETH%02d.TXT" % i for i in range(1, 6)]]
     with zipfile.ZipFile(archive) as z:
         found={}
         for entry in z.infolist():
@@ -57,8 +61,8 @@ def convert_document(name,text,reflection_every=5):
 def prepare(archive, output, reflection_every=5, verify_archive=True):
     archive=Path(archive)
     output=Path(output)
-    sha=hashlib.sha256(archive.read_bytes()).hexdigest()
-    if verify_archive and sha!=EXPECTED_ARCHIVE_SHA256:
+    sha=hashlib.sha256(archive.read_bytes()).hexdigest() if archive.is_file() else None
+    if verify_archive and archive.is_file() and sha!=EXPECTED_ARCHIVE_SHA256:
         raise ValueError("Unexpected source archive SHA256: "+sha)
     docs=diary_sources(archive)
     converted=[]
@@ -67,7 +71,7 @@ def prepare(archive, output, reflection_every=5, verify_archive=True):
         converted.append((name,new_text,numbers))
     output.mkdir(parents=True,exist_ok=True)
     manifest={"source_archive":archive.name,"source_sha256":sha,
-              "source":"examples/beth/BETHBOOT_V085.ZIP",
+              "source":"examples/beth/source",
               "reflection_every":reflection_every,
               "files":[]}
     for name,converted_text,numbers in converted:
@@ -80,8 +84,8 @@ def prepare(archive, output, reflection_every=5, verify_archive=True):
     return manifest
 
 def main():
-    p=argparse.ArgumentParser(description="Convert original GitHub Beth test ZIP for uploader v1")
-    p.add_argument("archive",nargs="?",default="BETHBOOT_V085.ZIP")
+    p=argparse.ArgumentParser(description="Prepare Beth diaries for uploader")
+    p.add_argument("archive",nargs="?",default=str(Path(__file__).parent / "source"))
     p.add_argument("--output",default="beth_v1")
     p.add_argument("--relive-every",type=int,default=5)
     p.add_argument("--allow-modified-source",action="store_true",

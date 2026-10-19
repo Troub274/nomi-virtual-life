@@ -1,0 +1,11 @@
+{
+  "nomi": "Beth Peterson",
+  "date_format": "US",
+  "inputs": [
+    "input/BETH01_V1.TXT",
+    "input/BETH02_V1.TXT",
+    "input/BETH03_V1.TXT",
+    "input/BETH04_V1.TXT",
+    "input/BETH05_V1.TXT"
+  ]
+}

@@ -934,11 +934,5 @@ def main():
           (len(selected),receipt['episodes'],journal,a.completion))
     return 0
 
-if __name__=='__main__':
-    try:sys.exit(main())
-    except KeyboardInterrupt:
-        print('Interrupted. Resume by running the same command. Journal retained.',file=sys.stderr)
-        sys.exit(130)
-    except Exception as exc:
-        print('ERROR:',exc,file=sys.stderr)
-        sys.exit(1)
+if __name__ == '__main__':
+    raise SystemExit("Internal uploader compatibility module. Run nomi-uploader.py instead.")

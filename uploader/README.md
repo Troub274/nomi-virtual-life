@@ -1,6 +1,6 @@
 # Nomi Uploader v1.0
 
-**Current:** Nomi Uploader 1.0. **Legacy:** v0.85 rehydrator is supported but superseded; its independent script remains under `rehydration/`. The uploader includes a verbatim legacy engine in `legacy_v085.py` and `--legacy` forwards its original CLI.
+**Current:** Nomi Uploader 1.0. `legacy_v085.py` is an internal compatibility dependency for API access and export parsing; use `nomi-uploader.py` for all operations.
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Set `NOMI_API_KEY` before live uploads.
 
@@ -10,7 +10,6 @@ python uploader/nomi-uploader.py uploader/example.txt
 python uploader/nomi-uploader.py --passes 3 uploader/example.txt
 python uploader/nomi-uploader.py --resume
 python uploader/nomi-uploader.py --utility
-python uploader/nomi-uploader.py --legacy --mode journal diary.txt
 python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
 ```
 
@@ -50,13 +49,13 @@ Beth: Morning!
 
 Type defaults to Knowledge; source defaults to System except Journal (selected Nomi). Date required for Journal and text Chat; optional for Knowledge and Instructions. ISO and written dates accepted. Numeric dates follow OS locale unless `--date-format US|EU` overrides. Omitted years use the run's year; two-digit years use 70–99 => 1970–1999 and 00–69 => 2000–2069.
 
-`Nomi:` instructions are additive by default; `Nomi Mode: Replace` suppresses the type-specific default. Range prompts like `entries 1-24` execute after entry 24. Nomi JSON/ZIP exports use the preserved v0.85 export parser.
+`Nomi:` instructions are additive by default; `Nomi Mode: Replace` suppresses the type-specific default. Range prompts like `entries 1-24` execute after entry 24. Nomi JSON/ZIP exports use the internal compatibility export parser.
 
 Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion.
 
 ### Room reuse and deletion (v1.0)
 
-For a new upload, the uploader finds existing rooms for the chosen Nomi (using the Nomi UUID) and offers **reuse as choice 1 (the default)**, as in v0.85. Select another room by number, or explicitly choose to create a new room. `--room UUID` directly reuses a verified room; `--resume` keeps the room and manifest from the original checkpoint. Rooms associated with checkpoints in the selected checkpoint directory are excluded from automatic reuse.
+For a new upload, the uploader finds existing rooms for the chosen Nomi (using the Nomi UUID) and offers **reuse as choice 1 (the default)**, using existing Nomi room membership. Select another room by number, or explicitly choose to create a new room. `--room UUID` directly reuses a verified room; `--resume` keeps the room and manifest from the original checkpoint. Rooms associated with checkpoints in the selected checkpoint directory are excluded from automatic reuse.
 
 In `--utility`, enter a room number or `ALL`. The room manager shows the exact eligible rooms, excludes rooms protected by checkpoints in the selected directory, and asks **once**: `Delete these N room(s)? [y/N]`. `y`, `Y`, or `yes` (any capitalization) confirms; anything else cancels. No `DELETE N` or per-room UUID entry is required. Room deletion is permanent, so examine the filtered list and use the appropriate checkpoint directory.
  Completion confirms API transmission, **not** long-term memory consolidation.
@@ -94,13 +93,13 @@ Every processing prompt triggers a separate `/rooms/{room}/chat/request` call. S
 
 ## Interactive operation and room management
 
-Running `python uploader/nomi-uploader.py` in an interactive terminal now opens a text menu for upload, resume, dry-run and room management. `--utility` opens the room manager directly. The manager can list all rooms, filter by Nomi, filter abandoned/inactive/failed statuses, inspect individual rooms and delete one or many with explicit confirmation and individual UUID acknowledgement. Incomplete upload checkpoints found in the selected checkpoint directory protect their rooms from deletion. **Protection is directory-scoped:** keep all checkpoint files in that directory and do not use bulk deletion with checkpoints stored elsewhere.
+Running `python uploader/nomi-uploader.py` in an interactive terminal now opens a text menu for upload, resume, dry-run and room management. `--utility` opens the room manager directly. The manager can list all rooms, filter by Nomi, filter abandoned/inactive/failed statuses, inspect individual rooms and delete one or many with explicit confirmation and one confirmation of the displayed deletion list. Incomplete upload checkpoints found in the selected checkpoint directory protect their rooms from deletion. **Protection is directory-scoped:** keep all checkpoint files in that directory and do not use bulk deletion with checkpoints stored elsewhere.
 
-JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prompts as well as the preserved v0.85 conversation turn parsing. Automatic room creation uses a single POST rather than retrying uncertain creation requests.
+JSON/ZIP Nomi exports now receive Chat introductory and periodic processing prompts as well as the internal compatibility conversation turn parsing. Automatic room creation uses a single POST rather than retrying uncertain creation requests.
 
 ### Remaining release gates
 
-The implementation remains **experimental**. The 42-test suite has been executed in WSL, with four retry-logging formatting errors reported and subsequently corrected in commit `8216a8e`; a subsequent green rerun has not been provided. A complete live pass has not been verified. Multi-session chat chronology, recovery from partially completed room creation, checkpoint portability and the handling of ambiguous API outcomes still need deeper testing. Do not interpret a completed upload as proof of durable Nomi memory.
+The implementation remains experimental. Run the offline suite using the command below. Full-pass live verification and durable memory retention remain separate release checks.
 
 
 ### Recover an uncertain content POST (`--retry-uncertain-send`)
@@ -153,7 +152,7 @@ Replace `1:9` with the affected `PASS:INDEX`. This authorizes retrying that repl
 
 **Beth live test:** A live run with an existing Beth Nomi and five converted diary volumes reported 765 planned messages. At message 9, the reflection prompt for entries 1–5 was confirmed, but the API returned `NoReply`. Explicit recovery received Beth's reflection and the uploader continued from message 10. This establishes a successful partial live recovery, **not** completion of the full pass or guaranteed durable Nomi memory.
 
-**Tests:** The WSL suite ran 42 tests; the latest shared output reported four errors caused by one retry-log format mismatch. That mismatch was corrected in commit `8216a8e`. A subsequent full green test run has not yet been provided. Run:
+**Tests:** Run the offline unit and mocked integration suite from the repository root:
 
 ```bash
 python3 -m unittest discover -s uploader/tests -p "test_*.py" -v

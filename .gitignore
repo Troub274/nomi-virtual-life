@@ -24,3 +24,14 @@ private/
 input/
 exports/
 logs/
+
+# Packaged public example and local test scratch
+!examples/beth/BETH_UPLOADER.zip
+.test-tmp/
+examples/beth/beth_v1/
+!examples/chris/CHRIS_UPLOADER.zip
+.local-runs/
+!examples/beth/input/
+!examples/beth/input/**
+!examples/chris/input/
+!examples/chris/input/**

@@ -679,14 +679,6 @@ def interactive_menu():
 
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
-    if "--legacy" in argv:
-        argv.remove("--legacy")
-        saved=sys.argv
-        try:
-            sys.argv=[saved[0]]+argv
-            return legacy.main()
-        finally:
-            sys.argv=saved
     parser=argparse.ArgumentParser(description="Nomi Uploader v1.0")
     parser.add_argument("files",nargs="*")
     parser.add_argument("--version",action="version",version=VERSION)

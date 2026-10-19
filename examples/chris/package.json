@@ -1,0 +1,16 @@
+{
+  "nomi": "Christine",
+  "date_format": "US",
+  "inputs": [
+    "input/CHRIS_DIARY_001_100_V1.txt",
+    "input/CHRIS_DIARY_101_200_V1.txt",
+    "input/CHRIS_DIARY_201_300_V1.txt",
+    "input/CHRIS_DIARY_301_400_V1.txt",
+    "input/CHRIS_DIARY_401_500_V1.txt",
+    "input/CHRIS_DIARY_501_600_V1.txt",
+    "input/CHRIS_DIARY_601_700_V1.txt",
+    "input/CHRIS_DIARY_701_800_V1.txt",
+    "input/CHRIS_DIARY_801_900_V1.txt",
+    "input/CHRIS_DIARY_901_1000_V1.txt"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "source_archive": "source",
+  "source_sha256": null,
+  "source": "examples/beth/source",
+  "reflection_every": 5,
+  "files": [
+    {
+      "file": "BETH01_V1.TXT",
+      "entry_count": 100,
+      "first_entry": 1,
+      "last_entry": 100,
+      "sha256": "823f03e0fff592c4b6536344ae1dd90b6dcabc2df32dd4f19086eb0a00fcf69d"
+    },
+    {
+      "file": "BETH02_V1.TXT",
+      "entry_count": 100,
+      "first_entry": 101,
+      "last_entry": 200,
+      "sha256": "2217284efbef0193807ec0bf461b38bb27aaacbe9784bac459e873a8c2f5d3d4"
+    },
+    {
+      "file": "BETH03_V1.TXT",
+      "entry_count": 100,
+      "first_entry": 201,
+      "last_entry": 300,
+      "sha256": "050addc4f57fd611a65eab26591077bc050121f22762e5216b56d8b49dbc6079"
+    },
+    {
+      "file": "BETH04_V1.TXT",
+      "entry_count": 100,
+      "first_entry": 301,
+      "last_entry": 400,
+      "sha256": "f6a5aad343ec2e207ab9fc83b0c495f07e9ff3d232a43becfab1c4f05cb49972"
+    },
+    {
+      "file": "BETH05_V1.TXT",
+      "entry_count": 165,
+      "first_entry": 401,
+      "last_entry": 565,
+      "sha256": "4b9fbd39afa71f7af1d5f6514f0a814c7ea0a5514e8b6b58defe97eb1c06ecf9"
+    }
+  ]
+}

@@ -20,6 +20,7 @@ The CI workflow `.github/workflows/nomi-uploader-tests.yml` runs the same tests 
 | `test_uploader.py` | Dates, sections, journal/chat parsing, Beth converter, prompt intervals, export planning, protected rooms, legacy compatibility |
 | `test_specification.py` | Every type/source processing instruction, local/global intervals, ranged prompts, invalid input, multi-session chat, Unicode byte boundaries, export delegation |
 | `test_integration.py` | Mocked room creation, complete upload, Nomi reply capture, checkpoint durability, resumed completion, uncertain POST handling, malformed replies, changed manifest, repeated passes, output files |
+| `test_packages.py` | Shipped Beth and Chris ZIPs, source hashes, 565/1,000 entries, real planning, byte limits, isolated package checkpoints, obsolete CLI rejection |
 
 ### Offline vs live
 
@@ -31,9 +32,9 @@ The offline tests verify deterministic uploader behavior and simulated Nomi API 
 - Never resume when the content manifest changed.
 - Never repeat a confirmed Nomi response request.
 - Preserve source and speaker attribution.
-- Never delete a room referenced by a checkpoint in the selected directory.
+- Never delete a room protected by an unfinished checkpoint in the selected directory; completed runs release their rooms.
 - Never silently claim a successful run when a reply is missing.
 
 ### Known limits
 
-Tests do not yet cover every real-world Nomi export variation, network timeouts from a real service, or a complete live Beth ZIP replay. GitHub Actions execution status must be checked before claiming that tests passed.
+Tests do not yet cover every real-world Nomi export variation, network timeouts from a real service, or a complete live Beth ZIP replay. Local offline results and GitHub Actions results are separate checks.

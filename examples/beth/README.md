@@ -1,23 +1,47 @@
-# Beth Peterson — Test Bootstrap (v0.85)
+# Beth Peterson — uploader example
 
-**[Download the complete Beth test ZIP](BETHBOOT_V085.ZIP)**
+Use [BETH_UPLOADER.zip](BETH_UPLOADER.zip) or the checked-in `input/` files.
+The bundle contains data and configuration, not an executable loader.
+`source/` retains original diaries, canon and portrait; `input/` contains generated
+Journal sections attributed to Beth Peterson, with reflection every five entries.
+All 565 entries retain their numbering and dates. The existing converter omits the
+editorial fictional-backstory disclaimer from upload text only; source diaries stay intact.
 
-The archive contains:
-- Five diary files: `BETH01.TXT` through `BETH05.TXT` (565 chronological entries).
-- `nomi_room_rehydrate_episode_v085.py`: Nomi **room-based** importer with automatic resume.
-- `TEST.BAT` and `START.BAT`: Windows startup scripts.
-- `BETHSET.TXT` and `README.TXT`: complete setup instructions.
-- `CANON.TXT` and `INDEX.JSN`: reference material.
-- `BETH_PORTRAIT.JPG`: Beth's portrait **to view**, not to upload. No portrait-upload step exists in this test.
+Create a new adult Nomi named **Beth Peterson**, age 38, dark hair, blue eyes,
+height 5 feet 8 inches. Suggested traits: Thoughtful/Curious, Confident, Affectionate,
+Romantic, Deep Conversations/Intellectual, Emotional and Imaginative. Leave backstory
+blank. The portrait is a visual reference; do not upload it. For this controlled
+experiment, wait until import completion before chatting. Canon is for evaluation afterward.
 
-Before import, create a new standard Nomi named Beth, age 38, height 5 feet 8 inches, dark hair and blue eyes. Use the Thoughtful/Curious, Confident, Affectionate, Romantic, Deep Conversations/Intellectual, Emotional, and Imaginative traits. Leave backstory blank to avoid contradictions. Set up your Nomi API key privately.
+From the repository root, preview without credentials or API calls:
 
-**Do not talk to Beth until the loader reports COMPLETE.** An import may take hours. If interrupted, restart in the same folder; v0.85 uses the local checkpoint to resume. The portrait is a visual reference only and is not processed or uploaded by the script.
+For the standard isolated package workflow, use `python examples/run_package.py beth --dry-run`,
+`python examples/run_package.py beth` for live upload, and
+`python examples/run_package.py beth --resume` to continue. State is kept under
+`.local-runs/beth/`. The explicit commands below are an alternative with custom state paths.
 
-Read the [Beth setup guide](../../rehydration/BETH_TEST_LOAD.md) and the [operator guide](../../rehydration/OPERATOR_GUIDE.md) before running.
+```sh
+python uploader/nomi-uploader.py --dry-run --nomi "Beth Peterson" --date-format US examples/beth/input/BETH01_V1.TXT examples/beth/input/BETH02_V1.TXT examples/beth/input/BETH03_V1.TXT examples/beth/input/BETH04_V1.TXT examples/beth/input/BETH05_V1.TXT
+```
 
-Archive SHA-256: `8139daf9d070120f91b2db27aaa935b639c18f5ba567c799ae987efa7f4fa3af`.
+For live loading, set `NOMI_API_KEY` privately, remove `--dry-run --nomi "Beth Peterson"`,
+and select Beth Peterson interactively. Use `--checkpoint beth_checkpoint.jsonl
+--completion beth_completed.json --replies beth_replies.txt` to isolate this run.
+Resume from the same working directory:
 
-## New v1.0 uploader test
+```sh
+python uploader/nomi-uploader.py --resume --checkpoint beth_checkpoint.jsonl --completion beth_completed.json --replies beth_replies.txt
+```
 
-The original v0.85 bootstrap above is unchanged. To prepare and test **the same five GitHub diary files** with the v1.0 uploader, use [README_V1.md](README_V1.md), [prepare_v1.py](prepare_v1.py), and [TEST_V1.BAT](TEST_V1.BAT). `START_V1.BAT` performs a live experimental upload; `RESUME_V1.BAT` resumes its checkpoint.
+On Windows, `TEST_V1.BAT`, `START_V1.BAT`, and `RESUME_V1.BAT` prepare and use
+`beth_v1/` with their own checkpoint paths. Do not switch paths midway through a run.
+They require the repository's uploader two folders above them.
+To regenerate inputs separately (never replace inputs of an active run):
+
+```sh
+python examples/beth/prepare_v1.py examples/beth/source --output new_beth_input --relive-every 5
+```
+
+Imports use rooms, not ordinary direct chat. Keep checkpoints and source files.
+Transmission completion is not proof of long-term memory. See the
+[uploader guide](../../uploader/README.md) and [recovery guide](../../uploader/RECOVERY.md).
