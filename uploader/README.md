@@ -161,3 +161,14 @@ python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
 **Known limitations:** The public API routes exercised here provide room metadata but not a verified room chat-history GET endpoint. Retain the checkpoint as the local send/reply audit record. A durable per-retry event log, long-running reply timeout controls, and full-pass live verification remain future improvements.
 
 **Checkpoint recovery for recorded readiness errors:** When an earlier run recorded an explicit `reply_uncertain` event whose API payload identifies one of the recognized not-ready error types, the current uploader can recover that request on plain `--resume`. An ambiguous network failure is not eligible for this automatic recovery. `--recover-noreply PASS:INDEX` remains the manual option for older checkpoints with an unclassified pending reply attempt; use it only when the operator knows the earlier response was explicitly `NoReply`.
+
+### Resume in a fresh room after a stuck reply
+
+```bash
+python3 uploader/nomi-uploader.py --resume --new-room-on-resume --abandon-reply 1:499
+```
+
+This abandons only the pending reply to confirmed prompt 1:499, preserves the old
+room and checkpoint history, and continues at 500 in a fresh room. Repeating the
+command reuses the recorded migration. See [RECOVERY.md](RECOVERY.md#stuck-reply-recovery-migrate-after-message-499)
+for backups, flag restrictions and interrupted room-creation reconciliation.

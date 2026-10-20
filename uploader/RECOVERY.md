@@ -5,8 +5,55 @@
 
 **Applies to:** Nomi Uploader v1.0, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
 **Prepared:** October 13, 2026  
-**Updated:** October 15, 2026 — v1.0 content POST recovery and CLI command reference  
+**Updated:** October 19, 2026 — safe stuck-reply room migration
 **Status:** Operational manual describing observed behavior and inspected code. Proposed v1.1 changes are explicitly labeled.
+
+## Stuck reply recovery: migrate after message 499
+
+From the original upload directory, preserve a backup and run:
+
+```bash
+cp -n nomi_uploader_checkpoint.jsonl nomi_uploader_checkpoint.jsonl.before-room-migration
+python3 uploader/nomi-uploader.py --resume --new-room-on-resume --abandon-reply 1:499
+```
+
+For a custom checkpoint, also supply its original `--checkpoint`, `--completion`, and
+`--replies` paths. Input files and planning options are restored from the checkpoint;
+keep the input files at their original paths.
+
+The uploader requires 1:499 to be a confirmed prompt with an attempted, uncommitted
+reply. It appends `reply_abandoned` with its original room UUID, time and reason.
+The prompt remains confirmed: messages 1–499 are never replayed. Message 500 and
+later messages use the fresh processing room. The original room
+`41e3bb66-4ae4-420d-9251-a68083eda60a` remains intact; no room is deleted.
+
+Before creating a room, the uploader validates the manifest, confirmed prefix,
+abandonment positions, outstanding sends and other pending replies. Abandonment
+requires both flags, and cannot be combined with `--room`, recovery/retry flags,
+`--dry-run` or `--utility`. Multiple `--abandon-reply` values may be supplied for
+pending replies in this migration. A completed migration is reused when the same
+flags are repeated; new abandonments after migration are rejected.
+
+Room creation uses a durable `room_migration_intent` containing a unique room name,
+followed by one create POST, then an append-only `room_migrated` event containing
+both room UUIDs. On interruption, resume with the same command or plain `--resume`.
+An existing intent is reconciled by its exact unique room name and Nomi UUID.
+The uploader never repeats an uncertain create POST. If zero or multiple matching
+rooms are visible, it stops for inspection; retrying resume later is safe. A crash
+before the POST but after the intent can also require manual reconciliation. Do
+not remove the intent to force another create without verifying the service state.
+
+Both rooms stay protected while the run is active, including a created destination
+whose migration event has not yet been written. Completion records abandoned reply
+positions and releases protection only when all sends and all other replies are
+complete. The derived transcript contains received replies only; abandonment is
+recorded in the checkpoint and completion metadata.
+
+An OS lock prevents concurrent writers to the same checkpoint. A torn checkpoint
+append stops upload without rewriting the file; readable room references remain
+protected. Preserve that file and inspect it before any manual repair. Ambiguous
+content sends after migration retain the existing explicit recovery requirement.
+These guarantees do not imply that an uncertain network POST can be retried safely.
 
 ## 1. Purpose and governing principle
 
