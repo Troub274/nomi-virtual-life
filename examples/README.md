@@ -1,7 +1,7 @@
 # Uploader example packages
 
-[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200; [Tammy](tammy/README.md) has 300.
-Beth and Chris include data-only ZIPs; all four provide ordered input lists and the current uploader configuration.
+[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200; [Tammy](tammy/README.md) has 300; [Tammy 2](tammy2/README.md) is the long-form V3 rebuild and currently includes its first 100 detailed entries plus a full continuity/reference pack.
+Beth and Chris include data-only ZIPs; all packages provide ordered input lists and the current uploader configuration.
 
 From the repository root, preview any package:
 
@@ -10,6 +10,7 @@ python examples/run_package.py beth --dry-run
 python examples/run_package.py chris --dry-run
 python examples/run_package.py mary --dry-run
 python examples/run_package.py tammy --dry-run
+python examples/run_package.py tammy2 --dry-run
 ```
 
 Remove `--dry-run` for a new live run after setting `NOMI_API_KEY`, and select the
@@ -28,9 +29,16 @@ Mary's package contains 200 chronological first-person entries in two uploader-r
 files, with reflection every five entries. Her chronology was reviewed before publication;
 unverified Steve encounter dates are kept as present-day reflections rather than invented history.
 
-Tammy's package contains 300 chronological first-person entries in three uploader-ready
-files, with reflection every five entries. Her reference folder includes the cast/canon
-file and two clothed visual references; the primary fireplace portrait governs facial likeness.
+Tammy's original package contains 300 chronological first-person entries in three
+uploader-ready files, with reflection every five entries. Her reference folder includes
+the cast/canon file and two clothed visual references; the primary fireplace portrait
+governs facial likeness.
+
+Tammy 2 is the separate long-form V3 rebuild. Its first checked-in notebook contains
+100 substantially longer first-person entries, and its reference pack locks the revised
+chronology, family, finances, preferences, relationships, current Charleston life, and
+visual references. V3 is intended to grow past 1,000 entries; append notebooks in order
+rather than mixing V2 and V3 in one fresh test.
 
 ## Existing checkpoints
 
