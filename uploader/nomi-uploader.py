@@ -278,13 +278,20 @@ def digest(messages):
     return hashlib.sha256(raw).hexdigest()
 
 def record(path, obj):
-    with open(path,"a",encoding="utf-8") as f:
-        f.write(json.dumps(obj,ensure_ascii=False)+"\n")
+    with open(path,"a+b") as f:
+        if f.tell():
+            f.seek(-1,os.SEEK_END)
+            if f.read(1)!=b"\n":
+                raise ValueError("Incomplete checkpoint tail; preserve file and inspect before repair")
+        f.write((json.dumps(obj,ensure_ascii=False)+"\n").encode("utf-8"))
         f.flush(); os.fsync(f.fileno())
 
 def records(path):
     if not path.exists(): return []
-    return [json.loads(s) for s in path.read_text(encoding="utf-8").splitlines() if s.strip()]
+    raw=path.read_text(encoding="utf-8")
+    if raw and not raw.endswith("\n"):
+        raise ValueError("Incomplete checkpoint tail; preserve file and inspect before repair")
+    return [json.loads(s) for s in raw.splitlines() if s.strip()]
 
 def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
     """Wait through explicit Nomi not-ready responses; stop on ambiguous errors."""
@@ -377,14 +384,83 @@ def select_or_create_room(nomi, checkpoint_dir="."):
             return create_upload_room(nomi)
         print("Enter a number from 1 through %d." % new_option)
 
+def migration_room(events):
+    room=events[0]["room_uuid"]
+    for e in events:
+        if e.get("event")=="room_migrated":
+            if e["from_room_uuid"]!=room: raise ValueError("Invalid migration chain")
+            room=e["to_room_uuid"]
+    return room
+
+
+def migrate_resume(cp, old, nomi, room):
+    intents=[e for e in old if e.get("event")=="room_migration_intent"]
+    if intents:
+        intent=intents[-1]
+        if any(e.get("event")=="room_migrated" and e.get("migration_id")==intent["migration_id"] for e in old):
+            return room
+        matches=[r for r in legacy.list_rooms() if r.get("name")==intent["room_name"]]
+        if len(matches)!=1:
+            raise RuntimeError("Migration creation outcome uncertain; inspect rooms for "+intent["room_name"]+"; no automatic create retry")
+        if not legacy.room_contains_nomi(matches[0],nomi["uuid"]):
+            raise ValueError("Migration room is not associated with selected Nomi")
+        rid=matches[0]["uuid"]
+    else:
+        mid=str(uuid.uuid4())
+        intent={"event":"room_migration_intent","migration_id":mid,
+                "from_room_uuid":room,"room_name":"UPLOADER::MIGRATION::"+mid,
+                "time":dt.datetime.now(dt.timezone.utc).isoformat()}
+        record(cp,intent)
+        status,payload=legacy.api_request("/rooms","POST",{
+            "name":intent["room_name"],"note":"Nomi Uploader resume migration",
+            "backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
+        if not legacy.ok(status):
+            raise RuntimeError("Migration creation outcome uncertain; resume to reconcile; no create retry")
+        rid=payload.get("uuid") or payload.get("room",{}).get("uuid")
+        if not rid: raise RuntimeError("Migration returned no UUID; resume to reconcile")
+    if rid==room: raise ValueError("Migration destination must be a fresh room")
+    record(cp,{"event":"room_migrated","migration_id":intent["migration_id"],
+               "from_room_uuid":room,"to_room_uuid":rid,
+               "time":dt.datetime.now(dt.timezone.utc).isoformat()})
+    return rid
+
+
 def upload(args):
+    # Advisory locks are released by the OS on process termination. Never unlink
+    # this file: doing so could allow two processes to lock different inodes.
+    lockpath=Path(str(args.checkpoint)+".lock")
+    lockpath.parent.mkdir(parents=True,exist_ok=True)
+    with open(lockpath,"a+b") as lock:
+        if os.name=="nt":
+            import msvcrt
+            if lockpath.stat().st_size==0:
+                lock.write(b"0"); lock.flush()
+            lock.seek(0)
+            try: msvcrt.locking(lock.fileno(),msvcrt.LK_NBLCK,1)
+            except OSError: raise RuntimeError("Checkpoint in use by another uploader")
+        else:
+            import fcntl
+            try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            except OSError: raise RuntimeError("Checkpoint in use by another uploader")
+        return _upload_locked(args)
+
+
+def _upload_locked(args):
+    migrating=getattr(args,"new_room_on_resume",False)
+    tokens=getattr(args,"abandon_reply",[]) or []
+    if (migrating or tokens) and not args.resume: raise ValueError("migration flags require --resume")
+    if bool(tokens)!=bool(migrating): raise ValueError("--new-room-on-resume and --abandon-reply must be used together")
+    if migrating and (args.room or args.dry_run or getattr(args,"recover_noreply",[]) or getattr(args,"recover_uncertain_reply",[]) or getattr(args,"retry_uncertain_send",[])):
+        raise ValueError("migration cannot be combined with --room, --dry-run or recovery flags")
     cp=Path(args.checkpoint)
     old=records(cp) if args.resume else []
     if args.resume and not old: raise ValueError("No checkpoint to resume")
     if old:
         init=old[0]
+        if init.get("event")!="start": raise ValueError("Checkpoint must begin with start event")
         nomi={"uuid":init["nomi_uuid"],"name":init["nomi_name"]}
-        year=init["year"]; order=init["order"]; room=init["room_uuid"]
+        year=init["year"]; order=init["order"]; room=migration_room(old)
+        if args.room and args.room!=room: raise ValueError("--room cannot override checkpoint room")
         files=init["files"]; passes=init["passes"]
         args.user=init.get("user","")
         args.chunk_bytes=init.get("chunk_bytes",750)
@@ -409,11 +485,11 @@ def upload(args):
             expected=prevstart.get("passes",0)*len(messages)
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
-            reply_count=sum(1 for r in previous if r.get("event")=="reply_committed")
+            reply_count=sum(1 for r in previous if r.get("event") in ("reply_committed","reply_abandoned"))
             if not prevstart or confirmed_count!=expected or reply_count<reply_expected or \
                any(r.get("event") in ("attempt","reply_attempt") and
                    (r.get("pass"),r.get("index")) not in
-                   {(x.get("pass"),x.get("index")) for x in previous if x.get("event")==("confirmed" if r.get("event")=="attempt" else "reply_committed")}
+                   {(x.get("pass"),x.get("index")) for x in previous if x.get("event") in (("confirmed",) if r.get("event")=="attempt" else ("reply_committed","reply_abandoned"))}
                    for r in previous):
                 raise ValueError("Unfinished checkpoint exists; use --resume or a different --checkpoint")
             stamp=dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
@@ -436,6 +512,39 @@ def upload(args):
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
     reply_committed={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_committed"}
+    abandoned={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_abandoned"}
+    if migrating or abandoned:
+        positions={(p,i) for p in range(1,passes+1) for i in range(1,len(messages)+1)}
+        if not (attempts | confirmed | reply_attempts | reply_committed | abandoned) <= positions:
+            raise ValueError("Checkpoint positions outside the saved plan")
+        prefix=set(sorted(positions)[:len(confirmed)])
+        if confirmed!=prefix: raise ValueError("Migration requires a contiguous confirmed prefix")
+        prompts={k for k in confirmed if messages[k[1]-1]["kind"]=="prompt"}
+        if not abandoned <= (prompts & reply_attempts)-reply_committed:
+            raise ValueError("Invalid abandoned reply state")
+    requested=set()
+    for token in tokens:
+        if not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*",token): raise ValueError("--abandon-reply expects PASS:INDEX")
+        key=tuple(map(int,token.split(":")))
+        if (key[0]>passes or key[1]>len(messages) or messages[key[1]-1]["kind"]!="prompt" or key not in confirmed or key not in reply_attempts or key in reply_committed):
+            raise ValueError("No pending confirmed reflection at "+token)
+        requested.add(key)
+    if migrating:
+        if any(e.get("event")=="room_migrated" for e in old) and requested-abandoned:
+            raise ValueError("This recovery migration is already complete")
+        pending={(p,i) for p,i in confirmed if messages[i-1]["kind"]=="prompt"}-reply_committed-abandoned
+        if attempts-confirmed or pending-requested: raise ValueError("Resolve all uncertain sends and pending replies before migration")
+        for p,i in sorted(requested-abandoned):
+            record(cp,{"event":"reply_abandoned","pass":p,"index":i,"room_uuid":room,
+                       "nomi_uuid":nomi["uuid"],"run_id":old[0].get("run_id"),
+                       "time":dt.datetime.now(dt.timezone.utc).isoformat(),
+                       "reason":"operator abandoned stuck reply; prompt remains confirmed"})
+        abandoned |= requested
+    migration_pending=bool(abandoned) and not any(e.get("event")=="room_migrated" for e in old)
+    if migration_pending:
+        pending={(p,i) for p,i in confirmed if messages[i-1]["kind"]=="prompt"}-reply_committed-abandoned
+        if attempts-confirmed or pending:
+            raise ValueError("Finish authorizing all pending replies before interrupted migration; no room created")
     # A send with a failed/ambiguous POST cannot be retried automatically.
     # The operator must explicitly authorize each unconfirmed message by pass/index.
     uncertain_sends=attempts-confirmed
@@ -458,7 +567,7 @@ def upload(args):
             key=(int(p_str),int(i_str))
         except (ValueError,TypeError):
             raise ValueError("--recover-noreply expects PASS:INDEX, e.g. 1:9")
-        if key not in reply_attempts or key not in confirmed or key in reply_committed:
+        if key not in reply_attempts or key not in confirmed or key in reply_committed or key in abandoned:
             raise ValueError("No pending confirmed reflection at %s"%token)
         if any(r.get("event")=="reply_uncertain" and
                (r.get("pass"),r.get("index"))==key and
@@ -474,7 +583,7 @@ def upload(args):
             key=(int(p_str),int(i_str))
         except (ValueError,TypeError):
             raise ValueError("--recover-uncertain-reply expects PASS:INDEX, e.g. 1:559")
-        if key not in confirmed or key not in reply_attempts or key in reply_committed:
+        if key not in confirmed or key not in reply_attempts or key in reply_committed or key in abandoned:
             raise ValueError("No pending confirmed reflection at %s"%token)
         if not any(r.get("event")=="reply_uncertain" and
                    (r.get("pass"),r.get("index"))==key for r in old):
@@ -493,9 +602,12 @@ def upload(args):
         and legacy.err_type(r.get("api_response")) in known_wait_errors
     }
     recovery |= retryable_previous & reply_attempts & confirmed
-    uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery)
+    recovery -= abandoned
+    uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery-abandoned)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
+    if migrating or migration_pending: room=migrate_resume(cp,records(cp),nomi,room)
+    if any(e.get("event")=="room_migrated" for e in records(cp)): legacy.wait_for_room(room)
     for p,i in sorted(recovery):
         record(cp,{"event":"reply_recovery_authorized","pass":p,"index":i,
                    "reason":"explicit Nomi not-ready response or operator-verified NoReply"})
@@ -520,7 +632,7 @@ def upload(args):
                            "kind":m["kind"],"api_response":response})
                 print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
                 if args.delay: time.sleep(args.delay)
-            if m["kind"]=="prompt" and key not in reply_committed:
+            if m["kind"]=="prompt" and key not in reply_committed and key not in abandoned:
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
@@ -553,14 +665,24 @@ def upload(args):
             out.write("PROMPT: "+row["prompt"]+"\n")
             out.write("REPLY: "+str(body)+"\n\n")
     Path(args.completion).parent.mkdir(parents=True,exist_ok=True)
-    Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
+    Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"abandoned_replies":[list(k) for k in sorted(abandoned)],"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
 def active_room_ids(checkpoint_dir="."):
     protected=set()
     for path in Path(checkpoint_dir).glob("*.jsonl"):
         try:
-            events=records(path)
+            # A torn append must never release rooms. Recover only the readable
+            # prefix for protection; upload itself refuses the damaged file.
+            events=[]
+            damaged=False
+            for line in path.read_text(encoding="utf-8").splitlines(keepends=True):
+                try:
+                    if not line.endswith("\n"): raise ValueError("torn tail")
+                    if line.strip(): events.append(json.loads(line))
+                except ValueError:
+                    damaged=True
+                    break
             if not events or events[0].get("event")!="start": continue
             start=events[0]
             # Release only runs with a matching completion marker AND a fully
@@ -573,13 +695,20 @@ def active_room_ids(checkpoint_dir="."):
                                 if e.get("event") == "confirmed"
                                 and e.get("kind") == "prompt"}
             completed = False
-            if prompt_positions <= replied:
+            abandoned={(e.get("pass"),e.get("index")) for e in events if e.get("event")=="reply_abandoned"}
+            rooms={start["room_uuid"]}
+            for e in events:
+                if e.get("event")=="room_migrated": rooms.update((e["from_room_uuid"],e["to_room_uuid"]))
+                if e.get("event")=="room_migration_intent" and not any(x.get("event")=="room_migrated" and x.get("migration_id")==e["migration_id"] for x in events):
+                    rooms.update(r["uuid"] for r in legacy.list_rooms() if r.get("name")==e["room_name"])
+            if not damaged and prompt_positions <= replied | abandoned:
                 for marker in path.parent.glob("*completed.json"):
                     try:
                         data = json.loads(marker.read_text(encoding="utf-8"))
                         expected = start.get("passes", 0) * data.get("messages_per_pass", 0)
                         if (expected and len(confirmed) == expected
-                                and data.get("room_uuid") == start["room_uuid"]
+                                and data.get("room_uuid") == migration_room(events)
+                                and (not abandoned or data.get("abandoned_replies")==[list(k) for k in sorted(abandoned)])
                                 and data.get("manifest") == start.get("manifest")
                                 and data.get("passes") == start.get("passes")
                                 and (not start.get("messages_per_pass") or
@@ -589,7 +718,7 @@ def active_room_ids(checkpoint_dir="."):
                     except (OSError, ValueError):
                         continue
             if not completed:
-                protected.add(start["room_uuid"])
+                protected.update(rooms)
         except (OSError,ValueError,KeyError):
             continue
     return protected
@@ -684,6 +813,8 @@ def main(argv=None):
     parser.add_argument("--version",action="version",version=VERSION)
     parser.add_argument("--utility",action="store_true")
     parser.add_argument("--resume",action="store_true")
+    parser.add_argument("--new-room-on-resume",action="store_true",help="Move a stuck-reply run to a fresh room; requires --abandon-reply")
+    parser.add_argument("--abandon-reply",action="append",default=[],metavar="PASS:INDEX",help="Abandon only a confirmed prompt's pending reply; requires --new-room-on-resume")
     parser.add_argument("--recover-noreply",action="append",default=[],metavar="PASS:INDEX",help="Authorize retry of a legacy checkpoint reply known to have returned NoReply")
     parser.add_argument("--recover-uncertain-reply",action="append",default=[],metavar="PASS:INDEX",help="Explicitly authorize retry after ambiguous reply POST; duplicate reply possible")
     parser.add_argument("--retry-uncertain-send",action="append",default=[],metavar="PASS:INDEX",help="Operator-authorized resend of one unconfirmed POST after a 502/timeout; duplicate message possible")
@@ -704,6 +835,7 @@ def main(argv=None):
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
     if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume: parser.error("recovery flags require --resume")
+    if args.utility and (args.new_room_on_resume or args.abandon_reply): parser.error("migration cannot be combined with --utility")
     if args.utility: utilities()
     else: upload(args)
 
