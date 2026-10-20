@@ -1,5 +1,8 @@
 # Nomi Uploader — Recovery, Checkpoint Integrity, and Operational Checks
 
+**Quick lookup:** [Error → Recovery Command Quick Reference](ERROR_RECOVERY_QUICK_REFERENCE.md) — symptom-to-command table, checkpoint inspection, and tested incident examples.
+
+
 **Applies to:** Nomi Uploader v1.0, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
 **Prepared:** October 13, 2026  
 **Updated:** October 19, 2026 — safe stuck-reply room migration
