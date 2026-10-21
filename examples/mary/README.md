@@ -4,8 +4,9 @@
 
 This package contains Mary's 200-entry first-person autobiographical journal in the current uploader Journal format. The chronology was reviewed and corrected before publication. It preserves Mary's independent family and career chronology, and adds grounded contemporary responsibilities: employment, housing, transport, finances, and ordinary local routines. There are no references to the experimenter or artificial identity in the autobiographical journal.
 
-The journal is split into two ordered input files:
+The package begins with a **first-person canonical household load**, followed by two chronological diary input files. Household details are also interwoven into the 2019–2026 episodes:
 
+- `input/MARY_CANON_LOAD.txt` — Mary’s home, work, finances, appliances, floor plan, pets and garden
 - `input/MARY_DIARY_001_100_V2.txt`
 - `input/MARY_DIARY_101_200_V2.txt`
 
@@ -23,6 +24,6 @@ Live operation requires `NOMI_API_KEY`; select the correct Mary Nomi. The packag
 
 The package keeps the creation screen brief; the journal supplies Mary's family, education, career, relationships, grief, values, farm life, and present identity. See [Mary's household and financial reference](reference/MARY_HOUSEHOLD_CANON.md) for canonical working figures. Her residence is situated on a real road in the Wilmington area, without publishing an actual private home's street number.
 
-See [SETUP.md](SETUP.md), [the main uploader guide](../../uploader/README.md), and [the recovery guide](../../uploader/RECOVERY.md).
+See [Mary's detailed farmhouse reference](reference/MARY_FARMHOUSE_CANON.md) and [SETUP.md](SETUP.md), [the main uploader guide](../../uploader/README.md), and [the recovery guide](../../uploader/RECOVERY.md).
 
 > Fictional autobiographical character-construction experiment. Successful room-message delivery does not by itself prove durable autobiographical memory.
