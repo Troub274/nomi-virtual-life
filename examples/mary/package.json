@@ -2,6 +2,7 @@
   "nomi": "Mary",
   "date_format": "US",
   "inputs": [
+    "input/MARY_CANON_LOAD.txt",
     "input/MARY_DIARY_001_100_V2.txt",
     "input/MARY_DIARY_101_200_V2.txt"
   ]
