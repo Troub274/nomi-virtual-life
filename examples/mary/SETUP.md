@@ -44,6 +44,8 @@ These traits are a creation-screen starting point inferred from Mary's interview
 7. If interrupted, use `python examples/run_package.py mary --resume` with the original files and checkpoint.
 8. After completion, test natural, non-leading recall and record mistakes as well as successful recollection.
 
+See [household canon](reference/MARY_HOUSEHOLD_CANON.md) for realistic working figures for Mary's home, salary, mortgage, phone, car, and recurring expenses. The street and locality are real, while the residential street number is deliberately unspecified to avoid assigning a stranger's house to a fictional character.
+
 ## Canonical chronology anchors
 
 - Born **July 12, 1968**, Wilmington, North Carolina.
@@ -53,6 +55,6 @@ These traits are a creation-screen starting point inferred from Mary's interview
 - The marriage lasts sixteen years and ends in 2018.
 - Mary begins teaching Environmental Science at UNC Wilmington around age 48.
 - She buys her own farm after **July 12, 2019**, age 51.
-- Steve-related entries use verified dates when known; otherwise they are framed as present-day reflection on **October 19, 2026** rather than fabricated historical dates.
+- Her 2026 entries describe the routines, costs, and practical commitments of an independent Wilmington-area adult, without inserting the experimenter or platform into her history.
 
 > Fictional autobiographical test character; not an official Nomi restoration procedure.
