@@ -1,6 +1,16 @@
 # Nomi Uploader — Error → Recovery Command Quick Reference
 
-Applies to `python3 uploader/nomi-uploader.py` (current v1.0 CLI). Run commands from the repository root. **Use the same checkpoint, inputs and manifest** as the interrupted run; `--resume` reads the saved file list and planning options, so filenames need not be repeated.
+Applies to `python3 uploader/nomi-uploader.py` (current v1.1 CLI). Run commands from the repository root. **Use the same checkpoint, inputs and manifest** as the interrupted run; `--resume` reads the saved file list and planning options, so filenames need not be repeated.
+
+For packaged examples, the first recovery command is usually just the same command again:
+
+```bash
+python examples/run_package.py tammy
+```
+
+It resumes automatically. Check status safely with `python examples/run_package.py tammy --status`.
+
+For a raw checkpoint, `python3 uploader/nomi-uploader.py --resume --easy --checkpoint PATH` gives the same friendly recovery prompts. The expert commands below are still useful when you want explicit control.
 
 **Before any operator-authorized retry**, preserve the checkpoint:
 
@@ -14,7 +24,7 @@ For a custom checkpoint, replace `--checkpoint FILE.jsonl` in each example and b
 
 | Error / checkpoint state | Recovery command | Important qualification |
 |---|---|---|
-| Normal interruption; no uncertain requests | `python3 uploader/nomi-uploader.py --resume` | Continues from the checkpoint; does not replay confirmed messages. |
+| Normal interruption; no uncertain requests | `python3 uploader/nomi-uploader.py --resume --easy` | Continues from the checkpoint; does not replay confirmed messages. Packaged examples resume automatically when rerun. |
 | `Uncertain send/reply request(s) [(1, 536)]` **and** `attempt` exists but no `confirmed` for 1:536 | `python3 uploader/nomi-uploader.py --resume --retry-uncertain-send 1:536` | Resends **message** 536; possible duplicate if the first POST reached Nomi. This fixed Mary's observed incident. |
 | `POST outcome uncertain: send failed (HTTP 502)` | `python3 uploader/nomi-uploader.py --resume --retry-uncertain-send PASS:INDEX` | **Only** if the checkpoint has an attempted, unconfirmed send at that index. |
 | `Reply request outcome uncertain` (e.g. HTTP 502) **and** confirmed prompt + `reply_attempt` + `reply_uncertain` exist | `python3 uploader/nomi-uploader.py --resume --recover-uncertain-reply PASS:INDEX` | Retries **reply request only**, not the prompt. Possible duplicate reply. |
