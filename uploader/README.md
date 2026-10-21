@@ -1,19 +1,61 @@
-# Nomi Uploader v1.0
+# Nomi Uploader v1.1
 
-**Current:** Nomi Uploader 1.0. `legacy_v085.py` is an internal compatibility dependency for API access and export parsing; use `nomi-uploader.py` for all operations.
+**Current:** Nomi Uploader 1.1. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Set `NOMI_API_KEY` before live uploads.
+
+## Easiest way to use it
+
+For the packaged examples, the normal command is now all a user needs:
+
+```bash
+python examples/run_package.py beth
+python examples/run_package.py chris
+python examples/run_package.py mary
+python examples/run_package.py tammy
+```
+
+If no checkpoint exists, the package starts. If an unfinished checkpoint exists, the runner resumes it automatically. If a genuinely ambiguous POST is found, the uploader explains the duplication risk in plain language and asks before retrying.
+
+Useful package commands:
+
+```bash
+python examples/run_package.py tammy --status
+python examples/run_package.py tammy --dry-run
+python examples/run_package.py tammy --restart
+```
+
+`--restart` is explicit. An unfinished checkpoint is still protected and will not be silently discarded.
+
+## Raw uploader
 
 ```bash
 python uploader/nomi-uploader.py --dry-run --nomi Beth uploader/example.txt
 python uploader/nomi-uploader.py uploader/example.txt
-python uploader/nomi-uploader.py --passes 3 uploader/example.txt
-python uploader/nomi-uploader.py --resume
+python uploader/nomi-uploader.py --status
+python uploader/nomi-uploader.py --resume --easy
 python uploader/nomi-uploader.py --utility
 python3 -m unittest discover -s uploader/tests -p "test_*.py" -v
 ```
 
-Each new invocation creates a fresh upload run; repeated documents are intentional. `--resume` continues a specific checkpoint. To begin a new run after completion, use a new checkpoint path (e.g. `--checkpoint second_run.jsonl`), or archive the previous checkpoint. This distinction prevents accidental duplicate sends during recovery.
+New v1.1 runs plan transport by **characters**, not UTF-8 bytes. The Nomi room-message ceiling is 800 characters; the default is `--chunk-chars 750` to leave headroom for uploader metadata. The old byte planner is retained internally so v1.0 checkpoints reproduce their original manifests exactly.
+
+### Load only part of a journal
+
+The raw uploader can select journal entry numbers without creating new source files:
+
+```bash
+python uploader/nomi-uploader.py diary.txt --entries 45-100
+python uploader/nomi-uploader.py diary.txt --entries 45-
+python uploader/nomi-uploader.py diary.txt --entries -100
+python uploader/nomi-uploader.py diary.txt --entries 45 --chunk-chars 750
+```
+
+`--entries` selects complete logical Journal entries. Each selected entry is then split into as many <=800-character transport messages as required. Entries are **not bundled together** to fill a message. `Process Every: 5` still counts complete journal entries, not transport chunks.
+
+For new runs `--chunk-chars` accepts 150–800 and defaults to 750. `--chunk-bytes` is retained only for legacy compatibility/testing and should not be used for ordinary v1.1 runs.
+
+The raw uploader still treats each new non-resume invocation as a new run. `--resume` continues a specific checkpoint; `--status` is read-only and makes no Nomi API calls.
 
 ## Input
 
@@ -53,14 +95,14 @@ Type defaults to Knowledge; source defaults to System except Journal (selected N
 
 Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion.
 
-### Room reuse and deletion (v1.0)
+### Room reuse and deletion (v1.1)
 
 For a new upload, the uploader finds existing rooms for the chosen Nomi (using the Nomi UUID) and offers **reuse as choice 1 (the default)**, using existing Nomi room membership. Select another room by number, or explicitly choose to create a new room. `--room UUID` directly reuses a verified room; `--resume` keeps the room and manifest from the original checkpoint. Rooms associated with checkpoints in the selected checkpoint directory are excluded from automatic reuse.
 
 In `--utility`, enter a room number or `ALL`. The room manager shows the exact eligible rooms, excludes rooms protected by checkpoints in the selected directory, and asks **once**: `Delete these N room(s)? [y/N]`. `y`, `Y`, or `yes` (any capitalization) confirms; anything else cancels. No `DELETE N` or per-room UUID entry is required. Room deletion is permanent, so examine the filtered list and use the appropriate checkpoint directory.
  Completion confirms API transmission, **not** long-term memory consolidation.
 
-**Caution:** This remains an experimental v1.0 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
+**Caution:** This remains an experimental v1.1 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
 
 ## Type-aware processing and response capture
 
