@@ -426,8 +426,8 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
             if max_wait:
                 wait=min(wait,max(0,max_wait-elapsed))
                 if wait<=0: return status,payload
-            print("Nomi API error: %s; %s attempt %d; elapsed %.1fs; retry in %.1fs"%
-                  (error,legacy.err_type(payload),n,elapsed,wait),file=sys.stderr,flush=True)
+            print("Nomi API error: %s; %s attempt %d; retry in %.1fs; elapsed %.1fs"%
+                  (error,legacy.err_type(payload),n,wait,elapsed),file=sys.stderr,flush=True)
             time.sleep(wait)
             delay=min(delay*2,30)
             continue
