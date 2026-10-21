@@ -9,12 +9,26 @@ Nomi Uploader handles imports; [Chat Bridge](bridge/README.md) connects live Cha
 Requires Python 3.10+. Optional Word support: `python -m pip install -r uploader/requirements.txt`.
 Set `NOMI_API_KEY` privately before live operation.
 
+For a packaged example, use the same command every time. It starts a new run when needed and safely resumes an unfinished checkpoint:
+
 ```sh
-python uploader/nomi-uploader.py --dry-run --nomi Beth uploader/example.txt
-python uploader/nomi-uploader.py uploader/example.txt
-python uploader/nomi-uploader.py --resume
+python examples/run_package.py beth
+python examples/run_package.py chris
+python examples/run_package.py mary
+python examples/run_package.py tammy
+```
+
+Check progress without API calls with `python examples/run_package.py tammy --status`. Use `--restart` only when intentionally beginning another completed run.
+
+The raw v1.1 uploader supports journal ranges such as `--entries 45-100` and uses a 750-character default transport limit under the Nomi API's 800-character ceiling:
+
+```sh
+python uploader/nomi-uploader.py diary.txt --entries 45-100
+python uploader/nomi-uploader.py --resume --easy
 python -m unittest discover -s uploader/tests -v
 ```
+
+The exact pre-v1.1 uploader is preserved at `uploader/archive/nomi-uploader-v1.0.py`.
 
 ## Example packages
 
@@ -25,7 +39,8 @@ and the [Chris package](examples/chris/README.md).
 
 For journal and conversation imports, run `uploader/nomi-uploader.py`. Its internal compatibility
 module preserves API, journal-heading and conversation-export behavior. It is not a
-separate application. Historical commits remain available through Git history.
+separate application. The archived v1.0 uploader is also retained as a normal repository file,
+in addition to Git history.
 
 ## Chat Bridge
 
