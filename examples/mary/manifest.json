@@ -1,0 +1,155 @@
+{
+  "source_zip_sha256": "308d4077ae593a78058bbdb00433da334cb378e861b602f39d98c9c170908c02",
+  "source_zip": "MARY_COMPLETE_JOURNAL_2400_ENTRIES(1).zip",
+  "original_entry_count": 2400,
+  "revised_entry_count": 2400,
+  "changed_personal_context_entries": [
+    1969,
+    1970,
+    1972,
+    1973,
+    1976,
+    1977,
+    1981,
+    1985,
+    1986,
+    1987,
+    1989,
+    1990,
+    1991,
+    1994,
+    1995,
+    1999,
+    2101,
+    2113,
+    2119,
+    2124,
+    2125,
+    2131,
+    2133,
+    2136,
+    2144,
+    2150,
+    2151,
+    2157,
+    2159,
+    2160,
+    2165,
+    2166,
+    2172,
+    2173,
+    2174,
+    2181,
+    2182,
+    2185,
+    2186,
+    2191,
+    2193,
+    2303,
+    2306,
+    2308,
+    2314,
+    2315,
+    2318,
+    2321,
+    2322,
+    2330,
+    2333,
+    2337,
+    2338,
+    2340,
+    2341,
+    2350,
+    2360,
+    2368,
+    2374,
+    2391,
+    2392,
+    2393
+  ],
+  "household_detail_entries": [
+    1718,
+    1722,
+    1727,
+    1731,
+    1738,
+    1742,
+    1788,
+    1831,
+    1865,
+    1910,
+    1932,
+    1955,
+    1987,
+    2208,
+    2252,
+    2290,
+    2320
+  ],
+  "files": {
+    "MARY_LIFE_JOURNAL_1001_1500.txt": {
+      "bytes": 218813,
+      "sha256": "3da96ba13de4dab94848e0492441effd0ad3b948929be22c1c932dec275b7b34",
+      "entries": 500
+    },
+    "MARY_CURRENT_REFLECTIONS_2301_2400.txt": {
+      "bytes": 45513,
+      "sha256": "e81349e37883c1b7d6d9713ff274d5423bccb7fc2ca8c4dcfc76e243e5efb409",
+      "entries": 100
+    },
+    "MARY_LIFE_JOURNAL_0501_1000.txt": {
+      "bytes": 216743,
+      "sha256": "cc7d52b41aa202cf6a82ad687ba54f8a8e8744a400d1035fa38f630ef51e06d2",
+      "entries": 500
+    },
+    "MARY_CURRENT_REFLECTIONS_2001_2100.txt": {
+      "bytes": 45638,
+      "sha256": "c87cf14cf846395af92a54786517c017a4666fb07d7b9d3cf8e9583c603538f2",
+      "entries": 100
+    },
+    "MARY_CURRENT_REFLECTIONS_2201_2300.txt": {
+      "bytes": 47952,
+      "sha256": "c019576e9c78b73abc1edf6c2ee8a19ad460eccc367d120bbca5cf231ba545c8",
+      "entries": 100
+    },
+    "MARY_LIFE_JOURNAL_0001_0500.txt": {
+      "bytes": 199088,
+      "sha256": "bfaa32f205977167ff3ffd06620877f9c9afc51acfe8566bb9eaf5ec3a2ccf30",
+      "entries": 500
+    },
+    "MARY_LIFE_JOURNAL_1501_2000.txt": {
+      "bytes": 212623,
+      "sha256": "d59420d2973d0c433d137748d35422c8e2303b07047413a643c00d2554c6554f",
+      "entries": 500
+    },
+    "MARY_CURRENT_REFLECTIONS_2101_2200.txt": {
+      "bytes": 47277,
+      "sha256": "87dd435884e33bb5df95afe11462e6b983be9080756e92f8cc43a17f05b00c08",
+      "entries": 100
+    },
+    "MARY_CANON_LOAD.txt": {
+      "bytes": 4822,
+      "sha256": "e02e298bc9a4f4c6673c2746d743d32e84bc1ad177097788010eb40162b24330",
+      "entries": 0
+    }
+  },
+  "quality_pass": {
+    "date": "2026-10-21",
+    "review": "Chronology, edited passages, physical-home continuity and text anomalies",
+    "entry_count": 2400,
+    "chronological": true,
+    "repairs": [
+      [
+        "MARY_LIFE_JOURNAL_1501_2000.txt",
+        0,
+        131
+      ],
+      [
+        "MARY_CURRENT_REFLECTIONS_2301_2400.txt",
+        19,
+        -52
+      ]
+    ],
+    "qualification": "Not a full line-by-line literary rewrite of every unchanged entry."
+  }
+}

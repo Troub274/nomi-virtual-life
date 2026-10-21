@@ -3,7 +3,13 @@
   "date_format": "US",
   "inputs": [
     "input/MARY_CANON_LOAD.txt",
-    "input/MARY_DIARY_001_100_V2.txt",
-    "input/MARY_DIARY_101_200_V2.txt"
+    "input/MARY_LIFE_JOURNAL_0001_0500.txt",
+    "input/MARY_LIFE_JOURNAL_0501_1000.txt",
+    "input/MARY_LIFE_JOURNAL_1001_1500.txt",
+    "input/MARY_LIFE_JOURNAL_1501_2000.txt",
+    "input/MARY_CURRENT_REFLECTIONS_2001_2100.txt",
+    "input/MARY_CURRENT_REFLECTIONS_2101_2200.txt",
+    "input/MARY_CURRENT_REFLECTIONS_2201_2300.txt",
+    "input/MARY_CURRENT_REFLECTIONS_2301_2400.txt"
   ]
 }

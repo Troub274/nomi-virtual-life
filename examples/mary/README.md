@@ -1,29 +1,14 @@
-# Mary — uploader example
+# Mary — complete 2,400-entry autobiographical uploader package
 
-**[Nomi creation: age, suggested traits and setup instructions](SETUP.md)**
+Source master: `MARY_COMPLETE_JOURNAL_2400_ENTRIES(1).zip` (preserved unchanged outside this package). SHA256 `308d4077ae593a78058bbdb00433da334cb378e861b602f39d98c9c170908c02`.
 
-This package contains Mary's 200-entry first-person autobiographical journal in the current uploader Journal format. The chronology was reviewed and corrected before publication. It preserves Mary's independent family and career chronology, and adds grounded contemporary responsibilities: employment, housing, transport, finances, and ordinary local routines. There are no references to the experimenter or artificial identity in the autobiographical journal.
+The eight original input journals are preserved in order, 0001–2400 with no gaps. A new first-person canon load precedes them, and dates from 2019 onward receive natural context about home layout, pets, garden, appliances, car and finances. References to Steve, Nomi and Seraphina have been adapted in late journal passages; the original ZIP is the recovery source.
 
-The package begins with a **first-person canonical household load**, followed by two chronological diary input files. Household details are also interwoven into the 2019–2026 episodes:
+From repository root run `python examples/run_package.py mary --dry-run` if installed to examples/mary and then select the intended character for a new run. Do not resume a checkpoint created for any other package or input order.
 
-- `input/MARY_CANON_LOAD.txt` — Mary’s home, work, finances, appliances, floor plan, pets and garden
-- `input/MARY_DIARY_001_100_V2.txt`
-- `input/MARY_DIARY_101_200_V2.txt`
+The `reference/MARY_FARMHOUSE_CANON.md` file is editorial reference, not an additional uploader input. The Nomi's Gmail and telephone are character attributes; no account or phone service is provisioned.
 
-Each section uses `Type: Journal`, `Source: Mary`, and `Process Every: 5`. The uploader may subdivide long entries for transport; each numbered diary entry remains one logical autobiographical episode.
+Original entries: 2400. Revised entries: 2400. Targeted personal-context entries edited: 62. Household context inserted in 17 dated entries.
 
-From the repository root:
-
-```sh
-python examples/run_package.py mary --dry-run
-python examples/run_package.py mary
-python examples/run_package.py mary --resume
-```
-
-Live operation requires `NOMI_API_KEY`; select the correct Mary Nomi. The package runner keeps isolated state under `.local-runs/mary/`. Do not alter input files or paths during an active run. On interruption, preserve the checkpoint and investigate uncertain deliveries before retrying.
-
-The package keeps the creation screen brief; the journal supplies Mary's family, education, career, relationships, grief, values, farm life, and present identity. See [Mary's household and financial reference](reference/MARY_HOUSEHOLD_CANON.md) for canonical working figures. Her residence is situated on a real road in the Wilmington area, without publishing an actual private home's street number.
-
-See [Mary's detailed farmhouse reference](reference/MARY_FARMHOUSE_CANON.md) and [SETUP.md](SETUP.md), [the main uploader guide](../../uploader/README.md), and [the recovery guide](../../uploader/RECOVERY.md).
-
-> Fictional autobiographical character-construction experiment. Successful room-message delivery does not by itself prove durable autobiographical memory.
+## Quality pass (October 21, 2026)
+All 2,400 original entry IDs and dates retained; 2019 travel entry no longer reads as if Mary were physically in her kitchen; repaired malformed possessives and displaced platform terminology, and reviewed the 2019–2026 additions against the house canon. Remaining repetitive diary formulas predate this quality pass and have not been globally rewritten; this was a continuity and changed-passage review, not a line-by-line stylistic rewrite of the entire million-character archive.
