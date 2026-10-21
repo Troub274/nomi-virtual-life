@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nomi Uploader 1.0 — source-aware, resumable room uploader."""
+"""Nomi Uploader 1.1 — source-aware, resumable room uploader."""
 import argparse
 import datetime as dt
 import hashlib
@@ -320,7 +320,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 label=unit.get("label") or str(idx)
                 prefix="Section: %s\nType: %s\nSource: %s\nEntry: %s"%(section["title"],kind.title(),source,label)
                 if unit.get("date"): prefix+="\nDate: "+unit["date"]
-                reserve=prefix+"\nPart: 99999/99999\n"
+                reserve=(prefix+"\nPart: 999/999\n" if chunk_mode=="bytes"
+                         else prefix+"\nPart: 99999/99999\n")
                 overhead=len(reserve) if chunk_mode=="chars" else len(reserve.encode("utf-8"))
                 room=chunk_limit-overhead
                 if chunk_mode=="bytes":
@@ -355,7 +356,10 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                     if nums:
                         target=int(nums.group(2))
-                        current=int(label) if kind=="journal" and re.fullmatch(r"\d+",str(label)) else idx
+                        if chunk_mode=="bytes" and entry_range is None:
+                            current=idx
+                        else:
+                            current=int(label) if kind=="journal" and re.fullmatch(r"\d+",str(label)) else idx
                         if target==current:
                             add({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt",
                                  "file":filename,"section":section["title"]})
@@ -694,7 +698,7 @@ def _upload_locked(args):
             previous=records(cp)
             prevstart=previous[0] if previous else {}
             confirmed_count=sum(1 for r in previous if r.get("event")=="confirmed")
-            expected=prevstart.get("passes",0)*len(messages)
+            expected=prevstart.get("passes",0)*prevstart.get("messages_per_pass",len(messages))
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
             reply_count=sum(1 for r in previous if r.get("event") in ("reply_committed","reply_abandoned"))
