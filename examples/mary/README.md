@@ -1,4 +1,7 @@
 # Mary — complete 2,400-entry autobiographical uploader package
+**[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
+
+Reference images: [Mary primary portrait](reference/MaryPortrait_1.png) and [alternate portrait](reference/MaryPortrait_2.png).
 
 Source master: `MARY_COMPLETE_JOURNAL_2400_ENTRIES(1).zip` (preserved unchanged outside this package). SHA256 `308d4077ae593a78058bbdb00433da334cb378e861b602f39d98c9c170908c02`.
 
