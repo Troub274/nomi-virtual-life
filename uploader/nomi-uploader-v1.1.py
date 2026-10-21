@@ -344,7 +344,12 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     first=((idx-1)//interval)*interval+1
                     first_label=(units[first-1].get("label") or str(first)) if kind=="journal" else first
                     last_label=label if kind=="journal" else idx
-                    custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
+                    if chunk_mode=="bytes" and entry_range is None:
+                        # Preserve v1.0's historical double-escaped detector exactly;
+                        # old checkpoint manifests depend on that behavior.
+                        custom=[p for p in section["prompts"] if not re.search(r"\\b(?:entries|episodes)\\s+\\d+\\s*[-–]\\s*\\d+\\b",p,re.I)]
+                    else:
+                        custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
                     template=custom[0] if len(custom)==1 else PERIODIC_PROMPTS[default_key]
                     prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
                     msg={"text":prompt,"kind":"prompt","file":filename,
