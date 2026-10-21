@@ -36,6 +36,6 @@ examples/beth/beth_v1/
 !examples/chris/input/
 !examples/chris/input/**
 
-# Public Tammy 2 uploader inputs
-!examples/tammy2/input/
-!examples/tammy2/input/**
+# Public Tammy uploader inputs
+!examples/tammy/input/
+!examples/tammy/input/**

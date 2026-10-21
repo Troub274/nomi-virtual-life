@@ -31,7 +31,7 @@ def command(package, dry_run=False, resume=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('package', choices=['beth', 'chris', 'mary', 'tammy', 'tammy2'])
+    parser.add_argument('package', choices=['beth', 'chris', 'mary', 'tammy'])
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--dry-run', action='store_true')
     mode.add_argument('--resume', action='store_true')

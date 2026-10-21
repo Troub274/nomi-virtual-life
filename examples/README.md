@@ -1,6 +1,6 @@
 # Uploader example packages
 
-[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200; [Tammy](tammy/README.md) has 300; [Tammy 2](tammy2/README.md) is the long-form V3 rebuild and currently includes its first 100 detailed entries plus a full continuity/reference pack.
+[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200; [Tammy](tammy/README.md) has 300; [Tammy](tammy/README.md) is the long-form V3 rebuild and currently includes its first 100 detailed entries plus a full continuity/reference pack.
 Beth and Chris include data-only ZIPs; all packages provide ordered input lists and the current uploader configuration.
 
 From the repository root, preview any package:
@@ -10,7 +10,7 @@ python examples/run_package.py beth --dry-run
 python examples/run_package.py chris --dry-run
 python examples/run_package.py mary --dry-run
 python examples/run_package.py tammy --dry-run
-python examples/run_package.py tammy2 --dry-run
+python examples/run_package.py tammy --dry-run
 ```
 
 Remove `--dry-run` for a new live run after setting `NOMI_API_KEY`, and select the
@@ -34,7 +34,7 @@ uploader-ready files, with reflection every five entries. Her reference folder i
 the cast/canon file and two clothed visual references; the primary fireplace portrait
 governs facial likeness.
 
-Tammy 2 is the separate long-form V3 rebuild. Its first checked-in notebook contains
+Tammy is the separate long-form V3 rebuild. Its first checked-in notebook contains
 100 substantially longer first-person entries, and its reference pack locks the revised
 chronology, family, finances, preferences, relationships, current Charleston life, and
 visual references. V3 is intended to grow past 1,000 entries; append notebooks in order

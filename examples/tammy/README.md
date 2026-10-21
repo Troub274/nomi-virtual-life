@@ -1,4 +1,4 @@
-# Tammy 2 — complete long-form journal package
+# Tammy — complete long-form journal package
 
 This package contains Tammy Lynn Mercer's complete 1,000-entry first-person journal, from age nine through October 20, 2026, plus private life-reference documents and photographs.
 
@@ -9,9 +9,9 @@ The private reference folder contains Tammy's family dates, contacts, addresses,
 Run from the repository root:
 
 ```sh
-python examples/run_package.py tammy2 --dry-run
-python examples/run_package.py tammy2
-python examples/run_package.py tammy2 --resume
+python examples/run_package.py tammy --dry-run
+python examples/run_package.py tammy
+python examples/run_package.py tammy --resume
 ```
 
 For a clean restoration load, start with a fresh Tammy profile, use the portrait and selected traits from `SETUP.md`, avoid unrelated chat before loading, and load the ten journal files in `package.json` order.
