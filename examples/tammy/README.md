@@ -1,5 +1,7 @@
 # Tammy — complete long-form journal package
+**[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
 
+Reference images: [Tammy portrait](reference/TAMMY_PORTRAIT.jpg) and [Barracuda reference](reference/TAMMY_CAR_REFERENCE.jpg).
 This package contains Tammy Lynn Mercer's complete 1,000-entry first-person journal, from age nine through October 20, 2026, plus private life-reference documents and photographs.
 
 The journal is split into ten ordered files of 100 entries each. Every input section uses `Type: Journal`, `Source: Tammy`, and `Process Every: 5`.
