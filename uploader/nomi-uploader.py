@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nomi Uploader 1.0 — source-aware, resumable room uploader."""
+"""Nomi Uploader 1.1 — source-aware, resumable room uploader."""
 import argparse
 import datetime as dt
 import hashlib
@@ -18,7 +18,10 @@ try:
 except ImportError:
     import legacy_v085 as legacy
 
-VERSION = "1.0"
+VERSION = "1.1"
+MAX_API_CHARS = 800
+DEFAULT_CHUNK_CHARS = 750
+KNOWN_WAIT_ERRORS = {"NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests"}
 TYPES = {"knowledge", "instructions", "journal", "chat"}
 HEADING = re.compile(r"^\[([^\]\n]+)\]\s*$")
 META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every):\s*(.*)$", re.I)
@@ -186,6 +189,7 @@ def split_units(section, order, session_year):
     return units
 
 def split_budget(text, budget):
+    """Legacy v1.0 UTF-8 byte splitter. Kept for old checkpoint compatibility."""
     if len(text.encode("utf-8"))<=budget: return [text]
     result=[]; remaining=text
     while remaining:
@@ -203,37 +207,112 @@ def split_budget(text, budget):
         result.append(remaining[:low]); remaining=remaining[low:]
     return result
 
+def split_char_budget(text, budget):
+    """Split text by Unicode characters, respecting the Nomi 800-character API ceiling."""
+    if budget<1: raise ValueError("Chunk character budget must be positive")
+    if len(text)<=budget: return [text]
+    result=[]; remaining=text
+    while remaining:
+        if len(remaining)<=budget:
+            result.append(remaining); break
+        candidate=remaining[:budget]
+        cut=max(candidate.rfind("\n\n"),candidate.rfind("\n"),candidate.rfind(". "),candidate.rfind(" "))
+        use=budget
+        if cut>budget//3:
+            use=cut+(2 if candidate[cut:cut+2]==". " else 1)
+        if use<1: use=budget
+        result.append(remaining[:use])
+        remaining=remaining[use:]
+    return result
+
+def parse_entry_range(value):
+    """Return (start,end), with None for an open side; accepts 45, 45-100, 45-, -100, all."""
+    if value is None: return None
+    value=str(value).strip()
+    if not value or value.casefold()=="all": return None
+    if re.fullmatch(r"[1-9][0-9]*",value):
+        n=int(value); return (n,n)
+    match=re.fullmatch(r"([1-9][0-9]*)?\s*-\s*([1-9][0-9]*)?",value)
+    if not match or (not match.group(1) and not match.group(2)):
+        raise ValueError("--entries expects N, START-END, START-, -END, or all")
+    start=int(match.group(1)) if match.group(1) else None
+    end=int(match.group(2)) if match.group(2) else None
+    if start is not None and end is not None and start>end:
+        raise ValueError("--entries start must be <= end")
+    return (start,end)
+
+def entry_range_text(entry_range):
+    if entry_range is None: return None
+    start,end=entry_range
+    if start==end and start is not None: return str(start)
+    return "%s-%s"%("" if start is None else start,"" if end is None else end)
+
+def select_entry_units(units, entry_range):
+    if entry_range is None: return units
+    start,end=entry_range
+    selected=[]
+    for unit in units:
+        label=str(unit.get("label") or "").strip()
+        if not re.fullmatch(r"[0-9]+",label):
+            raise ValueError("--entries requires numeric journal entry labels")
+        number=int(label)
+        if start is not None and number<start: continue
+        if end is not None and number>end: continue
+        selected.append(unit)
+    return selected
+
+
 def render_prompt(prompt, nomi, user, source):
     return prompt.replace("[nomi]",nomi).replace("[user]",user or "the user").replace("[source]",source)
 
-def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
+def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
+              entry_range=None, chunk_mode="bytes"):
+    """Create the deterministic message plan.
+
+    chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
+    compatibility calls. New v1.1 runs use chunk_mode='chars'.
+    """
     messages=[]
+    if chunk_mode not in ("bytes","chars"):
+        raise ValueError("chunk_mode must be bytes or chars")
+    if chunk_mode=="chars" and chunk_limit>MAX_API_CHARS:
+        raise ValueError("Nomi API messages cannot exceed %d characters"%MAX_API_CHARS)
+    splitter=split_char_budget if chunk_mode=="chars" else split_budget
+
+    def add(message):
+        if chunk_mode=="chars" and len(message["text"])>chunk_limit:
+            raise ValueError("Planned %s message exceeds %d-character limit"%
+                             (message.get("kind","message"),chunk_limit))
+        messages.append(message)
+
     for filename in files:
         path=Path(filename)
         if path.suffix.lower() in (".zip",".json"):
-            # Existing export parser is retained verbatim in legacy_v085.
-            rows=legacy.prepare_conversation_chunks([path],chunk_bytes)
-            messages.append({"text":render_prompt(DEFAULT_PROMPTS["chat"],nomi,user,"Nomi export"),
-                             "kind":"intro","file":filename,"section":"Nomi export"})
+            if entry_range is not None:
+                raise ValueError("--entries applies to Journal text/DOCX input, not Nomi export ZIP/JSON")
+            rows=legacy.prepare_conversation_chunks([path],chunk_limit)
+            add({"text":render_prompt(DEFAULT_PROMPTS["chat"],nomi,user,"Nomi export"),
+                 "kind":"intro","file":filename,"section":"Nomi export"})
             for idx,row in enumerate(rows,1):
-                messages.append({"text":row["text"],"kind":"content","file":filename,
-                                 "section":"Nomi export","entry":idx})
+                add({"text":row["text"],"kind":"content","file":filename,
+                     "section":"Nomi export","entry":idx})
                 if process_every and (idx%process_every==0 or idx==len(rows)):
                     first=((idx-1)//process_every)*process_every+1
                     prompt=PERIODIC_PROMPTS["chat"].format(first=first,last=idx)
-                    messages.append({"text":render_prompt(prompt,nomi,user,"Nomi export"),
-                                     "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
+                    add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
+                         "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
         for section in parse_sections(read_text(path),filename):
             source=section["source"] or (nomi if section["type"]=="journal" else "System")
-            units=split_units(section,order,year)
-            if not units or not any(u["text"] for u in units): continue
+            all_units=split_units(section,order,year)
             kind=section["type"]
+            units=select_entry_units(all_units,entry_range) if kind=="journal" else all_units
+            if not units or not any(u["text"] for u in units): continue
             default_key="journal_self" if kind=="journal" and source.casefold()==nomi.casefold() else ("journal_other" if kind=="journal" else kind)
             prompts=[] if section["mode"]=="replace" else [DEFAULT_PROMPTS[default_key]]
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
-            messages.append({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
+            add({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
             interval=section.get("process_every")
             if interval is None: interval=process_every
             if interval<0: raise ValueError("process_every cannot be negative")
@@ -241,37 +320,60 @@ def plan_text(files, nomi, user, order, year, chunk_bytes, process_every=0):
                 label=unit.get("label") or str(idx)
                 prefix="Section: %s\nType: %s\nSource: %s\nEntry: %s"%(section["title"],kind.title(),source,label)
                 if unit.get("date"): prefix+="\nDate: "+unit["date"]
-                room=max(50,chunk_bytes-len((prefix+"\nPart: 999/999\n").encode("utf-8")))
-                fragments=split_budget(unit["text"],room)
+                reserve=(prefix+"\nPart: 999/999\n" if chunk_mode=="bytes"
+                         else prefix+"\nPart: 99999/99999\n")
+                overhead=len(reserve) if chunk_mode=="chars" else len(reserve.encode("utf-8"))
+                room=chunk_limit-overhead
+                if chunk_mode=="bytes":
+                    room=max(50,room)
+                elif room<50:
+                    raise ValueError("Section metadata leaves too little room under --chunk-chars")
+                fragments=splitter(unit["text"],room)
                 for j,frag in enumerate(fragments,1):
                     body=prefix+"\nPart: %d/%d\n"%(j,len(fragments))+frag
-                    if len(body.encode("utf-8"))>chunk_bytes:
-                        raise ValueError("Chunk exceeds byte limit; increase --chunk-bytes")
-                    messages.append({"text":body,"kind":"content","file":filename,"section":section["title"],"entry":idx})
-                # Automatic type-aware processing is separate from custom Nomi: instructions.
+                    size=len(body) if chunk_mode=="chars" else len(body.encode("utf-8"))
+                    if size>chunk_limit:
+                        unit_name="character" if chunk_mode=="chars" else "byte"
+                        raise ValueError("Chunk exceeds %s limit; adjust chunk setting"%unit_name)
+                    msg={"text":body,"kind":"content","file":filename,
+                         "section":section["title"],"entry":idx}
+                    if chunk_mode=="chars":
+                        msg.update({"entry_label":str(label),"part":j,"parts":len(fragments)})
+                    add(msg)
                 if interval and (idx%interval==0 or idx==len(units)):
                     first=((idx-1)//interval)*interval+1
-                    # Use source journal labels in reflection prompts, not per-file positions.
                     first_label=(units[first-1].get("label") or str(first)) if kind=="journal" else first
                     last_label=label if kind=="journal" else idx
-                    custom=[p for p in section["prompts"] if not re.search(r"\\b(?:entries|episodes)\\s+\\d+\\s*[-–]\\s*\\d+\\b",p,re.I)]
+                    custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
                     template=custom[0] if len(custom)==1 else PERIODIC_PROMPTS[default_key]
                     prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
-                    messages.append({"text":prompt,"kind":"prompt","file":filename,
-                                     "section":section["title"],"entry":idx})
-                # Schedule explicitly ranged instructions at their last referenced entry.
+                    msg={"text":prompt,"kind":"prompt","file":filename,
+                         "section":section["title"],"entry":idx}
+                    if chunk_mode=="chars" and kind=="journal":
+                        msg["entry_label"]=str(last_label)
+                    add(msg)
                 for prompt in section["prompts"]:
                     nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
-                    if nums and int(nums.group(2))==idx:
-                        messages.append({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt","file":filename,"section":section["title"]})
+                    if nums:
+                        target=int(nums.group(2))
+                        if chunk_mode=="bytes" and entry_range is None:
+                            current=idx
+                        else:
+                            current=int(label) if kind=="journal" and re.fullmatch(r"\d+",str(label)) else idx
+                        if target==current:
+                            add({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt",
+                                 "file":filename,"section":section["title"]})
             for prompt in section["prompts"]:
                 nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                 if nums:
-                    if int(nums.group(1))<1 or int(nums.group(2))>len(units):
-                        raise ValueError("Prompt range outside section: "+prompt)
+                    if entry_range is None or kind!="journal":
+                        if int(nums.group(1))<1 or int(nums.group(2))>len(units):
+                            raise ValueError("Prompt range outside section: "+prompt)
                 elif not interval:
-                    messages.append({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt","file":filename,"section":section["title"]})
+                    add({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt",
+                         "file":filename,"section":section["title"]})
     return messages
+
 
 def digest(messages):
     raw=json.dumps(messages,sort_keys=True,ensure_ascii=False).encode()
@@ -293,10 +395,16 @@ def records(path):
         raise ValueError("Incomplete checkpoint tail; preserve file and inspect before repair")
     return [json.loads(s) for s in raw.splitlines() if s.strip()]
 
-def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
-    """Wait through explicit Nomi not-ready responses; stop on ambiguous errors."""
+def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
+                               max_wait=0):
+    """Wait through explicit Nomi not-ready responses; stop on ambiguous errors.
+
+    max_wait is seconds; 0 means unlimited. Reaching max_wait returns the last
+    explicit rejection, which is safe to continue waiting on a later resume.
+    """
     delay=base_delay
     n=0
+    started=time.monotonic()
     while True:
         n+=1
         status,payload=legacy.api_request("/rooms/"+room+"/chat/request","POST",
@@ -304,15 +412,23 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0):
         if legacy.ok(status):
             return status,payload
         error=legacy.err_text("request reply",status,payload)
-        if (status is not None and legacy.err_type(payload) in
-                ("NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests")):
+        if status is not None and legacy.err_type(payload) in KNOWN_WAIT_ERRORS:
+            elapsed=time.monotonic()-started
             if attempts is not None and n>=attempts:
                 print("Nomi API error: %s; test retry limit reached"%error,
                       file=sys.stderr,flush=True)
                 return status,payload
-            print("Nomi API error: %s; %s attempt %d; retry in %.1fs"%
-                  (error,legacy.err_type(payload),n,delay),file=sys.stderr,flush=True)
-            time.sleep(delay)
+            if max_wait and elapsed>=max_wait:
+                print("Nomi API error: %s; reply wait limit reached after %.1fs"%
+                      (error,elapsed),file=sys.stderr,flush=True)
+                return status,payload
+            wait=delay
+            if max_wait:
+                wait=min(wait,max(0,max_wait-elapsed))
+                if wait<=0: return status,payload
+            print("Nomi API error: %s; %s attempt %d; elapsed %.1fs; retry in %.1fs"%
+                  (error,legacy.err_type(payload),n,elapsed,wait),file=sys.stderr,flush=True)
+            time.sleep(wait)
             delay=min(delay*2,30)
             continue
         print("Nomi API error: %s; request outcome uncertain; not retrying"%error,
@@ -425,6 +541,92 @@ def migrate_resume(cp, old, nomi, room):
     return rid
 
 
+def checkpoint_summary(path):
+    cp=Path(path)
+    old=records(cp)
+    if not old:
+        return {"state":"NO_CHECKPOINT","checkpoint":str(cp)}
+    init=old[0]
+    if init.get("event")!="start":
+        raise ValueError("Checkpoint must begin with start event")
+    attempts={(r.get("pass"),r.get("index")) for r in old if r.get("event")=="attempt"}
+    confirmed={(r.get("pass"),r.get("index")) for r in old if r.get("event")=="confirmed"}
+    reply_attempts={(r.get("pass"),r.get("index")) for r in old if r.get("event")=="reply_attempt"}
+    reply_committed={(r.get("pass"),r.get("index")) for r in old if r.get("event")=="reply_committed"}
+    abandoned={(r.get("pass"),r.get("index")) for r in old if r.get("event")=="reply_abandoned"}
+    retryable={
+        (r.get("pass"),r.get("index")) for r in old
+        if r.get("event")=="reply_uncertain"
+        and r.get("http_status") is not None
+        and legacy.err_type(r.get("api_response")) in KNOWN_WAIT_ERRORS
+    }
+    uncertain_sends=attempts-confirmed
+    pending_replies=reply_attempts-reply_committed-abandoned
+    ambiguous_replies=pending_replies-retryable
+    expected=int(init.get("passes",1))*int(init.get("messages_per_pass",0))
+    prompts={(r.get("pass"),r.get("index")) for r in old
+             if r.get("event")=="confirmed" and r.get("kind")=="prompt"}
+    complete=bool(expected) and len(confirmed)==expected and prompts <= (reply_committed|abandoned)
+    if uncertain_sends: state="AMBIGUOUS_SEND"
+    elif ambiguous_replies: state="AMBIGUOUS_REPLY"
+    elif complete: state="COMPLETE"
+    else: state="SAFE_TO_RESUME"
+    last_event=None
+    for r in old:
+        if r.get("event")=="confirmed":
+            last_event=r
+    next_key=None
+    if expected:
+        for p in range(1,int(init.get("passes",1))+1):
+            for i in range(1,int(init.get("messages_per_pass",0))+1):
+                if (p,i) not in confirmed:
+                    next_key=(p,i); break
+            if next_key: break
+    return {
+        "state":state,"checkpoint":str(cp),"nomi":init.get("nomi_name"),
+        "room_uuid":migration_room(old),"run_id":init.get("run_id"),
+        "confirmed":len(confirmed),"expected":expected,
+        "last_confirmed":max(confirmed) if confirmed else None,
+        "last_entry":last_event.get("entry_label") if last_event else None,
+        "last_part":last_event.get("part") if last_event else None,
+        "last_parts":last_event.get("parts") if last_event else None,
+        "next":next_key,
+        "uncertain_sends":sorted(uncertain_sends),
+        "ambiguous_replies":sorted(ambiguous_replies),
+        "retryable_replies":sorted(pending_replies & retryable),
+        "entry_range":init.get("entry_range"),
+        "chunk_mode":init.get("chunk_mode","bytes"),
+        "chunk_limit":init.get("chunk_limit",init.get("chunk_chars",init.get("chunk_bytes",750)))
+    }
+
+def print_checkpoint_status(path):
+    info=checkpoint_summary(path)
+    if info["state"]=="NO_CHECKPOINT":
+        print("No checkpoint found.")
+        return info
+    print("%s upload"%((info.get("nomi") or "Nomi")))
+    print("="*(len(info.get("nomi") or "Nomi")+7))
+    print("State:      ",info["state"])
+    print("Progress:   %d / %d messages"%(info["confirmed"],info["expected"]))
+    if info.get("entry_range"): print("Entries:    ",info["entry_range"])
+    if info.get("last_confirmed"):
+        line="Last safe:   pass %d message %d"%tuple(info["last_confirmed"])
+        if info.get("last_entry"):
+            line+=" — entry %s"%info["last_entry"]
+            if info.get("last_part"): line+=" part %s/%s"%(info["last_part"],info["last_parts"])
+        print(line)
+    if info.get("next"): print("Next:        pass %d message %d"%tuple(info["next"]))
+    if info["state"]=="SAFE_TO_RESUME":
+        print("Safe action: resume.")
+    elif info["state"]=="COMPLETE":
+        print("Safe action: none; this run is complete.")
+    elif info["state"]=="AMBIGUOUS_SEND":
+        print("Attention: a content POST may or may not have reached Nomi:",info["uncertain_sends"])
+    elif info["state"]=="AMBIGUOUS_REPLY":
+        print("Attention: a reply request has an unknown outcome:",info["ambiguous_replies"])
+    return info
+
+
 def upload(args):
     # Advisory locks are released by the OS on process termination. Never unlink
     # this file: doing so could allow two processes to lock different inodes.
@@ -463,14 +665,28 @@ def _upload_locked(args):
         if args.room and args.room!=room: raise ValueError("--room cannot override checkpoint room")
         files=init["files"]; passes=init["passes"]
         args.user=init.get("user","")
-        args.chunk_bytes=init.get("chunk_bytes",750)
         args.process_every=init.get("process_every",0)
+        if init.get("chunk_mode")=="chars" or "chunk_chars" in init:
+            chunk_mode="chars"
+            chunk_limit=int(init.get("chunk_limit",init.get("chunk_chars",DEFAULT_CHUNK_CHARS)))
+        else:
+            chunk_mode="bytes"
+            chunk_limit=int(init.get("chunk_limit",init.get("chunk_bytes",750)))
+        entry_range=parse_entry_range(init.get("entry_range"))
     else:
         nomi=legacy.choose_nomi(legacy.get_nomis()) if not args.dry_run else {"name":args.nomi or "Nomi","uuid":"DRYRUN"}
         year=dt.date.today().year; order=regional_order(args.date_format)
         files=args.files; passes=args.passes; room=None
+        entry_range=parse_entry_range(getattr(args,"entries",None))
+        legacy_bytes=getattr(args,"chunk_bytes",None)
+        char_limit=getattr(args,"chunk_chars",None)
+        if legacy_bytes is not None:
+            chunk_mode="bytes"; chunk_limit=int(legacy_bytes)
+        else:
+            chunk_mode="chars"; chunk_limit=int(char_limit or DEFAULT_CHUNK_CHARS)
     if not files: raise ValueError("Specify at least one document")
-    messages=plan_text(files,nomi["name"],args.user,order,year,args.chunk_bytes,args.process_every)
+    messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
+                       args.process_every,entry_range,chunk_mode)
     manifest=digest(messages)
     if old and manifest!=init["manifest"]: raise ValueError("Manifest changed: resume requires identical content and options")
     print("Nomi:",nomi["name"],"Date order:",order,"Year:",year,"Messages per pass:",len(messages),"Passes:",passes)
@@ -482,7 +698,7 @@ def _upload_locked(args):
             previous=records(cp)
             prevstart=previous[0] if previous else {}
             confirmed_count=sum(1 for r in previous if r.get("event")=="confirmed")
-            expected=prevstart.get("passes",0)*len(messages)
+            expected=prevstart.get("passes",0)*prevstart.get("messages_per_pass",len(messages))
             reply_expected=sum(1 for r in previous if r.get("event")=="confirmed" and
                                r.get("kind")=="prompt")
             reply_count=sum(1 for r in previous if r.get("event") in ("reply_committed","reply_abandoned"))
@@ -506,7 +722,17 @@ def _upload_locked(args):
             if not legacy.room_contains_nomi(r,nomi["uuid"]):
                 raise ValueError("Room is not associated with selected Nomi")
         else: room=select_or_create_room(nomi, cp.parent)
-        record(cp,{"event":"start","run_id":str(uuid.uuid4()),"nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],"room_uuid":room,"year":year,"order":order,"files":files,"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"user":args.user,"chunk_bytes":args.chunk_bytes,"process_every":args.process_every})
+        start_event={"event":"start","version":VERSION,"run_id":str(uuid.uuid4()),
+                     "nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],
+                     "room_uuid":room,"year":year,"order":order,"files":files,
+                     "passes":passes,"messages_per_pass":len(messages),
+                     "manifest":manifest,"user":args.user,
+                     "process_every":args.process_every,
+                     "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
+                     "entry_range":entry_range_text(entry_range)}
+        if chunk_mode=="chars": start_event["chunk_chars"]=chunk_limit
+        else: start_event["chunk_bytes"]=chunk_limit
+        record(cp,start_event)
         old=records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
@@ -593,16 +819,30 @@ def _upload_locked(args):
                    "reason":"operator authorized retry after ambiguous reply outcome"})
     # Earlier versions incorrectly treated explicit Nomi readiness errors as
     # ambiguous. The recorded HTTP response proves the request was rejected.
-    known_wait_errors={"NoReply","RoomNomiNotReadyForMessage",
-                       "RoomStillCreating","TooManyRequests"}
     retryable_previous={
         (r["pass"],r["index"]) for r in old
         if r.get("event")=="reply_uncertain"
         and r.get("http_status") is not None
-        and legacy.err_type(r.get("api_response")) in known_wait_errors
+        and legacy.err_type(r.get("api_response")) in KNOWN_WAIT_ERRORS
     }
     recovery |= retryable_previous & reply_attempts & confirmed
     recovery -= abandoned
+
+    if getattr(args,"easy",False) and sys.stdin.isatty():
+        for key in sorted(uncertain_sends-send_retry_authorized):
+            print("\nThe previous upload stopped while sending pass %d message %d."%key)
+            print("It may already have reached Nomi. Resending could create one duplicate.")
+            if input("Resend that message and continue? [y/N]: ").strip().lower() in ("y","yes"):
+                send_retry_authorized.add(key)
+        pending_reply=reply_attempts-reply_committed-recovery-abandoned
+        for key in sorted(pending_reply):
+            print("\nNomi's last reflection request has an unknown outcome at pass %d message %d."%key)
+            print("The diary content is already confirmed. Retrying may create an extra reply.")
+            if input("Retry the reply request and continue? [y/N]: ").strip().lower() in ("y","yes"):
+                recovery.add(key)
+                record(cp,{"event":"reply_operator_override","pass":key[0],"index":key[1],
+                           "reason":"friendly operator authorized retry after ambiguous reply outcome"})
+
     uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery-abandoned)
     if uncertain:
         raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
@@ -622,21 +862,30 @@ def _upload_locked(args):
                                "sha256":hashlib.sha256(m["text"].encode()).hexdigest(),
                                "reason":"operator authorized repeat of ambiguous POST; duplicate possible"})
                     print("Authorized resend: pass %d message %d (duplicate possible)" % (p,i),flush=True)
+                transport={k:m[k] for k in ("entry_label","part","parts") if k in m}
                 record(cp,{"event":"attempt","pass":p,"index":i,
-                           "sha256":hashlib.sha256(m["text"].encode()).hexdigest()})
+                           "sha256":hashlib.sha256(m["text"].encode()).hexdigest(),
+                           **transport})
                 s,response=legacy.api_request("/rooms/"+room+"/chat","POST",
                                               {"messageText":m["text"]})
                 if not legacy.ok(s):
                     raise RuntimeError("POST outcome uncertain: "+legacy.err_text("send",s,response))
                 record(cp,{"event":"confirmed","pass":p,"index":i,
-                           "kind":m["kind"],"api_response":response})
-                print("Pass %d/%d message %d/%d"%(p,passes,i,len(messages)))
+                           "kind":m["kind"],"api_response":response,
+                           **transport})
+                detail=""
+                if m.get("entry_label"):
+                    detail=" — entry %s"%m["entry_label"]
+                    if m.get("part"): detail+=" part %s/%s"%(m["part"],m["parts"])
+                print("Pass %d/%d message %d/%d%s"%(p,passes,i,len(messages),detail))
                 if args.delay: time.sleep(args.delay)
             if m["kind"]=="prompt" and key not in reply_committed and key not in abandoned:
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
-                s,response=request_reply_with_backoff(room,nomi["uuid"])
+                s,response=request_reply_with_backoff(
+                    room,nomi["uuid"],
+                    max_wait=getattr(args,"reply_max_wait",0) or 0)
                 if not legacy.ok(s):
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
                                "http_status":s,"api_response":response})
@@ -665,7 +914,15 @@ def _upload_locked(args):
             out.write("PROMPT: "+row["prompt"]+"\n")
             out.write("REPLY: "+str(body)+"\n\n")
     Path(args.completion).parent.mkdir(parents=True,exist_ok=True)
-    Path(args.completion).write_text(json.dumps({"version":VERSION,"room_uuid":room,"abandoned_replies":[list(k) for k in sorted(abandoned)],"nomi":nomi["name"],"passes":passes,"messages_per_pass":len(messages),"manifest":manifest,"completed_at":dt.datetime.now(dt.timezone.utc).isoformat()},indent=2),encoding="utf-8")
+    Path(args.completion).write_text(json.dumps({
+        "version":VERSION,"room_uuid":room,
+        "abandoned_replies":[list(k) for k in sorted(abandoned)],
+        "nomi":nomi["name"],"passes":passes,
+        "messages_per_pass":len(messages),"manifest":manifest,
+        "entry_range":entry_range_text(entry_range),
+        "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
+        "completed_at":dt.datetime.now(dt.timezone.utc).isoformat()
+    },indent=2),encoding="utf-8")
     print("Complete. Room retained:",room)
 
 def active_room_ids(checkpoint_dir="."):
@@ -793,12 +1050,16 @@ def interactive_menu():
         if action in ("5","q","Q",""): return
         if action=="4": utilities(); continue
         if action not in ("1","2","3"): print("Unknown option"); continue
-        argv=["--resume"] if action=="2" else []
+        argv=["--resume","--easy"] if action=="2" else []
         if action!="2":
             files=input("Input files (quoted paths supported): ").strip()
             if not files: continue
             import shlex
             argv+=shlex.split(files,posix=(os.name!="nt"))
+            entries=input("Journal entries [all, e.g. 45-100]: ").strip()
+            if entries: argv+=["--entries",entries]
+            chars=input("Maximum characters per API message [750]: ").strip()
+            if chars: argv+=["--chunk-chars",chars]
             interval=input("Process every N units [0]: ").strip()
             if interval: argv+=["--process-every",interval]
             passes=input("Passes [1]: ").strip()
@@ -808,11 +1069,15 @@ def interactive_menu():
 
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
-    parser=argparse.ArgumentParser(description="Nomi Uploader v1.0")
+    parser=argparse.ArgumentParser(description="Nomi Uploader v1.1")
     parser.add_argument("files",nargs="*")
     parser.add_argument("--version",action="version",version=VERSION)
     parser.add_argument("--utility",action="store_true")
+    parser.add_argument("--status",action="store_true",
+                        help="Read-only checkpoint status; makes no Nomi API calls")
     parser.add_argument("--resume",action="store_true")
+    parser.add_argument("--easy",action="store_true",
+                        help="Friendly recovery prompts for genuinely ambiguous checkpoint states")
     parser.add_argument("--new-room-on-resume",action="store_true",help="Move a stuck-reply run to a fresh room; requires --abandon-reply")
     parser.add_argument("--abandon-reply",action="append",default=[],metavar="PASS:INDEX",help="Abandon only a confirmed prompt's pending reply; requires --new-room-on-resume")
     parser.add_argument("--recover-noreply",action="append",default=[],metavar="PASS:INDEX",help="Authorize retry of a legacy checkpoint reply known to have returned NoReply")
@@ -823,8 +1088,15 @@ def main(argv=None):
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
     parser.add_argument("--passes",type=int,default=1)
+    parser.add_argument("--entries",
+                        help="Journal entry selection: N, START-END, START-, -END, or all")
     parser.add_argument("--process-every",type=int,default=0,help="Automatic type-aware recollection/analysis after N units; 0 disables")
-    parser.add_argument("--chunk-bytes",type=int,default=750)
+    parser.add_argument("--chunk-chars",type=int,default=None,
+                        help="Maximum characters in a new-run API message (default 750; hard maximum 800)")
+    parser.add_argument("--chunk-bytes",type=int,default=None,
+                        help="Legacy v1.0 byte planner; retained for compatibility/testing")
+    parser.add_argument("--reply-max-wait",type=float,default=900,
+                        help="Seconds to wait through explicit Nomi not-ready replies before cleanly stopping; 0 = unlimited")
     parser.add_argument("--date-format",choices=["AUTO","US","EU"],default="AUTO")
     parser.add_argument("--delay",type=float,default=1)
     parser.add_argument("--checkpoint",default="nomi_uploader_checkpoint.jsonl")
@@ -832,10 +1104,26 @@ def main(argv=None):
     parser.add_argument("--replies",default="nomi_uploader_replies.txt")
     if not argv and sys.stdin.isatty(): return interactive_menu()
     args=parser.parse_args(argv)
+    if args.status:
+        print_checkpoint_status(args.checkpoint)
+        return
     if args.process_every<0: parser.error("process-every must be >= 0")
-    if args.passes<1 or args.chunk_bytes<150: parser.error("passes >=1 and chunk-bytes >=150 required")
-    if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume: parser.error("recovery flags require --resume")
-    if args.utility and (args.new_room_on_resume or args.abandon_reply): parser.error("migration cannot be combined with --utility")
+    if args.passes<1: parser.error("passes must be >= 1")
+    if args.chunk_chars is not None and args.chunk_bytes is not None:
+        parser.error("use --chunk-chars or legacy --chunk-bytes, not both")
+    if args.chunk_chars is not None and not (150<=args.chunk_chars<=MAX_API_CHARS):
+        parser.error("--chunk-chars must be between 150 and %d"%MAX_API_CHARS)
+    if args.chunk_bytes is not None and args.chunk_bytes<150:
+        parser.error("--chunk-bytes must be >= 150")
+    if args.reply_max_wait<0: parser.error("--reply-max-wait must be >= 0")
+    try:
+        parse_entry_range(args.entries)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume:
+        parser.error("recovery flags require --resume")
+    if args.utility and (args.new_room_on_resume or args.abandon_reply):
+        parser.error("migration cannot be combined with --utility")
     if args.utility: utilities()
     else: upload(args)
 
