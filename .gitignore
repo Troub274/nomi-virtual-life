@@ -35,3 +35,7 @@ examples/beth/beth_v1/
 !examples/beth/input/**
 !examples/chris/input/
 !examples/chris/input/**
+
+# Public Tammy 2 uploader inputs
+!examples/tammy2/input/
+!examples/tammy2/input/**
