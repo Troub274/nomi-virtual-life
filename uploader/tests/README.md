@@ -1,4 +1,4 @@
-# Nomi Uploader v1.0 — Test Suite
+# Nomi Uploader v1.1 — Test Suite
 
 This suite uses Python's standard-library `unittest` and does **not** require Nomi credentials.
 
@@ -20,7 +20,7 @@ The CI workflow `.github/workflows/nomi-uploader-tests.yml` runs the same tests 
 | `test_uploader.py` | Dates, sections, journal/chat parsing, Beth converter, prompt intervals, export planning, protected rooms, legacy compatibility |
 | `test_specification.py` | Every type/source processing instruction, local/global intervals, ranged prompts, invalid input, multi-session chat, Unicode byte boundaries, export delegation |
 | `test_integration.py` | Mocked room creation, complete upload, Nomi reply capture, checkpoint durability, resumed completion, uncertain POST handling, malformed replies, changed manifest, repeated passes, output files |
-| `test_packages.py` | Shipped Beth and Chris ZIPs, source hashes, 565/1,000 entries, real planning, byte limits, isolated package checkpoints, obsolete CLI rejection |
+| `test_packages.py` | Shipped Beth and Chris ZIPs, source hashes, 565/1,000 entries, legacy byte planning, isolated package checkpoints, obsolete CLI rejection |\n| `test_v11.py` | Entry ranges, character-based splitting, 800-character ceiling, checkpoint classification, and exact v1.0 planner compatibility |
 
 ### Offline vs live
 
@@ -28,7 +28,7 @@ The offline tests verify deterministic uploader behavior and simulated Nomi API 
 
 ### Safety invariants
 
-- Never retry a POST after an ambiguous outcome.
+- Never automatically retry a POST after an ambiguous outcome; v1.1 friendly mode requires explicit user authorization.
 - Never resume when the content manifest changed.
 - Never repeat a confirmed Nomi response request.
 - Preserve source and speaker attribution.
