@@ -894,6 +894,10 @@ def _upload_locked(args):
                 if not legacy.ok(s):
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
                                "http_status":s,"api_response":response})
+                    if s is not None and legacy.err_type(response) in KNOWN_WAIT_ERRORS:
+                        raise RuntimeError(
+                            "Nomi is still not ready after the reply wait limit; "
+                            "the checkpoint is safe to resume.")
                     raise RuntimeError("Reply request outcome uncertain: "+
                                        legacy.err_text("request reply",s,response))
                 reply=response.get("replyMessage") if isinstance(response,dict) else None
