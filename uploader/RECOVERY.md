@@ -3,10 +3,39 @@
 **Quick lookup:** [Error → Recovery Command Quick Reference](ERROR_RECOVERY_QUICK_REFERENCE.md) — symptom-to-command table, checkpoint inspection, and tested incident examples.
 
 
-**Applies to:** Nomi Uploader v1.0, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
+**Applies to:** Nomi Uploader v1.1, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
 **Prepared:** October 13, 2026  
-**Updated:** October 19, 2026 — safe stuck-reply room migration
-**Status:** Operational manual describing observed behavior and inspected code. Proposed v1.1 changes are explicitly labeled.
+**Updated:** October 21, 2026 — v1.1 automatic package resume, checkpoint status, entry ranges, character transport limits  
+**Status:** Operational manual. The exact v1.0 uploader is preserved at `uploader/archive/nomi-uploader-v1.0.py`.
+
+## v1.1 normal-user recovery
+
+Most users should not start with the expert recovery flags in this document.
+
+For a packaged character, simply rerun the same command:
+
+```bash
+python examples/run_package.py tammy
+```
+
+The package runner starts a new run when no checkpoint exists and automatically resumes an unfinished checkpoint. Use:
+
+```bash
+python examples/run_package.py tammy --status
+```
+
+to inspect progress without making API calls.
+
+For a raw uploader checkpoint:
+
+```bash
+python uploader/nomi-uploader.py --status --checkpoint PATH
+python uploader/nomi-uploader.py --resume --easy --checkpoint PATH
+```
+
+`--easy` automatically continues states that are provably safe. If an interrupted POST may or may not have reached Nomi, it does **not** guess: it explains the risk and asks before authorizing a possible duplicate. The expert flags below remain available for scripted or forensic recovery.
+
+New v1.1 runs wait up to 900 seconds by default through explicit `NoReply` / not-ready responses, then stop cleanly. Those explicit rejections are safe to continue waiting on later; `--reply-max-wait 0` restores unlimited waiting.
 
 ## Stuck reply recovery: migrate after message 499
 
@@ -453,7 +482,7 @@ A repeated `reply_attempt` for the same key can be legitimate after authorized r
 - Modify source files between start and resume.
 - Assume `--recover-noreply` is risk-free; it authorizes a new reply request when the previous outcome may be unknown.
 
-## 15. Recommended v1.1 engineering improvements (NOT present in v1.0)
+## 15. Engineering follow-ups after v1.1
 
 ### Priority A — durable retry evidence
 
@@ -469,9 +498,9 @@ Report elapsed wall-clock time, total attempts, last error, and next delay. Add 
 
 On Ctrl+C during backoff, exit cleanly with checkpoint preserved. On Ctrl+C during an in-flight POST, record an explicit local interruption marker without claiming the remote request failed. The marker should remain **ambiguous** unless the response was received.
 
-### Priority B — checkpoint inspection command
+### Implemented in v1.1 — checkpoint inspection command
 
-Add `--inspect-checkpoint` that reports run identity, room, planned messages, confirmed content, committed replies, pending operations, last known error, and whether automatic resume is safe. It must be read-only.
+`--status` now reports run identity, progress, last confirmed position, pending ambiguity, and whether resume is safe. It is read-only.
 
 ### Priority B — recovery-specific interface
 
