@@ -17,10 +17,7 @@ experiment, wait until import completion before chatting. Canon is for evaluatio
 
 From the repository root, preview without credentials or API calls:
 
-For the standard isolated package workflow, use `python examples/run_package.py beth --dry-run`,
-`python examples/run_package.py beth` for live upload, and
-`python examples/run_package.py beth --resume` to continue. State is kept under
-`.local-runs/beth/`. The explicit commands below are an alternative with custom state paths.
+For the standard isolated package workflow, use `python examples/run_package.py beth --dry-run` to preview and `python examples/run_package.py beth` for live upload. If interrupted, run the same live command again; v1.1 detects the checkpoint and resumes automatically. Use `python examples/run_package.py beth --status` for a read-only progress check. State is kept under `.local-runs/beth/`. The explicit raw-uploader commands below are an alternative with custom state paths.
 
 ```sh
 python uploader/nomi-uploader.py --dry-run --nomi "Beth Peterson" --date-format US examples/beth/input/BETH01_V1.TXT examples/beth/input/BETH02_V1.TXT examples/beth/input/BETH03_V1.TXT examples/beth/input/BETH04_V1.TXT examples/beth/input/BETH05_V1.TXT
