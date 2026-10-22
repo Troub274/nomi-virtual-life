@@ -122,7 +122,7 @@ Example of an isolated Cathy run:
 
 ```bash
 python3 uploader/nomi-uploader.py \
-  --user "Yehoshua" --passes 1 --chunk-bytes 750 --process-every 5 \
+  --user "Yehoshua" --passes 1 --chunk-chars 750 --process-every 5 \
   --checkpoint cathy_review5_checkpoint.jsonl \
   --completion cathy_review5_completed.json \
   --replies cathy_review5_replies.txt \
@@ -332,7 +332,7 @@ Resume reports an unresolved (pass,index)
                                may be possible      operator decision
 ```
 
-For uncertain **content** sends, see §7.3. The earlier decision tree's "do not resend blindly" instruction means **require explicit operator consent**; a scoped resend is supported in v1.0.
+For uncertain **content** sends, see §7.3. The earlier decision tree's "do not resend blindly" instruction means **require explicit operator consent**; a scoped resend is supported in v1.1.
 
 A bare `reply_attempt` alone is not evidence that Nomi returned `NoReply`. The current code intentionally requires explicit operator authorization for that case.
 
