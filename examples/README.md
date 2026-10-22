@@ -13,7 +13,7 @@ python examples/run_package.py mary --dry-run
 python examples/run_package.py tammy --dry-run
 ```
 
-Remove `--dry-run` for a new live run after setting `NOMI_API_KEY`, and select the correct Nomi. Add `--resume` to continue the package runner's checkpoint. Keep all inputs and their paths unchanged during active runs. The runner keeps per-character state in `.local-runs/`. It never migrates or overwrites an existing development run.
+For live use, rerun the same package command without `--dry-run` after setting `NOMI_API_KEY`. The package runner automatically starts when no checkpoint exists and resumes an unfinished checkpoint when one does. Use `--status` for a read-only progress check and `--restart` only when intentionally beginning another run after completion. Keep all inputs and their paths unchanged during active runs. State stays isolated under `.local-runs/`.
 
 Beth's original diary bytes, canon and portrait are preserved with hashes in `beth/source/`. Character setup instructions now use the uploader. Obsolete bundled executables and launchers were removed; the former archive remains in Git history.
 
