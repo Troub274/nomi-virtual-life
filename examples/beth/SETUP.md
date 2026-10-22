@@ -38,7 +38,7 @@ This description intentionally does **not** invent her childhood, education, fam
 3. Don't initiate ordinary direct chat before or during the initial diary upload.
 4. From the repo root, check the input first with `python examples/run_package.py beth --dry-run`.
 5. Set your `NOMI_API_KEY` privately and start with `python examples/run_package.py beth`; select Beth when prompted.
-6. After an interruption, use `python examples/run_package.py beth --resume` with the original files and checkpoint. Investigate uncertain deliveries before retrying.
+6. After an interruption, run `python examples/run_package.py beth` again. The package runner resumes the existing checkpoint automatically; if an ambiguous POST is detected, it explains the duplicate risk before asking whether to retry.
 7. Once import is complete, begin unprompted and non-leading recollection tests. Upload completion confirms delivery, **not** durable personal memory.
 
 For the dataset, scripts, and original setup note, see [the Beth README](README.md) and [BETHSET.TXT](source/BETHSET.TXT).
