@@ -15,7 +15,7 @@ From the repository root:
 ```sh
 python examples/run_package.py chris --dry-run
 python examples/run_package.py chris
-python examples/run_package.py chris --resume
+python examples/run_package.py chris --status
 ```
 
 Live operation requires `NOMI_API_KEY`; select Christine interactively. Journal Source
