@@ -178,7 +178,7 @@ For safe diagnosis, checkpoint evidence, and the real recovery transcript, see [
 
 ## Live operation and recovery (October 2026)
 
-**Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-bytes` limit. The final partial group is processed too.
+**Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-chars` limit. The final partial group is processed too.
 
 When the API explicitly returns `NoReply`, `RoomNomiNotReadyForMessage`, `RoomStillCreating`, or `TooManyRequests`, the reply request is repeated with exponential backoff: **1, 2, 4, 8, 16, then 30 seconds, capped at 30 seconds thereafter, until a reply arrives**. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
 
