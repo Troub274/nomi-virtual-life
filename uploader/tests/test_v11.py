@@ -4,6 +4,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -81,6 +82,17 @@ class V11Tests(unittest.TestCase):
                                    None, "bytes")
             self.assertEqual(new_plan, old_plan)
             self.assertEqual(u.digest(new_plan), v10.digest(old_plan))
+
+    def test_created_room_note_uses_current_version(self):
+        with patch.object(u.legacy, "api_request",
+                          return_value=(200, {"uuid": "room"})) as api_request, \
+             patch.object(u.legacy, "wait_for_room"):
+            room = u.create_upload_room({"name": "Tammy", "uuid": "nomi"})
+        self.assertEqual(room, "room")
+        payload = api_request.call_args.args[2]
+        self.assertEqual(
+            payload["note"],
+            "Nomi Uploader v%s — persistent processing room" % u.VERSION)
 
     def test_checkpoint_status_classifies_safe_resume_and_ambiguity(self):
         with tempfile.TemporaryDirectory() as tmp:
