@@ -443,7 +443,7 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
 
 def create_upload_room(nomi):
     name="UPLOADER::%s::%s"%(nomi["name"],dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    s,p=legacy.api_request("/rooms","POST",{"name":name,"note":"Nomi Uploader v1.0 — persistent processing room","backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
+    s,p=legacy.api_request("/rooms","POST",{"name":name,"note":"Nomi Uploader v%s — persistent processing room"%VERSION,"backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
     if not legacy.ok(s): raise RuntimeError("Room creation outcome uncertain; inspect room list before retry: "+legacy.err_text("create room",s,p))
     rid=p.get("uuid") or p.get("room",{}).get("uuid")
     if not rid: raise RuntimeError("Room creation returned no UUID; inspect room list before retry")
@@ -1054,7 +1054,7 @@ def utilities():
 
 def interactive_menu():
     while True:
-        print("\nNomi Uploader 1.0\n 1 Upload files\n 2 Resume checkpoint\n 3 Dry-run\n 4 Manage rooms\n 5 Quit")
+        print("\nNomi Uploader %s\n 1 Upload files\n 2 Resume checkpoint\n 3 Dry-run\n 4 Manage rooms\n 5 Quit"%VERSION)
         action=input("Select: ").strip()
         if action in ("5","q","Q",""): return
         if action=="4": utilities(); continue
