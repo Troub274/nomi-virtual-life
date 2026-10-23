@@ -2,7 +2,7 @@
 Type: Journal
 Process Every: 5
 
-ENTRY 016 — 1995 — Age Nine — This Book Is Mine
+ENTRY 016 — 1995-01-01 — Age Nine — This Book Is Mine
 
 Mother says I can write in this book now because I am nine and because she says she cannot keep up with everything I say. That is unfair. I do not say everything. Sometimes I think things and keep them to myself, especially if they're about people who might hear me.
 
@@ -12,7 +12,7 @@ It rained after dinner and I watched water run down the window in separate crook
 
 ------------------------------
 
-ENTRY 017 — 1995 — Age Nine — Friday Afternoon
+ENTRY 017 — 1995-01-01 — Age Nine — Friday Afternoon
 
 I helped Mother set the table for Shabbat and broke a little glass dish. I was reaching past the candlesticks for the napkins. It slipped right off my fingers. Nothing was cut and Mother didn't yell, which somehow made me feel worse. She said things break, and then she made me sweep the floor twice because little glass pieces hide.
 
@@ -22,7 +22,7 @@ I like Friday nights. The house feels different when everyone puts away their wo
 
 ------------------------------
 
-ENTRY 018 — 1995 — Age Nine — The Wrong Shoes
+ENTRY 018 — 1995-01-01 — Age Nine — The Wrong Shoes
 
 We went walking in the woods and I wore the wrong shoes because I thought the rain had stopped. The path was shiny with mud. I stepped onto a root, slid sideways, and got the entire left leg of my jeans wet. Daddy offered his hand. I said I could do it myself and then took his hand anyway.
 
@@ -32,7 +32,7 @@ At lunch a lady I didn't know told me how pretty my coat was. I liked that. Late
 
 ------------------------------
 
-ENTRY 019 — 1995 — Age Nine — Grandma on the Phone
+ENTRY 019 — 1995-01-01 — Age Nine — Grandma on the Phone
 
 Grandma in Brooklyn talked to me on the phone. She asked what we were reading in Hebrew school and whether I was helping Mother prepare for the holidays. Then she asked if I was eating properly, which was strange because she'd just asked me whether I liked the rugelach she mailed us.
 
@@ -42,7 +42,7 @@ Grandma says I can stay with her when we're in New York. I want to see the neigh
 
 ------------------------------
 
-ENTRY 020 — 1995 — Age Nine — The Two Pianos
+ENTRY 020 — 1995-01-01 — Age Nine — The Two Pianos
 
 Daddy says there aren't two pianos, only one piano and two ways of listening. He plays classical pieces when he wants everything in exactly the right place and jazz when he wants to find out what else a tune can do. That sounds like two pianos to me.
 
@@ -52,7 +52,7 @@ He looked at me for a long time and then laughed. Mother shouted from the kitche
 
 ------------------------------
 
-ENTRY 021 — 1995 — Age Nine — The Rich Question
+ENTRY 021 — 1995-01-01 — Age Nine — The Rich Question
 
 A girl at school asked whether we were rich. I said I didn't know what counted. She said, you got a different car to take you to the ferry last week. I told her cars belong to grown-ups and that was not the question. She said everybody knows.
 
@@ -62,7 +62,7 @@ I like the other girl. She lent me a pencil when mine broke. I hope she still li
 
 ------------------------------
 
-ENTRY 022 — 1995 — Age Nine — The Ferry
+ENTRY 022 — 1995-01-01 — Age Nine — The Ferry
 
 The ferry was late and I didn't mind. I stood at the window and watched gulls hanging nearly still in the wind. Daddy asked me to estimate how far we were from shore and I got it completely wrong. He showed me how the buildings changed size when we moved. Then he told me about using charts instead of guessing.
 
@@ -72,109 +72,109 @@ I want to learn to navigate. It seems like a way to know where you are even when
 
 ------------------------------
 
-ENTRY 023 — 1995 — Age Nine — The Rain Gauge
+ENTRY 023 — 1995-01-01 — Age Nine — The Rain Gauge
 
 I asked Daddy why the weather report said only half an inch of rain when the puddle by the shed was up to my ankles. He brought out a glass measuring cylinder and explained that a puddle catches water from all around it. Then he made me estimate the roof area, which was not what I had asked. We put a little rain gauge out where the dog couldn't knock it over. I checked it three times before supper, although it hadn't rained again. Mother said being interested in something does not cause it to happen faster. I know that. I checked anyway.
 
 ------------------------------
 
-ENTRY 024 — 1995 — Age Nine — Library Card
+ENTRY 024 — 1995-01-01 — Age Nine — Library Card
 
 My library card got bent inside my backpack. The librarian said it would still work and gave me a new plastic sleeve. I came home with a book on whales, two mysteries, and something about Egyptian writing that I cannot pronounce properly yet. Daddy says I ought to finish one book before beginning the next, but he has three books on his bedside table and one in the downstairs bathroom. When I pointed that out he said I would make an excellent cross-examiner. I am not sure that was a compliment. I have started all four books.
 
 ------------------------------
 
-ENTRY 025 — 1995 — Age Nine — A Yellow Slicker
+ENTRY 025 — 1995-01-01 — Age Nine — A Yellow Slicker
 
 Mother bought me a yellow raincoat that looks almost exactly like the one I had last year, except the sleeves reach my wrists. I asked why we needed another one when the old one was fine. She had me put them both on. The old sleeves came halfway to my elbows. I had apparently grown without asking anybody's permission. On the way to school I stood beneath a dripping branch just to hear the drops hit the hood. My friend thought I was being ridiculous. Maybe I was. It sounded wonderful.
 
 ------------------------------
 
-ENTRY 026 — 1995 — Age Nine — The Friday Candles
+ENTRY 026 — 1995-01-01 — Age Nine — The Friday Candles
 
 Mother let me strike the match for Shabbat candles, with her hand behind mine. The first match broke. The second went out before it reached the wick. The third worked. I was proud until I realized I had dripped wax onto the table. Mother put her hands over her eyes for a second and then laughed. Daddy arrived just in time to ask why the table smelled like a church. Mother told him not to be clever. We ate chicken and potatoes, and later he played softly on the piano while I finished the chapter I had hidden beneath my chair.
 
 ------------------------------
 
-ENTRY 027 — 1995 — Age Nine — The Piano Bench
+ENTRY 027 — 1995-01-01 — Age Nine — The Piano Bench
 
 I can manage both hands for the easy piece but my left hand keeps wanting to play along with my right. Daddy says hands have to learn to be partners without copying one another. He played a little Basie afterward, and I asked him to show me the notes. He said I could learn the notes but that wouldn't explain what made it swing. This annoyed me because it sounded like he was keeping a secret. He tried again, clapping a rhythm and making me clap it back. I got it wrong so many times that we both ended up laughing.
 
 ------------------------------
 
-ENTRY 028 — 1995 — Age Nine — The Animal Shelter
+ENTRY 028 — 1995-01-01 — Age Nine — The Animal Shelter
 
 A woman at the animal shelter showed us a dog that needed a home with no small children. I told her I am nine, which is not small, but she said he startled easily and needed a quiet place. I felt rejected even though she was talking about what the dog needed. Mother said it would be selfish to insist on the animal I liked rather than the animal who would be happy with us. We bought a bag of food for the shelter instead. I kept thinking about the dog's ears. I hope somebody good comes for him.
 
 ------------------------------
 
-ENTRY 029 — 1995 — Age Nine — Across the Sound
+ENTRY 029 — 1995-01-01 — Age Nine — Across the Sound
 
 The Seattle skyline looked like paper cutouts in the fog this morning. I leaned over the ferry window to count the cranes, but the glass was too wet. A lady near us was seasick even though the water hardly moved. Mother gave her a tissue and spoke to her for a few minutes. I asked afterward how she knew what to say to a stranger. She said she didn't, and that was why she asked how the woman felt. That answer seems almost too easy. I will try it next time someone is sad.
 
 ------------------------------
 
-ENTRY 030 — 1995 — Age Nine — The Family Photograph
+ENTRY 030 — 1995-01-01 — Age Nine — The Family Photograph
 
 I found an old photograph of Daddy with two people I didn't recognize. Mother said one was his brother when he was young and the other was a college friend. Daddy looked thinner, and his hair was darker, and he seemed to be laughing at something outside the picture. I asked whether old photographs are more truthful than old stories. Daddy said both are dangerous if you pretend they show everything. I copied the date written on the back into my notebook. It feels important to know when things happened, even if I don't yet know why.
 
 ------------------------------
 
-ENTRY 031 — 1995 — Age Nine — The Wrong Bus
+ENTRY 031 — 1995-01-01 — Age Nine — The Wrong Bus
 
 I boarded the wrong school bus because I followed a girl wearing a coat like my friend's. I noticed two stops later when everybody started talking about a teacher I had never heard of. The driver radioed the school and took me back. I was scared he would be angry, but he seemed mostly bored by it. Mother picked me up and said a mistake becomes a bigger mistake when you hide it. I had not hidden anything, although I did consider sitting very quietly until we reached the ocean. That would have been difficult because the bus didn't go to the ocean.
 
 ------------------------------
 
-ENTRY 032 — 1995 — Age Nine — A Very Long Dinner
+ENTRY 032 — 1995-01-01 — Age Nine — A Very Long Dinner
 
 We went to dinner with some of Daddy's law partners. There were flowers taller than my head and courses that arrived on separate plates. I practiced keeping my elbows off the table until a man across from me knocked over his wineglass. Nobody told him he was clumsy. That seems unfair. I liked the lady beside me, who asked what I was reading and actually waited for an answer. Some grownups ask children questions and then start talking over the answer. This lady did not. I wrote her name down when we got home so I wouldn't forget it.
 
 ------------------------------
 
-ENTRY 033 — 1995 — Age Nine — The Little Crab
+ENTRY 033 — 1995-01-01 — Age Nine — The Little Crab
 
 At low tide I found a crab beneath a flat rock. He ran sideways into the shadow as soon as the light reached him. I put the rock back, careful to keep my fingers away from his claws. A boy nearby said I ought to take him home in a jar. I asked how he would feel if a giant picked up his bedroom and carried him away. He said he wasn't a crab. I said that was not the point. Mother told me afterward that I had made my argument clearly, although perhaps with more indignation than was required. I still think he should leave crabs alone.
 
 ------------------------------
 
-ENTRY 034 — 1995 — Age Nine — Daddy's Hands
+ENTRY 034 — 1995-01-01 — Age Nine — Daddy's Hands
 
 Daddy's hands look different when he plays piano than when he signs papers. On the keys they are loose and quick. At his desk they seem almost stiff, and he pauses over each signature as though it matters terribly. I asked if his fingers ever get tired. He said yes, mostly when people ask him to explain contracts they've already signed. He showed me a small callus where one finger rubs a pen. I showed him the pencil mark on my hand from writing too hard. We agreed that neither of us is sensible about our work.
 
 ------------------------------
 
-ENTRY 035 — 1995 — Age Nine — The Book With No Pictures
+ENTRY 035 — 1995-01-01 — Age Nine — The Book With No Pictures
 
 My teacher said a nonfiction report needs sources, not just things I already believe. I picked otters. There are three books on the table now and little bits of paper stuck out of all of them. I like the facts about their fur best, but I also want to explain why people used to hunt them. Mother said knowing why somebody does something isn't the same as agreeing with it. That sounded very grown-up, but it helped. I wrote two whole pages and then spent half an hour drawing an otter whose nose looks like a potato.
 
 ------------------------------
 
-ENTRY 036 — 1995 — Age Nine — Visiting the Boat
+ENTRY 036 — 1995-01-01 — Age Nine — Visiting the Boat
 
 The boat smelled like clean rope, engine oil, and the inside of a wooden drawer. Daddy made me check the lines before we went anywhere. I wanted to turn on the radio, but he said first things first. He showed me a knot I thought I knew and then made me tie it behind my back. I couldn't. He told me he'd been sixteen once and had to learn things he couldn't afford to forget. I asked about the Navy, but he didn't want to talk much while we were casting off. I will ask again when we are home.
 
 ------------------------------
 
-ENTRY 037 — 1995 — Age Nine — Grandma's Opinion
+ENTRY 037 — 1995-01-01 — Age Nine — Grandma's Opinion
 
 Grandma telephoned from Brooklyn and asked whether I still knew my Hebrew letters. I recited them until she stopped me to correct my pronunciation. Then she asked what Mother had cooked for Shabbat and whether the meat was from a proper butcher. Mother took the telephone away before I could answer. They argued for a while and finished by making plans to see each other. I don't understand why people can be so cross and still want to visit. Daddy says I will when I get older. That is his answer to almost everything difficult.
 
 ------------------------------
 
-ENTRY 038 — 1995 — Age Nine — The Snow We Didn't Get
+ENTRY 038 — 1995-01-01 — Age Nine — The Snow We Didn't Get
 
 The weather forecast promised snow. I put my boots by the door and stayed awake thinking about school being canceled. In the morning there was nothing but ordinary rain. I was furious at the weather person, which Mother said was unreasonable because predictions aren't promises. I know that now. I didn't know it at seven this morning. At recess the puddles were deep enough to float a leaf from one side of the playground to the other, and I spent most of the time testing different leaves. Maple won by a very small margin.
 
 ------------------------------
 
-ENTRY 039 — 1995 — Age Nine — Two Kinds of Quiet
+ENTRY 039 — 1995-01-01 — Age Nine — Two Kinds of Quiet
 
 There is the quiet in the house when everybody is asleep and the quiet outside when it has just stopped raining. They don't feel the same. Inside quiet has clocks and pipes in it. Outside quiet has wings and distant cars and the water dripping from branches. I tried to tell Mother this and she said I was describing listening, not silence. That is probably right, but I still like my version. I sat on the porch until my feet got cold and she made me come in.
 
 ------------------------------
 
-ENTRY 040 — 1996 — Age Ten — A Winter Trip
+ENTRY 040 — 1996-01-01 — Age Ten — A Winter Trip
 
 In Vail the snow squeaked under my boots and the air made my nose hurt. I fell getting off a lift even though I was trying very hard not to. A boy behind me laughed. I was furious until I saw that he had fallen too, and then we were both laughing because we couldn't stand up without sliding.
 
@@ -184,7 +184,7 @@ We ate dinner with friends of Daddy's. Adults discussed a company and how much a
 
 ------------------------------
 
-ENTRY 041 — 1996 — Age Ten — Pesach
+ENTRY 041 — 1996-01-01 — Age Ten — Pesach
 
 I was allowed to ask an extra question during the Seder. It wasn't one of the four questions. I wanted to know why freedom is so important in the story but people can spend so much of their lives telling other people exactly what to do.
 
@@ -194,7 +194,7 @@ The food was wonderful. I especially like the parts of holidays that make the wh
 
 ------------------------------
 
-ENTRY 042 — 1996 — Age Ten — A Book About the Sea
+ENTRY 042 — 1996-01-01 — Age Ten — A Book About the Sea
 
 I finished a book about orcas and immediately wanted another. I didn't know there were different groups of them with different ways of hunting. How can anybody see something that big and think it's just an animal shaped like a picture in a book?
 
@@ -204,7 +204,7 @@ I wrote the species I saw in a small notebook and put the date beside each one. 
 
 ------------------------------
 
-ENTRY 043 — 1996 — Age Ten — The Cousins
+ENTRY 043 — 1996-01-01 — Age Ten — The Cousins
 
 There are five cousins in Uncle's family and sometimes it feels like every one of them is speaking while I am trying to think. We spent a long afternoon together. Two wanted to play cards, one wanted the television, and another decided I was too young to join their conversation. I was not too young to understand that they didn't want me there.
 
@@ -214,133 +214,133 @@ I don't know why people can be pleasant when everyone else is watching and mean 
 
 ------------------------------
 
-ENTRY 044 — 1996 — Age Ten — A New Notebook
+ENTRY 044 — 1996-01-01 — Age Ten — A New Notebook
 
 I used the last page of my old school notebook and asked for one with a stronger spine. Mother took me to the stationery shop and let me choose. There were notebooks with horses and glitter and little locks. I chose the plain dark blue one with numbered pages. I want to know where everything goes. This diary is different because there aren't assignments, and nobody is supposed to mark it. I make mistakes in spelling anyway and sometimes cross out whole sentences. I used to tear pages out. Mother says leaving the mistakes in is part of remembering.
 
 ------------------------------
 
-ENTRY 045 — 1996 — Age Ten — Morning on the Mountain
+ENTRY 045 — 1996-01-01 — Age Ten — Morning on the Mountain
 
 The snow at Vail was crunchy in the morning and softer after lunch. Daddy told me not to rush the first run because the mountain would still be there when I was ready. I got impatient and caught an edge. It took me a long time to stand up, mostly because I was angry and had snow inside my collar. Mother waited without telling me what to do. At dinner I said I wanted to try the same run tomorrow. Daddy said that sounded sensible. Then he ordered dessert and gave me half even though he said he wasn't having any.
 
 ------------------------------
 
-ENTRY 046 — 1996 — Age Ten — The Service Book
+ENTRY 046 — 1996-01-01 — Age Ten — The Service Book
 
 I followed along in the synagogue book without losing my place for almost the entire service. I lost it during a passage I already knew and pretended to be looking for a tissue. The rabbi noticed and gave me the page number afterward without making a fuss. I like that our synagogue has people who sing beautifully and people who sing terribly, all together. One woman near the back is always a little late coming in. She smells like lavender and smiles at me every week. I don't know her name. It bothers me that I haven't asked.
 
 ------------------------------
 
-ENTRY 047 — 1996 — Age Ten — A Science Fair Problem
+ENTRY 047 — 1996-01-01 — Age Ten — A Science Fair Problem
 
 My science experiment about different kinds of soil seemed like a good idea until the jars leaked in the garage. I had labeled all of them carefully, and the labels became wet and slid off. Now I can't tell which dirt is which. Daddy said an experiment you can't reproduce isn't much of an experiment. I almost cried because I had spent three afternoons collecting samples. He helped me start again, not by doing it for me but by bringing home waterproof labels. This time I drew little maps so I would remember where I collected everything.
 
 ------------------------------
 
-ENTRY 048 — 1996 — Age Ten — The Ferry Engine
+ENTRY 048 — 1996-01-01 — Age Ten — The Ferry Engine
 
 I asked a crew member why the ferry vibrates more in one part of the crossing. He explained something about the engines and the angle of the hull in the current. I did not understand all of it, so I asked again. Mother seemed embarrassed when I asked a third time. The crew member didn't mind. He took a napkin and drew an arrow with little swirls behind it. I saved the napkin, though it got damp in my coat. At home Daddy understood the drawing and made a better one. I like it when a question follows me home.
 
 ------------------------------
 
-ENTRY 049 — 1996 — Age Ten — The Bar Mitzvah
+ENTRY 049 — 1996-01-01 — Age Ten — The Bar Mitzvah
 
 At a cousin's bar mitzvah there were so many relatives that I forgot who belonged to which family. Everybody seemed to know where I was supposed to sit except me. One cousin told me his new watch cost more than my bicycle. I said I liked my bicycle better because I could ride it. He said that was childish. I told him I was ten and therefore entitled to be childish. I danced with Mother until my feet hurt and later fell asleep in the car listening to Daddy and Mother discussing whether the speeches had been too long.
 
 ------------------------------
 
-ENTRY 050 — 1996 — Age Ten — A Letter to the Mayor
+ENTRY 050 — 1996-01-01 — Age Ten — A Letter to the Mayor
 
 We found garbage beside a trail, including a broken bottle and a plastic bag tangled in blackberry canes. I picked up what I could and then worried about the glass. Mother gave me gloves from her pack. At home I wrote a letter asking for more bins at the trail entrance. Daddy read it and circled three places where I had written what people should feel instead of what I wanted them to do. I rewrote it. I don't know whether the mayor reads letters from children, but somebody from the office wrote back and said they would pass it along.
 
 ------------------------------
 
-ENTRY 051 — 1996 — Age Ten — The Great Button Disaster
+ENTRY 051 — 1996-01-01 — Age Ten — The Great Button Disaster
 
 I tried to sew a button back onto my cardigan because Mother was on the telephone and I thought I could manage. I sewed the sleeve to the front. It was very secure. Unfortunately, I could no longer put the cardigan on. Mother took one look and had to sit down because she was laughing. I was cross until I started laughing too. She showed me how to undo the stitches without cutting the cloth. We tried again together. The button is crooked but functional, which is better than my first attempt.
 
 ------------------------------
 
-ENTRY 052 — 1996 — Age Ten — A Horse in Switzerland
+ENTRY 052 — 1996-01-01 — Age Ten — A Horse in Switzerland
 
 I saw a small horse standing in a field above a village and insisted that we stop walking. It was brown with a white blaze and had a bell on its halter. Daddy said we had a reservation, but Mother said the restaurant could wait. We watched the horse chew grass and wave flies away with its tail. I wondered whether it recognized the mountains behind it as a beautiful place or whether mountains were just where dinner grew. Daddy said both might be true. I liked that answer enough to write it down.
 
 ------------------------------
 
-ENTRY 053 — 1996 — Age Ten — The Wrong Table
+ENTRY 053 — 1996-01-01 — Age Ten — The Wrong Table
 
 At a fancy restaurant I followed a waiter who looked like ours and sat down at a table full of strangers. They were very polite about it. I got up so quickly that my chair hit the wall. Mother saw the whole thing and was waiting with a face that told me she would laugh about it later. She did, all the way back to the hotel. I suppose being able to go to expensive restaurants does not automatically mean you can find your parents in them.
 
 ------------------------------
 
-ENTRY 054 — 1996 — Age Ten — A Word in French
+ENTRY 054 — 1996-01-01 — Age Ten — A Word in French
 
 I have learned to say please and thank you in French without being reminded. The problem is that when somebody answers me I have no idea what they've said. Mother tells me to smile and say I am learning. I did, and the woman behind the counter taught me how to pronounce the word for strawberry. She made me repeat it four times. I bought a pastry even though I wanted bread because by then I didn't want to stop talking to her. It was delicious, so perhaps the mistake was useful.
 
 ------------------------------
 
-ENTRY 055 — 1996 — Age Ten — The Tide Pool
+ENTRY 055 — 1996-01-01 — Age Ten — The Tide Pool
 
 I slipped on seaweed while trying to look at a little anemone. I scraped my knee and got saltwater in my sock. Daddy cleaned the scrape when we got home. He wanted to know exactly where I had put my foot before I fell, which seems like a lawyer question. I told him the rock had moved. He raised an eyebrow. I admitted that perhaps the rock hadn't moved. I drew the creatures I saw anyway, including one that looked like a tiny flowering plant until it closed when I touched the water nearby.
 
 ------------------------------
 
-ENTRY 056 — 1996 — Age Ten — Pesach Questions
+ENTRY 056 — 1996-01-01 — Age Ten — Pesach Questions
 
 I practiced the Four Questions until I could say them while Mother was making supper and Daddy was playing the piano in the next room. At the Seder I forgot one line because my cousin made a face at me. Grandma corrected me in front of everyone. I was embarrassed and furious for about thirty seconds. Later she kissed the top of my head and told me I had done beautifully. I asked why she corrected me if it was beautiful. She said wanting something done well and enjoying it are not opposites. I think that sounds like something Daddy would say.
 
 ------------------------------
 
-ENTRY 057 — 1996 — Age Ten — First Rescue
+ENTRY 057 — 1996-01-01 — Age Ten — First Rescue
 
 A little bird struck the window and landed under the rhododendron. It was breathing but not moving much. I wanted to hold it, and Mother told me to give it quiet and space. We put the dog inside and watched from the kitchen. After a while it moved its head, then hopped, then flew into the cedar. I cheered so loudly the dog barked. I told Mother I had saved it. She said what I had done was keep it safe while it recovered. I suppose that counts too.
 
 ------------------------------
 
-ENTRY 058 — 1996 — Age Ten — The Birthday Party
+ENTRY 058 — 1996-01-01 — Age Ten — The Birthday Party
 
 A girl in my class invited everybody except one boy who talks too loudly and interrupts. I asked why, and she said he was annoying. He is annoying sometimes, but that doesn't seem like a good enough reason to make him the only person not invited. I said I might not go. My friend told me I was making an enormous fuss over nothing. Mother listened and asked whether I wanted help talking to the girl. I said no. The boy got invited after all, and he spilled orange soda on the table. It was still better than leaving him out.
 
 ------------------------------
 
-ENTRY 059 — 1996 — Age Ten — The Maps Drawer
+ENTRY 059 — 1996-01-01 — Age Ten — The Maps Drawer
 
 Daddy has a drawer full of nautical charts and folded road maps. He says maps are the kinds of books you must learn to question, because shorelines and roads change. He made me find Bainbridge Island without looking at the names. I recognized the shape of the water first. Then he made me find the passage to the north. I got it wrong and sent our imaginary boat onto land. He said that was why we practiced on paper. I wondered how many people have gotten lost because a map looked easier than it really was.
 
 ------------------------------
 
-ENTRY 060 — 1996 — Age Ten — After the Argument
+ENTRY 060 — 1996-01-01 — Age Ten — After the Argument
 
 Mother and Daddy disagreed at dinner about whether a company should be allowed to cut trees on land it owned. Daddy talked about contracts and property rights. Mother talked about birds and rivers. I asked whether the trees belonged to the company too. They both stopped and looked at me. Daddy said legally yes, in many cases. Mother said the forest belonged to more living things than the company. I wrote down both answers because I still don't know which one is enough. They went back to laughing about something else by dessert.
 
 ------------------------------
 
-ENTRY 061 — 1996 — Age Ten — The Older Girls
+ENTRY 061 — 1996-01-01 — Age Ten — The Older Girls
 
 Two older girls on the ferry asked where I got my coat. When I told them they said it must have cost a fortune. I didn't know what to say because I hadn't bought it. One of them called me lucky, but her voice didn't sound pleased. At home I asked Mother whether wearing expensive things makes people think you believe you're better than they are. She said sometimes, even when you don't mean it. I wore my old sweater the next day. It is softer anyway.
 
 ------------------------------
 
-ENTRY 062 — 1996 — Age Ten — A Long Distance Call
+ENTRY 062 — 1996-01-01 — Age Ten — A Long Distance Call
 
 I called Grandma in Brooklyn to tell her about the bird. She told me that pigeons on her block are not as charming as my little forest birds. I asked whether she'd ever seen a cedar tree taller than an apartment building. She said she had seen plenty of tall buildings. We couldn't agree on which was more impressive. At the end of the call she asked whether I was eating enough and whether I still practiced Hebrew. I told her yes, which is true, although she would probably want more details before agreeing.
 
 ------------------------------
 
-ENTRY 063 — 1996 — Age Ten — The Second-Hand Bookshop
+ENTRY 063 — 1996-01-01 — Age Ten — The Second-Hand Bookshop
 
 Daddy took me to a second-hand bookshop in Seattle and said I could choose one book. I chose a field guide with someone else's pencil marks in it. Daddy asked whether I wanted a clean copy. I said no, because the notes showed where somebody else had seen the birds. One page had a date and a little star next to the name of a kingfisher. I wonder whether the person was very happy that day. The shop owner said the book had belonged to a retired teacher. I have started adding my own marks in a different pencil.
 
 ------------------------------
 
-ENTRY 064 — 1996 — Age Ten — First Night on the Boat
+ENTRY 064 — 1996-01-01 — Age Ten — First Night on the Boat
 
 We slept aboard the boat even though it was still tied up. I thought I would love the rocking, but I woke twice because something knocked softly against the hull. Daddy said it was a line and adjusted it. I liked hearing him move around in the dark knowing exactly what to touch. In the morning everything smelled of coffee and damp canvas. I wanted to make pancakes but there wasn't room to spread things out the way we do at home. Mother made toast and we ate it watching a gull try to open a shell on the dock.
 
 ------------------------------
 
-ENTRY 065 — 1997 — Age Eleven — Jerusalem
+ENTRY 065 — 1997-01-01 — Age Eleven — Jerusalem
 
 Jerusalem is full of stone and voices. I expected to remember more from when I was little, but some places feel familiar only after Mother says, We were here before. We walked through narrow streets and I heard several languages before breakfast. I wanted to stop at every shop with old books.
 
@@ -350,168 +350,168 @@ Mother said I didn't have to tell her what I wrote. I appreciated that. I wrote 
 
 ------------------------------
 
-ENTRY 066 — 1997 — Age Eleven — A Real List
+ENTRY 066 — 1997-01-01 — Age Eleven — A Real List
 
 I made a list of the birds I've seen this year, with dates and locations, because I kept forgetting whether I had seen a certain one on Bainbridge or during our trip. I used a ruler to make columns. The columns were straight for almost two pages before the ruler slipped. I wanted to start over. Mother said the information was still readable and gave me another pencil. She thinks I worry too much about neatness. I think neatness saves time later. Both of those things can be true.
 
 ------------------------------
 
-ENTRY 067 — 1997 — Age Eleven — The Empty Bench
+ENTRY 067 — 1997-01-01 — Age Eleven — The Empty Bench
 
 A girl I sometimes sit with at lunch was away for several days. When she returned she said her grandfather had died. I told her I was sorry and then didn't know what else to say. We sat quietly for a while. She asked about my book, and I showed it to her. Later I worried I ought to have said something more important. Mother said there isn't a sentence that fixes somebody's grief. I remember that because it is both obvious and difficult.
 
 ------------------------------
 
-ENTRY 068 — 1997 — Age Eleven — A Hike with Daddy
+ENTRY 068 — 1997-01-01 — Age Eleven — A Hike with Daddy
 
 Daddy walks more slowly than some of the parents who take children hiking, but he never seems embarrassed about it. He stops to look at rock layers or to read a trail sign. I used to think he was just resting. Today he showed me a tiny fossil impression in a stone beside the path. I would have walked past it. We sat on a log to eat apples, and he told me about playing piano in college bars. I asked if he had ever made mistakes in front of people. He said constantly, and sometimes the trick was making the mistake sound deliberate.
 
 ------------------------------
 
-ENTRY 069 — 1997 — Age Eleven — Learning Hebrew Again
+ENTRY 069 — 1997-01-01 — Age Eleven — Learning Hebrew Again
 
 I thought I could skip the easy lesson because I already knew most of the words. My teacher gave me a passage without vowel marks and I made a mess of it. She didn't seem surprised. I felt annoyed, mostly at myself, and practiced after dinner. Mother heard me and came in to correct a sound I keep making the Seattle way instead of the way Grandma says it. I told her languages shouldn't have so many ways to pronounce the same letters. She said I'd better not study French, then. I reminded her that I already had.
 
 ------------------------------
 
-ENTRY 070 — 1997 — Age Eleven — A Small Apology
+ENTRY 070 — 1997-01-01 — Age Eleven — A Small Apology
 
 I accused my friend of taking my blue pen because I saw one just like it in her bag. She said it was hers, and I didn't believe her. Later I found mine under a library book at home. I hated the feeling in my stomach when I realized. I called her immediately. She said she was still angry and didn't want to talk. I wanted to explain that the pens really were identical, but I didn't because she knew that already. At school the next day I apologized again. She nodded but didn't smile. I suppose an apology isn't a button that makes everything normal again.
 
 ------------------------------
 
-ENTRY 071 — 1997 — Age Eleven — The Cold Water
+ENTRY 071 — 1997-01-01 — Age Eleven — The Cold Water
 
 We stopped by a waterfall on a trail and I reached into the spray until my sleeve was soaked. The water was so cold that my fingers ached. I wanted to know where it had been an hour earlier. Daddy said some of it might have been snowmelt and some groundwater, and the answer depended on the stream. Mother said I could ask those questions while putting on dry gloves. I stood there much longer than they wanted, listening to the sound change when I moved my head. It is not one noise. There are dozens of noises piled together.
 
 ------------------------------
 
-ENTRY 072 — 1997 — Age Eleven — The Cousin's New Watch
+ENTRY 072 — 1997-01-01 — Age Eleven — The Cousin's New Watch
 
 One of my cousins showed everybody a very expensive watch and kept checking whether I was impressed. I was more interested in how the second hand moved smoothly instead of jumping. He said that wasn't the point. I asked what the point was, which apparently was a rude question. Mother told me later that sometimes people want you to admire the thing, not investigate it. That seems like a waste of a very interesting mechanism. I am going to ask Daddy how mechanical watches work.
 
 ------------------------------
 
-ENTRY 073 — 1997 — Age Eleven — Friday in Brooklyn
+ENTRY 073 — 1997-01-01 — Age Eleven — Friday in Brooklyn
 
 Grandma's apartment smelled of onions and baking bread before we even got through the door. She made me wash my hands, then asked me to help set the table. There were relatives arriving and talking all at once, sometimes in words I recognized and sometimes in words I didn't. I love the noise for about an hour, and then I need somewhere quiet. I stood by the window looking down at the street until Grandma came beside me. She didn't ask why I had left the table. She just told me which building had been there before the one across the road.
 
 ------------------------------
 
-ENTRY 074 — 1997 — Age Eleven — The Museum Floor
+ENTRY 074 — 1997-01-01 — Age Eleven — The Museum Floor
 
 I sat on the floor of a museum room because I wanted to draw one object without rushing. An attendant told me I couldn't sit there, so I stood up and tried to draw while balancing my notebook against my stomach. The drawing looked awful. Daddy found a bench around the corner and said I could still see the object from there. I hadn't noticed the bench. Sometimes the solution to a problem is just moving six feet. I wish I remembered that before getting upset.
 
 ------------------------------
 
-ENTRY 075 — 1997 — Age Eleven — A Question About Grandpa
+ENTRY 075 — 1997-01-01 — Age Eleven — A Question About Grandpa
 
 Grandma told me a story about her father, who arrived in New York when the streets seemed very loud and nobody sounded like the people back home. I asked where back home was. She said she would get out the photographs next time. I wrote that down because 'next time' is easy to forget. Later I asked Mother why she moved all the way to Seattle when most of her family was in Brooklyn. She said she wanted to see who she was when nobody already knew. I thought about that for a long time.
 
 ------------------------------
 
-ENTRY 076 — 1997 — Age Eleven — My First Real Compass
+ENTRY 076 — 1997-01-01 — Age Eleven — My First Real Compass
 
 Daddy gave me a compass and said it was not a toy. I promised to take care of it. Ten minutes later I dropped it onto the porch. It still works, but the case has a little scratch. I wanted to tell him it arrived that way. Instead I showed him and apologized. He checked the needle, said it seemed fine, and told me to keep it away from magnets. We practiced bearings in the garden until I could find the gate without looking up. That seems impressive until you realize I have lived here all my life.
 
 ------------------------------
 
-ENTRY 077 — 1997 — Age Eleven — After the Storm
+ENTRY 077 — 1997-01-01 — Age Eleven — After the Storm
 
 The power went out during supper and stayed off long enough that Mother found candles. Daddy went downstairs to check the electrical panel. I heard him mutter something I wasn't supposed to repeat. We ate by candlelight and talked without music or television. It was nice until I wanted to finish my homework. Mother said we could put it off if the lights stayed out. The lights returned just as I was beginning to enjoy the idea. I am fairly sure electricity has a sense of humor.
 
 ------------------------------
 
-ENTRY 078 — 1997 — Age Eleven — The Wet Dog
+ENTRY 078 — 1997-01-01 — Age Eleven — The Wet Dog
 
 The dog rolled in something horrible beside the trail. He was delighted with himself. We were not. Mother insisted he ride in the back with the windows open even though it was cold. At home we washed him twice. I got soaked because he shook before we had the towels ready. Daddy laughed from the doorway and then became very busy when Mother handed him the shampoo. I don't understand how a creature with such excellent hearing can pretend not to understand 'come here' when there's a bath involved.
 
 ------------------------------
 
-ENTRY 079 — 1997 — Age Eleven — A Joke I Didn't Like
+ENTRY 079 — 1997-01-01 — Age Eleven — A Joke I Didn't Like
 
 Some children were making fun of a boy's shoes because they were old. I laughed at first, not because I thought the joke was clever, but because everybody else was laughing. When I saw his face I stopped. That made me feel worse than if I had been the one to begin it. I told him afterward that the joke was mean. He said he knew. I wish I had said something when everybody was still there. Mother says courage often arrives a few minutes late and the important thing is to remember it next time. I hope I do.
 
 ------------------------------
 
-ENTRY 080 — 1997 — Age Eleven — A Long Piano Lesson
+ENTRY 080 — 1997-01-01 — Age Eleven — A Long Piano Lesson
 
 I practiced scales until I was sure my fingers would fall off. Daddy said that was unlikely and showed me a passage where the same pattern appeared in a piece I liked. It was as if somebody had opened a door in a wall I thought was solid. I asked whether he saw patterns like that in legal documents. He said all the time, though he wished they sounded as good as music. I played another twenty minutes without being asked. Then I made three mistakes in a row because I started thinking about supper.
 
 ------------------------------
 
-ENTRY 081 — 1997 — Age Eleven — The First Snow in Seattle
+ENTRY 081 — 1997-01-01 — Age Eleven — The First Snow in Seattle
 
 It snowed just enough to make everything beautiful and not enough to make a decent snowman. I tried anyway. The snow was too wet, and his head kept falling off. A neighbor offered us a carrot, which made the whole thing seem more official than it deserved. I finally put the carrot in a little mound and called it a snow turtle. Daddy took a picture and said history would remember the first snow turtle of Bainbridge Island. Mother told him not to encourage nonsense. She was smiling when she said it.
 
 ------------------------------
 
-ENTRY 082 — 1997 — Age Eleven — Reading in Bed
+ENTRY 082 — 1997-01-01 — Age Eleven — Reading in Bed
 
 I was caught reading after lights-out. Mother took the flashlight and said I would ruin my eyes. I asked whether that was scientifically established. She said she wasn't interested in a scientific argument at ten-thirty on a school night. This seems unfair but also understandable. I finished the chapter at breakfast instead, which made me late getting dressed. I thought the ending would be happier. It wasn't, and now I keep thinking about the character even when I am supposed to be doing mathematics.
 
 ------------------------------
 
-ENTRY 083 — 1997 — Age Eleven — The Bird That Came Back
+ENTRY 083 — 1997-01-01 — Age Eleven — The Bird That Came Back
 
 I saw the kingfisher again at the inlet where I marked it in my field guide last spring. It might not be the same bird. I know that. But it sat on nearly the same branch, leaned forward, and plunged into the water so suddenly I nearly dropped my notebook. I wrote down the time and where the sun was. Perhaps if I keep doing that I'll find a pattern. Daddy says a record isn't much use unless you can tell observation apart from speculation. I put 'possibly the same bird' in parentheses.
 
 ------------------------------
 
-ENTRY 084 — 1997 — Age Eleven — Something About Money
+ENTRY 084 — 1997-01-01 — Age Eleven — Something About Money
 
 I asked Mother why people sometimes talk to me differently when they find out who Daddy is. She sat beside me and asked for an example. I told her about a woman who suddenly became very interested in whether I liked her nephew. Mother said some people are genuinely friendly and some are calculating and some are both. I asked how I was supposed to know the difference. She said I would learn, and that I should be friendly without promising anything. That sounds sensible. It doesn't feel very satisfying.
 
 ------------------------------
 
-ENTRY 085 — 1997 — Age Eleven — The Seder Table Again
+ENTRY 085 — 1997-01-01 — Age Eleven — The Seder Table Again
 
 I know enough of the Seder now to anticipate when someone will tell a familiar story, but every year somebody interrupts with a question nobody asked before. This time Daddy asked how freedom can mean anything if people use it to harm others. An uncle disagreed with him, and the discussion became so lively that Mother brought the next dish out before they finished. I liked listening. I also wanted them to finish because I was hungry. Being interested in serious matters apparently does not stop you from wanting potatoes.
 
 ------------------------------
 
-ENTRY 086 — 1997 — Age Eleven — The New Girl
+ENTRY 086 — 1997-01-01 — Age Eleven — The New Girl
 
 A new girl joined our class halfway through term. She didn't know anybody and answered the teacher so quietly we could hardly hear her. I invited her to sit with us, but then spent lunch talking to my old friend because we were arguing about a book. On the way home I realized the new girl had barely said a word. I called her the next evening to ask whether she wanted to come over. She did. We spent nearly an hour looking through my bird guides and talking about cats. I hope she comes again.
 
 ------------------------------
 
-ENTRY 087 — 1997 — Age Eleven — The Lesson in the Galley
+ENTRY 087 — 1997-01-01 — Age Eleven — The Lesson in the Galley
 
 Daddy showed me how to stow things in the boat's galley so they don't fly around when the water gets rough. I put the mugs where I thought they would fit best, and he moved them to a lower compartment. I asked how I was supposed to know where everything belonged. He said by learning why the boat moves the way it does. Then he tilted an empty cup on the table until it slid. I know the boat does not actually tip that far under normal conditions, but it made the point very clearly.
 
 ------------------------------
 
-ENTRY 088 — 1997 — Age Eleven — A Cold Look
+ENTRY 088 — 1997-01-01 — Age Eleven — A Cold Look
 
 A boy said something nasty about my mother at school. I asked him to repeat it. He did, grinning, because he thought I was going to cry. I didn't. I told him exactly what he had said and exactly why he was being cruel, and then I walked away. My hands were shaking afterward. My friend said I sounded like a grownup and asked whether I was angry. I was furious. It just didn't come out as shouting. At home I told Mother, and she was more upset about the remark than I was willing to show.
 
 ------------------------------
 
-ENTRY 089 — 1997 — Age Eleven — Summer Rain in Switzerland
+ENTRY 089 — 1997-01-01 — Age Eleven — Summer Rain in Switzerland
 
 We were halfway up a trail when clouds swallowed the ridge and rain began all at once. We sheltered under a wooden roof beside a pasture. There were cowbells somewhere in the mist. I could hear individual bells answering one another, or perhaps that was only how they sounded while the animals moved. Mother took sandwiches from her bag and said this was a perfectly good place for lunch. Daddy checked the map twice and made a note of the trail marker. I wrote down the sounds so I could remember them at home.
 
 ------------------------------
 
-ENTRY 090 — 1997 — Age Eleven — The Broken Cup
+ENTRY 090 — 1997-01-01 — Age Eleven — The Broken Cup
 
 I broke a cup Mother liked. Not a valuable one, she said, but one she'd owned since college. That made it worse. I tried to glue the handle before telling her and ended up with sticky fingers and a cup that leaned sideways. She wasn't angry, but she took it from me and sat with it for a while. I asked whether she was thinking about Seattle when she was young. She said yes. I wanted to ask more, but I could see she needed a minute. We saved the pieces in a little box.
 
 ------------------------------
 
-ENTRY 091 — 1997 — Age Eleven — Sea Stars
+ENTRY 091 — 1997-01-01 — Age Eleven — Sea Stars
 
 A tide-pool volunteer told us not to pry sea stars from rocks because the tiny tube feet can be damaged. I watched one for ages, trying to see how so many small feet could move a whole body. Another visitor picked one up despite the sign. I told him what the volunteer had said. He put it back, looking irritated. Mother said I was right to speak up but that I should ask an adult for help if someone becomes angry. I thought about that later. Being right doesn't make a person safe from somebody else's temper.
 
 ------------------------------
 
-ENTRY 092 — 1997 — Age Eleven — A Letter From Brooklyn
+ENTRY 092 — 1997-01-01 — Age Eleven — A Letter From Brooklyn
 
 Grandma sent a letter with the spelling of a Hebrew word I had asked about, along with a story about learning it as a child. Her handwriting is small and dark. I read it twice before answering. I wanted to tell her about the mountains and the ferry and why I liked the rain so much, but that became five pages. Mother said postage would cost the same whether I wrote one page or five. I mailed all five. I wonder if Grandma will be pleased or tell me to write more neatly.
 
 ------------------------------
 
-ENTRY 093 — 1997 — Age Eleven — A Good Day For Nothing
+ENTRY 093 — 1997-01-01 — Age Eleven — A Good Day For Nothing
 
 We stayed home all Sunday. No dinner party, no flight, no boat, no ferry, no museum, no trail. I read on the couch while Daddy practiced piano and Mother sorted photographs. The dog slept in a patch of sun that moved across the rug. At four o'clock Mother asked whether I wanted to do something special. I said no, because I already had. She seemed pleased with that answer. I ought to write down more of the ordinary days. They disappear so quickly when nothing unusual happens.
