@@ -2,7 +2,7 @@
 Type: Journal
 Process Every: 5
 
-[UPLOAD NOTE: ISO dates in ENTRY headers are approximate chronological indexing anchors, not documented exact event dates. The mother's original date/season wording is preserved after each anchor. Gwen's birthday of September 8 remains provisional.]
+Upload note: ISO dates in ENTRY headers are approximate chronological indexing anchors, not documented exact event dates. The mother's original date/season wording is preserved after each anchor. Gwen's birthday of September 8 remains provisional.
 
 ENTRY 001 — 1986-06-01 — 1986, Before Gwen's Birth
 
