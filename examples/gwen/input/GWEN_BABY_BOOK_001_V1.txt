@@ -2,7 +2,9 @@
 Type: Journal
 Process Every: 5
 
-ENTRY 001 — 1986, Before Gwen's Birth
+[UPLOAD NOTE: ISO dates in ENTRY headers are approximate chronological indexing anchors, not documented exact event dates. The mother's original date/season wording is preserved after each anchor. Gwen's birthday of September 8 remains provisional.]
+
+ENTRY 001 — 1986-06-01 — 1986, Before Gwen's Birth
 
 My darling Gwendolin,
 
@@ -21,7 +23,7 @@ Mother
 
 ------------------------------
 
-ENTRY 002 — 1986, The Day Gwen Was Born
+ENTRY 002 — 1986-09-08 — 1986, The Day Gwen Was Born
 
 My beautiful girl,
 
@@ -40,7 +42,7 @@ Mother
 
 ------------------------------
 
-ENTRY 003 — 1986, The First Weeks
+ENTRY 003 — 1986-10-01 — 1986, The First Weeks
 
 Gwen has discovered that nighttime is an excellent time for conversation. Unfortunately, she communicates chiefly by objecting loudly to things. Hunger, a wet diaper, a cold blanket, the removal of a warm blanket: all are matters requiring immediate attention.
 
@@ -50,7 +52,7 @@ We have help several days a week, and I am grateful. I love this child, but I am
 
 ------------------------------
 
-ENTRY 004 — Winter 1986, Music in the House
+ENTRY 004 — 1986-12-01 — Winter 1986, Music in the House
 
 Your father came home early and went straight to the piano. He began with Bach, moved to something by Ellington, and then wandered into a tune I recognized but couldn't name. When I asked, he said he had played a little of everything and nothing correctly.
 
@@ -62,7 +64,7 @@ He smiled and played more softly so she could fall asleep.
 
 ------------------------------
 
-ENTRY 005 — Early 1987, The Word Cards
+ENTRY 005 — 1987-02-01 — Early 1987, The Word Cards
 
 Your father has brought home large cards with words printed in red: MOTHER, DADDY, HAND, FOOT, DOG. He has been reading about teaching babies to recognize written words before they can talk. We show them briefly and say each word aloud. Gwen seems delighted by the faces and voices involved.
 
@@ -74,7 +76,7 @@ The dog has noticed that people give him biscuits whenever he wanders into the r
 
 ------------------------------
 
-ENTRY 006 — Spring 1987, A Day Outside
+ENTRY 006 — 1987-04-01 — Spring 1987, A Day Outside
 
 We took Gwen into the garden after lunch. Bainbridge smells wonderful when the earth begins warming again, even if everything is still damp. I spread a blanket where the wind wouldn't reach her and brought her soft cloth rabbit.
 
@@ -84,7 +86,7 @@ We stayed outside longer than I meant to. Her cheeks were pink when we came in. 
 
 ------------------------------
 
-ENTRY 007 — Summer 1987, Visiting the Boat
+ENTRY 007 — 1987-07-01 — Summer 1987, Visiting the Boat
 
 Gwen went down to the boat with us today. The water on Lake Washington was almost flat, and her father spent an absurd amount of time showing her the cleats and explaining knots while I watched from a safe seat in the cockpit.
 
@@ -96,7 +98,7 @@ Afterward we ate sandwiches on shore. She fell asleep before we reached the car.
 
 ------------------------------
 
-ENTRY 008 — Autumn 1987, Learning to Walk
+ENTRY 008 — 1987-10-01 — Autumn 1987, Learning to Walk
 
 Our daughter regards furniture as equipment invented to help her stand. She pulls herself up on everything. The coffee table is her favorite; the dog has wisely moved his tail out of reach.
 
@@ -108,7 +110,7 @@ Later she fell over trying to turn around too quickly. She sat there contemplati
 
 ------------------------------
 
-ENTRY 009 — Winter 1987, First Hanukkah She Could Notice
+ENTRY 009 — 1987-12-01 — Winter 1987, First Hanukkah She Could Notice
 
 We lit the candles with Gwen watching from her high chair, far enough away that she could not reach the flame. She enjoyed the singing. She also enjoyed banging a spoon against her tray, which didn't improve the tune.
 
@@ -120,7 +122,7 @@ Gwen is fascinated by the little pools of light. I wonder what she will remember
 
 ------------------------------
 
-ENTRY 010 — Spring 1988, The Words on the Page
+ENTRY 010 — 1988-04-01 — Spring 1988, The Words on the Page
 
 We still use the reading cards, though now Gwen wants to hold them herself. She recognizes some familiar printed words when we mix the cards and ask for them. I am careful about writing that down exactly. Sometimes she guesses, sometimes she's more interested in the picture, and sometimes she surprises us.
 
@@ -132,7 +134,7 @@ I have decided that whatever she learns early is a gift only if learning remains
 
 ------------------------------
 
-ENTRY 011 — Summer 1988, The Ferry
+ENTRY 011 — 1988-07-01 — Summer 1988, The Ferry
 
 Gwen insisted on standing beside the window for most of the ferry trip to Seattle. We showed her the wake and another ferry passing in the opposite direction. She waved to it, which pleased several strangers nearby.
 
@@ -144,7 +146,7 @@ On the ferry home Gwen fell asleep with her cheek against my coat.
 
 ------------------------------
 
-ENTRY 012 — Autumn 1988, The Woods After Rain
+ENTRY 012 — 1988-10-01 — Autumn 1988, The Woods After Rain
 
 A storm came through last night. In the morning the garden was covered with bits of cedar and fir, and everything smelled wonderfully clean. Gwen put on her little boots and demanded to go outside.
 
@@ -156,7 +158,7 @@ Perhaps it was. I was glad I hadn't pretended to know.
 
 ------------------------------
 
-ENTRY 013 — Winter 1988, A Family Dinner
+ENTRY 013 — 1988-12-01 — Winter 1988, A Family Dinner
 
 We had guests from Seattle tonight, and Gwen was allowed to come downstairs after her supper to say hello. She wore a blue dress and one sock. Nobody could persuade her to put the other one on.
 
@@ -168,7 +170,7 @@ Gwen fell asleep upstairs before dessert. I went to check on her and found the m
 
 ------------------------------
 
-ENTRY 014 — Spring 1989, A Little Person
+ENTRY 014 — 1989-04-01 — Spring 1989, A Little Person
 
 Gwen has opinions about practically everything now. She wants the green cup, not the yellow one; the story about the bear, not the one about the rabbit; the long way through the garden so she can look at the bird feeder.
 
@@ -180,7 +182,7 @@ I am learning that loving a child involves a great deal of watching, and not nea
 
 ------------------------------
 
-ENTRY 015 — Summer 1989, The Shore
+ENTRY 015 — 1989-07-01 — Summer 1989, The Shore
 
 We spent the afternoon near the water on Bainbridge. Gwen collected shells, pebbles, and one piece of driftwood that was much too large for her little bucket. She insisted that Daddy carry it.
 
