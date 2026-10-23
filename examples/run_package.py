@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 
-PACKAGES = ['beth', 'chris', 'mary', 'tammy']
+PACKAGES = ['beth', 'chris', 'mary', 'tammy', 'gwen']
 
 
 def state_paths(root, package):
