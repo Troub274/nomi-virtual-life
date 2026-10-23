@@ -1,6 +1,6 @@
 # Uploader example packages
 
-[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 200; [Tammy](tammy/README.md) has 1,000.
+[Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 2400; [Tammy](tammy/README.md) has 1,000.
 
 Beth and Chris include data-only ZIPs; all packages provide ordered input lists and the current uploader configuration.
 
