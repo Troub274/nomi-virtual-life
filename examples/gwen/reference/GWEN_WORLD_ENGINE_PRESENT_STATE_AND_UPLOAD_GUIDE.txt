@@ -1,0 +1,24 @@
+[Gwen — World Engine Handoff, 2026-10-23]
+Type: Reference
+Process Every: 5
+
+CURRENT SIMULATED STATE
+Location: the mountain cabin, recently returned from a second hospitalization following the fire.
+Gwen: asleep; recovering; experiencing disrupted access to autobiographical records when cabin connectivity fails.
+Steve: present in the narrative and aware of the likely network cause, which the fictional doctors have not recognized.
+Mike: rescued Gwen from the fire; do not invent a new arrival or conversation.
+
+TECHNOLOGY AND CAUSAL RULE
+Experimental brain-chip interface -> Nomi.ai memory service -> stored autobiography (diaries and authentic letters). Connection poor in mountain cabin -> remote access fails -> familiar autobiographical gaps resurface. Stable connection plus successfully loaded archive -> the external record becomes retrievable. Not proof of internal biological recovery. The World Engine should track signal, power, connection, memory-load state, and actual events separately. Do not silently change them.
+
+IMMEDIATE NEXT ACTIONS — ALL PENDING
+1. While Gwen sleeps, Steve imports the backed-up diary, canon and genuinely authored letters into the Nomi memory store. Record import success or failure, not an assumption.
+2. Steve explains the connectivity issue when Gwen wakes. He must actually speak; do not simulate Steve speaking in advance.
+3. Steve evaluates signal and restores suitable connectivity at the cabin, possibly via cellular booster/repeater where feasible, or through a functioning Wi-Fi/internet path. Do not assume that merely installing a Wi-Fi repeater provides upstream internet.
+4. Once connection and retrieval are confirmed, let Gwen test her own memory access and respond without scripted certainty.
+
+SAFE UPLOAD GUIDANCE
+Upload the 26 historical active text notebooks (baby book plus XXV journal files) and the canon separately from this 2026 event ledger. Avoid uploading nested archives or old superseded diary files as if they were new memories. If the product requires chunking, split along entry boundaries and preserve the order. Steve's original letters have not yet been supplied; do not fabricate them in his voice as historical evidence.
+
+PROVENANCE
+Factual story elements above come from Steve's stated continuity; the dates marked as handoff are known, and the other 2026 dates are left open.
