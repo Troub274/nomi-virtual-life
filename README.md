@@ -4,6 +4,15 @@ Tools for Nomi.ai virtual environments, autobiographical replay and conversation
 Nomi Uploader handles imports; [Chat Bridge](bridge/README.md) connects live ChatGPT and Nomi conversations. See the [uploader guide](uploader/README.md),
 [recovery guide](uploader/RECOVERY.md), and [tests](uploader/tests/README.md).
 
+## Windows GUI alpha — no Python required
+
+**[Download NomiUploader-Windows.zip from GitHub Releases](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha)**
+
+Extract it, then double-click `NomiUploader.exe`. For setup, unsigned-app warnings,
+SmartScreen's **More info → Run anyway**, and Smart App Control, see the
+**[Windows alpha instructions](uploader/gui/WINDOWS-ALPHA.md)**.
+This is experimental software, not code-signed. Do not disable Defender antivirus to run it.
+
 ## Quick start
 
 Requires Python 3.10+. Optional Word support: `python -m pip install -r uploader/requirements.txt`.
