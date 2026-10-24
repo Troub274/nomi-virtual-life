@@ -34,6 +34,11 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section><h2>Settings</h2><div class="stack">
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
 <label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
+<label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
+<div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
+<label>Room name<input id="roomName" maxlength="100" placeholder="Room name"></label>
+<label>Room description<textarea id="roomNote" maxlength="1000" placeholder="Room note / description" style="min-height:75px"></textarea></label>
+<div class="small" id="roomStatus">Select a Nomi to manage its rooms.</div>
 <div class="row"><label style="flex:1">Process every (default)<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
@@ -46,12 +51,12 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[];
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
-renderNomis();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
+renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
 for(const id of ["title","type","mode","source","date","process","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
 if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
@@ -67,7 +72,7 @@ async function loadSelected(){
    if(info.editable){const old=f.fields;const looksEmpty=old && !old.source && !old.date && !old.process && !old.prompts && (!old.title || old.title===f.path.split(/[\\\\/]/).pop().replace(/\\.txt$/i,"")) && (!old.type || old.type==="Knowledge") && (!old.mode || old.mode==="Add");if(!old||looksEmpty){f.fields=info.header;draw()}}
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
-function editSettings(){project.nomi=el("nomi").value;project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
+function editSettings(){let before=project.nomi;project.nomi=el("nomi").value;if(before!==project.nomi){project.room_uuid="";roomChoices=[];renderRooms();if(project.nomi)loadRooms()}project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
 function renderNomis(){
 const sel=el("nomi"),selected=project.nomi||"";
 sel.replaceChildren();
@@ -81,9 +86,44 @@ async function loadNomis(){
  const status=el("nomiStatus");status.textContent="Connecting…";
  try {const results=await call("list_nomis",project.key);
    nomiChoices=results;renderNomis();
-   status.textContent=results.length?results.length+" Nomis loaded":"Account returned no Nomis";
+   status.textContent=results.length?results.length+" Nomis loaded":"Account returned no Nomis";if(project.nomi)await loadRooms();
  }catch(e){status.textContent="Could not load Nomis";alert("Nomi connection failed: "+String(e))}
 }
+function nomiId(){return nomiChoices.find(n=>n.name===project.nomi)?.uuid||""}
+function renderRooms(){
+const select=el("roomSelect");select.replaceChildren();const base=document.createElement("option");base.value="";base.textContent="Select upload room";select.appendChild(base);
+for(const room of roomChoices){const option=document.createElement("option");option.value=room.uuid;option.textContent=room.name+" ("+room.status+")";select.appendChild(option)}
+select.value=roomChoices.some(r=>r.uuid===project.room_uuid)?project.room_uuid:"";setRoomDetails();
+}
+function setRoomDetails(){const r=roomChoices.find(x=>x.uuid===project.room_uuid);el("roomName").value=r?.name||"";el("roomNote").value=r?.note||""}
+function chooseRoom(){project.room_uuid=el("roomSelect").value;setRoomDetails()}
+async function loadRooms(){const status=el("roomStatus");try{
+if(!nomiId()){status.textContent="Load Nomis and select one first";return}
+status.textContent="Loading rooms…";roomChoices=await call("room_action","list",project.key,nomiId());
+if(!roomChoices.some(r=>r.uuid===project.room_uuid))project.room_uuid="";
+renderRooms();status.textContent=roomChoices.length+" rooms found for "+project.nomi;
+}catch(e){status.textContent="Room lookup failed: "+String(e)}}
+async function newRoom(){try{
+const name=el("roomName").value.trim(),note=el("roomNote").value;
+if(!name){alert("Enter a room name.");return}
+if(!confirm("Create room '"+name+"' for "+project.nomi+"?"))return;
+const response=await call("room_action","create",project.key,nomiId(),"",name,note);
+project.room_uuid=response.room?.uuid||response.room?.room?.uuid||"";
+await loadRooms();await save();el("roomStatus").textContent="Room created";
+}catch(e){alert("Creation result: "+String(e)+"\nCheck room list before retrying.")}}
+async function editRoom(){try{
+if(!project.room_uuid){alert("Select a room first.");return}
+const name=el("roomName").value.trim(),note=el("roomNote").value;
+if(!confirm("Update room '"+name+"'?"))return;
+await call("room_action","edit",project.key,nomiId(),project.room_uuid,name,note);
+await loadRooms();await save();el("roomStatus").textContent="Room updated";
+}catch(e){alert("Update result: "+String(e)+"\nRefresh before retrying.")}}
+async function deleteRoom(){try{
+const room=roomChoices.find(r=>r.uuid===project.room_uuid);if(!room){alert("Select a room first.");return}
+if(prompt("DELETE '"+room.name+"' permanently? Type DELETE to confirm.")!=="DELETE")return;
+await call("room_action","delete",project.key,nomiId(),room.uuid);
+project.room_uuid="";await loadRooms();await save();el("roomStatus").textContent="Room deleted";
+}catch(e){alert("Delete result: "+String(e)+"\nRefresh before retrying.")}}
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
