@@ -250,6 +250,12 @@ class API:
         directory=DATA / ("previews" if dry else "runs") / token
         directory.mkdir(parents=True,exist_ok=False)
         paths = self._paths(directory)
+        # Persist an exact input manifest for inspection and incident recovery.
+        manifest={"source_files":[x.get("path") for x in self.project.get("queue",[])],
+                  "processed_files":paths,"nomi_uuid":self.project.get("nomi_uuid"),
+                  "room_uuid":self.project.get("room_uuid")}
+        (directory/"gui-input-manifest.json").write_text(
+            json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
         args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
         if not dry:
             room = str(self.project.get("room_uuid") or "").strip()
