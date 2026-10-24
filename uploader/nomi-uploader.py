@@ -885,8 +885,23 @@ def _upload_locked(args):
                 print("Pass %d/%d message %d/%d%s"%(p,passes,i,len(messages),detail))
                 if args.delay: time.sleep(args.delay)
             if m["kind"]=="prompt" and key not in reply_committed and key not in abandoned:
-                # Match the bridge's two-phase state machine. Complete and persist
-                # the content phase before entering a distinct reply phase.
+                # IMPORTANT: KEEP THE CONTENT-COMPLETION BOUNDARY.
+                #
+                # Steve identified a live execution-flow discrepancy between this
+                # uploader and the browser bridge: the old uploader proceeded
+                # directly from posting the final prompt chunk to requesting a
+                # reply within the same processing loop. The bridge explicitly
+                # transitions from confirmed content to awaiting_reply first.
+                # After introducing this durable transition, live uploads were
+                # reported to run MUCH faster; remaining readiness errors
+                # typically cleared in 15-20 seconds rather than long stalls.
+                #
+                # Do NOT "optimize away" this checkpoint or collapse content
+                # completion into reply_attempt without a controlled regression
+                # test. It is an intentional phase marker, not redundant logging.
+                # The exact underlying scheduling mechanism remains unverified:
+                # this record call does not itself exit the Python loop or yield
+                # the thread. See CONTENT_COMPLETION_CHANGE_2026-10.md.
                 record(cp,{"event":"content_complete","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
