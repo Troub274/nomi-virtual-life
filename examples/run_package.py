@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Run an example package with automatic checkpoint/resume handling."""
 import argparse
@@ -15,15 +16,20 @@ def state_paths(root, package):
     return state, state/'checkpoint.jsonl', state/'completed.json', state/'replies.txt'
 
 
-def command(package, dry_run=False, resume=False, restart=False, status=False):
+def command(package, dry_run=False, resume=False, restart=False, status=False, delay=None):
     root = Path(__file__).resolve().parents[1]
     folder = root/'examples'/package
     config = json.loads((folder/'package.json').read_text(encoding='utf-8'))
     state, checkpoint, completion, replies = state_paths(root, package)
+
     args = [sys.executable, str(root/'uploader/nomi-uploader.py'),
             '--checkpoint', str(checkpoint),
             '--completion', str(completion),
             '--replies', str(replies)]
+
+    # Only override the uploader's delay when explicitly requested.
+    if delay is not None:
+        args += ['--delay', str(delay)]
 
     if status:
         return args + ['--status']
@@ -49,6 +55,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run a packaged Nomi diary. Plain PACKAGE starts or safely resumes it.')
     parser.add_argument('package', choices=PACKAGES)
+    parser.add_argument('--delay', type=float, default=None,
+                        help='Delay in seconds between requests; defaults to uploader setting')
+
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--dry-run', action='store_true',
                       help='Preview the message plan without API calls')
@@ -69,7 +78,8 @@ def main():
         print('Use --status to inspect it or --restart to begin a new run.')
         return 0
 
-    cmd = command(args.package, args.dry_run, args.resume, args.restart, args.status)
+    cmd = command(args.package, args.dry_run, args.resume, args.restart, args.status,
+                  delay=args.delay)
     if not args.dry_run and not args.status:
         state.mkdir(parents=True, exist_ok=True)
     return subprocess.call(cmd)
