@@ -1,0 +1,57 @@
+name: Release Nomi Uploader Python CLI
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'uploader/nomi-uploader.py'
+      - 'uploader/legacy_v085.py'
+      - 'uploader/requirements.txt'
+      - 'uploader/CLI-RELEASE.md'
+      - 'uploader/README.md'
+      - 'uploader/RECOVERY.md'
+      - '.github/workflows/release-nomi-uploader-cli.yml'
+concurrency:
+  group: nomi-uploader-cli-alpha
+  cancel-in-progress: true
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check uploader syntax and tests
+        run: |
+          python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py
+          python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+      - name: Package CLI
+        run: |
+          mkdir -p dist/nomi-uploader-cli
+          cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt dist/nomi-uploader-cli/
+          cp uploader/README.md uploader/RECOVERY.md dist/nomi-uploader-cli/
+          cp uploader/CLI-RELEASE.md dist/nomi-uploader-cli/INSTALL.md
+          (cd dist/nomi-uploader-cli && zip -q ../NomiUploader-CLI-Python.zip *)
+          sha256sum dist/NomiUploader-CLI-Python.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NomiUploader-CLI-Python
+          path: dist/NomiUploader-CLI-Python.zip
+      - name: Publish CLI prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$latest" != "${{ github.sha }}" ]; then
+            echo "Superseded build; skip publishing an older CLI."
+            exit 0
+          fi
+          tag=nomi-uploader-cli-alpha
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/NomiUploader-CLI-Python.zip --clobber
+            gh release edit "$tag" --notes-file uploader/CLI-RELEASE.md --prerelease
+          else
+            gh release create "$tag" dist/NomiUploader-CLI-Python.zip --title "Nomi Uploader Python CLI Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/CLI-RELEASE.md
+          fi
