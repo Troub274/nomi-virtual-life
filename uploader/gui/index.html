@@ -29,6 +29,14 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <label>Nomi prompts (one per line)<textarea id="promptsField" placeholder="Please reflect on these entries..." oninput="updateFields()"></textarea></label>
 <div class="small">Prompts are inserted as Nomi: header lines. Choose Replace to replace uploader defaults; Add keeps the defaults as well.</div>
 <label>Selected file content preview (read-only)</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
+<div id="exportEditor" class="stack" style="display:none">
+<h2>ZIP / JSON conversation prompts</h2>
+<label>Prompt mode<select id="exportMode" onchange="editExport()"><option>Replace</option><option>Add</option></select></label>
+<label>Opening prompt<textarea id="exportIntro" oninput="editExport()" placeholder="Message sent before importing conversations"></textarea></label>
+<label>Periodic reflection prompt<textarea id="exportPeriodic" oninput="editExport()" placeholder="Use {first} and {last} for message numbers"></textarea></label>
+<label>Reflect every N chunks (0 = disabled)<input id="exportProcess" type="number" min="0" oninput="editExport()"></label>
+<div class="small">Replace uses only your opening prompt; Add precedes it with the built-in default. Periodic prompts are sent only when the interval is above zero. Conversation content is unchanged.</div>
+</div>
 <div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
 </div></section>
 <section><h2>Settings</h2><div class="stack">
@@ -59,16 +67,19 @@ el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"a
 renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
 for(const id of ["title","type","mode","source","date","process","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
+el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"]])el(id).value=f.export_fields[key]??"";}
 if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
 }
 async function selectFile(i){active=i;draw();await loadSelected()}
 function move(i,d){let j=i+d;if(j<0||j>=project.queue.length)return;[project.queue[i],project.queue[j]]=[project.queue[j],project.queue[i]];active=j;draw()}
 function removeFile(i){project.queue.splice(i,1);active=Math.min(active,project.queue.length-1);draw()}
+function editExport(){if(active<0)return;const f=project.queue[active];f.export_fields={mode:el("exportMode").value,intro:el("exportIntro").value,periodic:el("exportPeriodic").value,process:el("exportProcess").value}}
 function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","process","prompts"])f.fields[id]=el(id+"Field").value}
 async function loadSelected(){
  const f=project.queue[active];if(!f)return;const token=++selectionToken;
  try {let info=await call("inspect_file",f.path);if(token!==selectionToken)return;
    el("preview").value=info.preview||"";el("previewNotice").textContent=info.truncated?"Preview limited to first 120,000 characters. Full file is retained.":info.editable?"Source file remains unchanged; edits go to a working copy during upload.":"Header options require TXT input; this format uses the uploader's existing importer.";
+   if(info.export){if(!f.export_fields){f.export_fields=info.header;draw()}el("previewNotice").textContent="Nomi export: "+info.nomi_name+" · "+info.count+" messages. First 30 shown. ZIP/JSON source is not modified.";}
    if(info.editable){const old=f.fields;const looksEmpty=old && !old.source && !old.date && !old.process && !old.prompts && (!old.title || old.title===f.path.split(/[\\\\/]/).pop().replace(/\\.txt$/i,"")) && (!old.type || old.type==="Knowledge") && (!old.mode || old.mode==="Add");if(!old||looksEmpty){f.fields=info.header;draw()}}
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
