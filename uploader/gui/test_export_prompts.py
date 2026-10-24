@@ -20,6 +20,14 @@ def plan(options,global_interval=0):
                                   global_interval,None,"chars",{FILE:options})
 
 class ExportOptionsTests(unittest.TestCase):
+    def test_txt_process_every_zero_disables_explicit_reflections(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            file=Path(temp)/"journal.txt"
+            file.write_text("[Journal]\\nType: Journal\\nProcess Every: 0\\nNomi: Reflect on entries 1-2\\n\\nENTRY 1\\nFirst day\\n\\nENTRY 2\\nSecond day\\n",encoding="utf-8")
+            messages=uploader.plan_text([str(file)],"Beth","User","US",2026,750,5,None,"chars")
+            self.assertFalse(any(m["kind"]=="prompt" for m in messages))
+
     def test_replace_intro_and_custom_periodic(self):
         messages=plan({"mode":"Replace","intro":"[nomi], review this export",
                        "periodic":"Summarize {first} through {last}","process_every":"2"})
