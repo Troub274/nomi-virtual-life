@@ -1,5 +1,6 @@
 """Optional pywebview front end to the existing Nomi uploader CLI."""
 import json
+import re
 import os
 import runpy
 import subprocess
@@ -38,6 +39,75 @@ class API:
                          file_types=("Uploader files (*.txt;*.docx;*.json;*.zip)", "All files (*.*)"))
         return list(paths or [])
 
+    def inspect_file(self, filename):
+        """Read TXT metadata and a preview without modifying the source file."""
+        source = Path(filename)
+        if source.suffix.lower() != ".txt":
+            return {"editable": False, "preview": "Metadata editor is available for TXT files. ZIP, JSON and DOCX are processed by the existing uploader."}
+        raw = source.read_text(encoding="utf-8-sig")
+        lines = raw.splitlines(keepends=True)
+        header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
+        if header_start is None:
+            return {"editable": True, "header": {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}, "preview": "", "existing": False}
+        existing = bool(re.fullmatch(r"\\[[^\\]\\n]+\\]", lines[header_start].strip()))
+        header = {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}
+        content_start = header_start
+        if existing:
+            header["title"] = lines[header_start].strip()[1:-1]
+            content_start = header_start + 1
+            prompts = []
+            for i in range(content_start, len(lines)):
+                m = re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):\\s*(.*)$", lines[i].strip(), re.I)
+                if m:
+                    k,v = m.group(1).lower(), m.group(2).strip()
+                    key = {"type":"type","source":"source","date":"date","process every":"process","nomi mode":"mode","nomi":"prompts"}[k]
+                    if key == "prompts": prompts.append(v)
+                    else: header[key] = v
+                    content_start = i + 1
+                elif not lines[i].strip():
+                    content_start = i + 1
+                else: break
+            header["prompts"] = "\\n".join(prompts)
+        content = "".join(lines[content_start:])
+        return {"editable": True, "header": header, "preview": content[:120000], "truncated": len(content)>120000, "existing": existing}
+
+    def _build_txt(self, source, item):
+        info = self.inspect_file(str(source))
+        if "fields" not in item:
+            return source.read_text(encoding="utf-8-sig")
+        fields = item["fields"]
+        raw = source.read_text(encoding="utf-8-sig")
+        if info["existing"]:
+            # Remove only the first section's existing metadata. Preserve original source.
+            lines = raw.splitlines(keepends=True)
+            first = next(i for i, x in enumerate(lines) if x.strip())
+            pos = first + 1
+            while pos < len(lines):
+                line = lines[pos].strip()
+                if not line or re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):", line, re.I):
+                    pos += 1
+                else: break
+            body = "".join(lines[pos:])
+        else:
+            body = raw
+        title = str(fields.get("title") or source.stem).strip()
+        kind = str(fields.get("type") or "Knowledge").strip().lower()
+        if kind not in ("knowledge","instructions","journal","chat"):
+            raise ValueError("Invalid content Type")
+        mode = str(fields.get("mode") or "Add").strip().lower()
+        if mode not in ("add","replace"): raise ValueError("Invalid Nomi Mode")
+        header = ["[" + title + "]", "Type: " + kind.title()]
+        for key, prop in (("Source", "source"), ("Date", "date"), ("Process Every", "process")):
+            v = str(fields.get(prop) or "").strip()
+            if v:
+                if prop == "process" and (not v.isdecimal() or int(v) < 0):
+                    raise ValueError("Process Every must be a nonnegative integer")
+                header.append(key + ": " + v)
+        header.append("Nomi Mode: " + mode.title())
+        for prompt in str(fields.get("prompts") or "").splitlines():
+            if prompt.strip(): header.append("Nomi: " + prompt.strip())
+        return "\\n".join(header) + "\\n\\n" + body
+
     def _paths(self):
         out = []
         for i, item in enumerate(self.project.get("queue", [])):
@@ -46,7 +116,11 @@ class API:
             suffix = source.suffix.lower()
             if suffix not in (".txt", ".docx", ".json", ".zip"):
                 raise ValueError("Unsupported file type: " + str(source))
-            if suffix == ".txt" and item.get("header"):
+            if suffix == ".txt" and item.get("fields"):
+                generated = DATA / ("prepared-%04d.txt" % i)
+                generated.write_text(self._build_txt(source, item), encoding="utf-8")
+                out.append(str(generated))
+            elif suffix == ".txt" and item.get("header"):
                 generated = DATA / ("prepared-%04d.txt" % i)
                 content = source.read_text(encoding="utf-8-sig")
                 if content.lstrip().startswith("["):
@@ -59,7 +133,7 @@ class API:
         return out
 
     def _cli(self, args):
-        return [sys.executable, "--uploader-cli"] + args
+        return ([sys.executable, "--uploader-cli"] if FROZEN else [sys.executable, str(UPLOADER)]) + args
 
     def _run(self, args):
         if self.proc and self.proc.poll() is None: raise RuntimeError("An upload is already running.")
