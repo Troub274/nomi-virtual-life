@@ -30,10 +30,10 @@ class ExportOptionsTests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as temp:
             file=Path(temp)/"journal.txt"
-            body="[Journal]\nType: Journal\nNomi: Reflect on entries 1-2\n\nENTRY 1\nFirst day\n\nENTRY 2\nSecond day\n"
+            body="[Journal]\nType: Journal\nDate: 2026-01-01\nNomi: Reflect on entries 1-2\n\nENTRY 1\nFirst day\n\nENTRY 2\nSecond day\n"
             file.write_text(body,encoding="utf-8")
             inherited=uploader.plan_text([str(file)],"Beth","User","US",2026,750,2,None,"chars")
-            file.write_text(body.replace("Type: Journal","Type: Journal\nProcess Every: 0"),encoding="utf-8")
+            file.write_text(body.replace("Type: Journal","Type: Journal\nDate: 2026-01-01\nProcess Every: 0"),encoding="utf-8")
             disabled=uploader.plan_text([str(file)],"Beth","User","US",2026,750,2,None,"chars")
             self.assertTrue(any(m["kind"]=="prompt" for m in inherited))
             self.assertFalse(any(m["kind"]=="prompt" for m in disabled))
@@ -42,7 +42,7 @@ class ExportOptionsTests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as temp:
             file=Path(temp)/"journal.txt"
-            file.write_text("[Journal]\nType: Journal\nProcess Every: 0\nNomi: Reflect on entries 1-2\n\nENTRY 1\nFirst day\n\nENTRY 2\nSecond day\n",encoding="utf-8")
+            file.write_text("[Journal]\nType: Journal\nDate: 2026-01-01\nProcess Every: 0\nNomi: Reflect on entries 1-2\n\nENTRY 1\nFirst day\n\nENTRY 2\nSecond day\n",encoding="utf-8")
             messages=uploader.plan_text([str(file)],"Beth","User","US",2026,750,5,None,"chars")
             self.assertFalse(any(m["kind"]=="prompt" for m in messages))
 
