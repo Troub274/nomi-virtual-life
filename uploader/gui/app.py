@@ -49,6 +49,57 @@ class API:
             if old is None: os.environ.pop("NOMI_API_KEY", None)
             else: os.environ["NOMI_API_KEY"] = old
 
+    def room_action(self, action, key, nomi_uuid="", room_uuid="", name="", note=""):
+        """Nomi room management; no automatic retries for writes."""
+        import uuid
+        sys.path.insert(0, str(UPLOADER.parent))
+        from legacy_v085 import api_request, list_rooms, get_nomis, room_contains_nomi, ok, err_text
+        if self.proc and self.proc.poll() is None and action != "list":
+            raise RuntimeError("Room modifications are disabled during an upload.")
+        old = os.environ.get("NOMI_API_KEY")
+        try:
+            os.environ["NOMI_API_KEY"] = str(key).strip()
+            if not os.environ["NOMI_API_KEY"]: raise ValueError("Enter an API key.")
+            if not nomi_uuid: raise ValueError("Select a Nomi first.")
+            uuid.UUID(str(nomi_uuid))
+            if action == "list":
+                return [{"uuid": str(r.get("uuid","")), "name": r.get("name",""),
+                         "note": r.get("note",""), "status": r.get("status","")}
+                        for r in list_rooms() if room_contains_nomi(r, nomi_uuid)]
+            if action in ("edit", "delete"):
+                uuid.UUID(str(room_uuid))
+                rooms = list_rooms()
+                if not any(str(r.get("uuid"))==room_uuid and room_contains_nomi(r, nomi_uuid) for r in rooms):
+                    raise ValueError("Room not found for selected Nomi; refresh the room list.")
+            if action == "create":
+                if not name.strip() or len(name)>100 or len(note)>1000:
+                    raise ValueError("Room name required (max 100 characters), note max 1000 characters.")
+                path,method,body = "/rooms","POST",{"name":name.strip(),"note":note,
+                    "backchannelingEnabled":True,"nomiUuids":[nomi_uuid]}
+            elif action == "edit":
+                if not name.strip() or len(name)>100 or len(note)>1000:
+                    raise ValueError("Room name required (max 100 characters), note max 1000 characters.")
+                path,method,body = "/rooms/"+room_uuid,"PUT",{"name":name.strip(),"note":note}
+            elif action == "delete":
+                cp=DATA/"upload.jsonl"
+                if cp.exists():
+                    events=[]
+                    for line in cp.read_text(encoding="utf-8").splitlines():
+                        try: events.append(json.loads(line))
+                        except ValueError: pass
+                    starts=[r for r in events if r.get("event")=="start"]
+                    if starts and starts[-1].get("room_uuid")==room_uuid and not (DATA/"completed.json").exists():
+                        raise ValueError("Room belongs to an unfinished checkpoint. Resolve the upload before deleting it.")
+                path,method,body = "/rooms/"+room_uuid,"DELETE",None
+            else: raise ValueError("Unknown room action")
+            status,payload=api_request(path,method,body)
+            if not ok(status):
+                raise RuntimeError(err_text(action,status,payload)+"; inspect rooms before retrying.")
+            return {"ok":True,"room":payload}
+        finally:
+            if old is None: os.environ.pop("NOMI_API_KEY",None)
+            else: os.environ["NOMI_API_KEY"]=old
+
     def choose(self):
         import webview
         paths = webview.windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
@@ -171,6 +222,10 @@ class API:
     def begin(self, dry=False):
         paths = self._paths()
         args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
+        if not dry:
+            room = str(self.project.get("room_uuid") or "").strip()
+            if not room: raise ValueError("Select or create an upload room first.")
+            args += ["--room", room]
         args += ["--process-every", str(int(self.project.get("process", 5))),
                  "--reply-max-wait", str(float(self.project.get("reply_wait", 900)))]
         args += ["--checkpoint", str(DATA / "upload.jsonl"),
