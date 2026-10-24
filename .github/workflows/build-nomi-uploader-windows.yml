@@ -1,0 +1,28 @@
+name: Build Nomi Uploader for Windows
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'uploader/gui/**'
+      - 'uploader/nomi-uploader.py'
+      - 'uploader/legacy_v085.py'
+      - '.github/workflows/build-nomi-uploader-windows.yml'
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Package Windows executable
+        shell: pwsh
+        run: ./uploader/gui/build-windows.ps1
+      - name: Publish Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: NomiUploader-Windows
+          path: dist/NomiUploader.exe
+          if-no-files-found: error
