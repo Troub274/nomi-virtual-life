@@ -885,6 +885,10 @@ def _upload_locked(args):
                 print("Pass %d/%d message %d/%d%s"%(p,passes,i,len(messages),detail))
                 if args.delay: time.sleep(args.delay)
             if m["kind"]=="prompt" and key not in reply_committed and key not in abandoned:
+                # Match the bridge's two-phase state machine. Complete and persist
+                # the content phase before entering a distinct reply phase.
+                record(cp,{"event":"content_complete","pass":p,"index":i,
+                           "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
