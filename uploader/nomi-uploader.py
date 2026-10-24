@@ -690,7 +690,15 @@ def _upload_locked(args):
             chunk_limit=int(init.get("chunk_limit",init.get("chunk_bytes",750)))
         entry_range=parse_entry_range(init.get("entry_range"))
     else:
-        nomi=legacy.choose_nomi(legacy.get_nomis()) if not args.dry_run else {"name":args.nomi or "Nomi","uuid":"DRYRUN"}
+        if args.dry_run:
+            nomi={"name":args.nomi or "Nomi","uuid":"DRYRUN"}
+        elif args.nomi_uuid:
+            matches=[n for n in legacy.get_nomis() if str(n.get("uuid","")).casefold()==args.nomi_uuid.casefold()]
+            if len(matches)!=1:
+                raise ValueError("Selected Nomi UUID is not available on this API account. Reload Nomis in the GUI.")
+            nomi=matches[0]
+        else:
+            nomi=legacy.choose_nomi(legacy.get_nomis())
         year=dt.date.today().year; order=regional_order(args.date_format)
         files=args.files; passes=args.passes; room=None
         entry_range=parse_entry_range(getattr(args,"entries",None))
@@ -1130,6 +1138,7 @@ def main(argv=None):
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
+    parser.add_argument("--nomi-uuid",help="Select Nomi by API UUID without an interactive prompt")
     parser.add_argument("--export-options",help="JSON map of ZIP/JSON paths to prompt options")
     parser.add_argument("--passes",type=int,default=1)
     parser.add_argument("--entries",
