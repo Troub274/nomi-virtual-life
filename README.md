@@ -13,6 +13,14 @@ SmartScreen's **More info → Run anyway**, and Smart App Control, see the
 **[Windows alpha instructions](uploader/gui/WINDOWS-ALPHA.md)**.
 This is experimental software, not code-signed. Do not disable Defender antivirus to run it.
 
+## Linux GUI alpha — x86-64
+
+**[Linux alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha)**
+
+Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a supported Linux graphical desktop.
+Unlike the Windows EXE, Linux requires system WebKitGTK/GTK libraries. See the
+**[Linux install notes](uploader/gui/README-LINUX.md)** for requirements and limitations.
+
 ## Quick start
 
 Requires Python 3.10+. Optional Word support: `python -m pip install -r uploader/requirements.txt`.
