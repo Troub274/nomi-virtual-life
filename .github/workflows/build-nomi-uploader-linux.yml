@@ -1,0 +1,52 @@
+name: Build Nomi Uploader for Linux
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'uploader/gui/**'
+      - 'uploader/nomi-uploader.py'
+      - 'uploader/legacy_v085.py'
+      - '.github/workflows/build-nomi-uploader-linux.yml'
+concurrency:
+  group: nomi-uploader-linux-alpha
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linux WebKitGTK development dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi
+      - name: Verify upload planning
+        run: python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+      - name: Package Linux binary
+        run: bash uploader/gui/build-linux.sh
+      - name: Upload Linux build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NomiUploader-Linux-x86_64
+          path: dist/NomiUploader-Linux-x86_64.tar.gz
+          if-no-files-found: error
+      - name: Publish Linux alpha release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha')
+          if [ "$latest" != "${{ github.sha }}" ]; then
+            echo "Build was superseded; not publishing older binary."
+            exit 0
+          fi
+          tag=nomi-uploader-linux-alpha
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --clobber
+            gh release edit "$tag" --notes-file uploader/gui/README-LINUX.md --prerelease
+          else
+            gh release create "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --title "Nomi Uploader Linux Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/gui/README-LINUX.md
+          fi
