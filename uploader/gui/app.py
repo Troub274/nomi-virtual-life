@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from pathlib import Path
 
 FROZEN = bool(getattr(sys, "frozen", False))
@@ -81,14 +82,14 @@ class API:
                     raise ValueError("Room name required (max 100 characters), note max 1000 characters.")
                 path,method,body = "/rooms/"+room_uuid,"PUT",{"name":name.strip(),"note":note}
             elif action == "delete":
-                cp=DATA/"upload.jsonl"
+                cp=self._active_dir()/"upload.jsonl"
                 if cp.exists():
                     events=[]
                     for line in cp.read_text(encoding="utf-8").splitlines():
                         try: events.append(json.loads(line))
                         except ValueError: pass
                     starts=[r for r in events if r.get("event")=="start"]
-                    if starts and starts[-1].get("room_uuid")==room_uuid and not (DATA/"completed.json").exists():
+                    if starts and starts[-1].get("room_uuid")==room_uuid and not (self._active_dir()/"completed.json").exists():
                         raise ValueError("Room belongs to an unfinished checkpoint. Resolve the upload before deleting it.")
                 path,method,body = "/rooms/"+room_uuid,"DELETE",None
             else: raise ValueError("Unknown room action")
@@ -181,7 +182,7 @@ class API:
             if prompt.strip(): header.append("Nomi: " + prompt.strip())
         return "\n".join(header) + "\n\n" + body
 
-    def _paths(self):
+    def _paths(self, run_dir):
         out = []
         for i, item in enumerate(self.project.get("queue", [])):
             source = Path(item["path"])
@@ -190,11 +191,11 @@ class API:
             if suffix not in (".txt", ".docx", ".json", ".zip"):
                 raise ValueError("Unsupported file type: " + str(source))
             if suffix == ".txt" and item.get("fields"):
-                generated = DATA / ("prepared-%04d.txt" % i)
+                generated = run_dir / ("prepared-%04d.txt" % i)
                 generated.write_text(self._build_txt(source, item), encoding="utf-8")
                 out.append(str(generated))
             elif suffix == ".txt" and item.get("header"):
-                generated = DATA / ("prepared-%04d.txt" % i)
+                generated = run_dir / ("prepared-%04d.txt" % i)
                 content = source.read_text(encoding="utf-8-sig")
                 if content.lstrip().startswith("["):
                     raise ValueError("File already has structured headers; edit its original header rather than adding a second one: " + str(source))
@@ -225,8 +226,25 @@ class API:
         threading.Thread(target=reader, daemon=True).start()
         return True
 
+    def _active_dir(self):
+        token=self.project.get("active_run")
+        if not token:
+            return DATA  # Preserve access to pre-upgrade checkpoints.
+        if not re.fullmatch(r"[0-9a-f]{32}",str(token)):
+            raise ValueError("Invalid run identifier")
+        return DATA / "runs" / token
+
+    def _has_checkpoint(self, directory):
+        cp=directory / "upload.jsonl"
+        return cp.is_file() and cp.stat().st_size>0
+
     def begin(self, dry=False):
-        paths = self._paths()
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Upload already running")
+        token=uuid.uuid4().hex
+        directory=DATA / ("previews" if dry else "runs") / token
+        directory.mkdir(parents=True,exist_ok=False)
+        paths = self._paths(directory)
         args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
         if not dry:
             room = str(self.project.get("room_uuid") or "").strip()
@@ -238,24 +256,38 @@ class API:
                                  "periodic":x["export_fields"].get("periodic",""),
                                  "process_every":x["export_fields"].get("process","")}
                       for x in self.project["queue"] if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
-            opts=DATA/"export-options.json"
+            opts=directory/"export-options.json"
             opts.write_text(json.dumps(settings,ensure_ascii=False,indent=2),encoding="utf-8")
             args += ["--export-options",str(opts)]
         args += ["--process-every", str(int(self.project.get("process", 5))),
                  "--reply-max-wait", str(float(self.project.get("reply_wait", 900)))]
-        args += ["--checkpoint", str(DATA / "upload.jsonl"),
-                 "--completion", str(DATA / "completed.json"),
-                 "--replies", str(DATA / "replies.txt")]
+        args += ["--checkpoint", str(directory / "upload.jsonl"),
+                 "--completion", str(directory / "completed.json"),
+                 "--replies", str(directory / "replies.txt")]
         args += paths
+        if not dry:
+            prior=self.project.get("active_run")
+            self.project["active_run"]=token
+            self.save(self.project)
+            try:
+                return self._run(args)
+            except Exception:
+                self.project["active_run"]=prior
+                self.save(self.project)
+                raise
         return self._run(args)
 
     def resume(self):
+        directory=self._active_dir()
+        if not self._has_checkpoint(directory):
+            raise ValueError("No checkpoint exists for the selected run.")
         return self._run(["--resume", "--checkpoint", str(DATA / "upload.jsonl"),
                           "--completion", str(DATA / "completed.json"),
                           "--replies", str(DATA / "replies.txt")])
 
     def status(self):
-        cp = DATA / "upload.jsonl"
+        directory=self._active_dir()
+        cp = directory / "upload.jsonl"
         confirmed = 0
         total = 0
         replies = []
@@ -273,7 +305,8 @@ class API:
         running = bool(self.proc and self.proc.poll() is None)
         return {"running":running,"exit_code":None if running or not self.proc else self.proc.returncode,
                 "confirmed":confirmed,"total":total,"log":recent,"replies":replies[-50:],
-                "project":self.project}
+                "project":self.project,"can_resume":self._has_checkpoint(directory),
+                "completed":(directory/"completed.json").exists()}
 
 if __name__ == "__main__":
     if "--uploader-cli" in sys.argv:
