@@ -52,6 +52,7 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
 </div></section>
 <section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button></div>
+<div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button></div>
 <p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
 <p class="small">Start NEW upload creates a separate checkpoint, even when changing Nomis. Resume continues the currently selected run. Previous run files are retained locally. Preview never sends messages.</p>
 </section>
@@ -138,7 +139,19 @@ project.room_uuid="";await loadRooms();await save();el("roomStatus").textContent
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
-async function start(dry){try{await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"Upload started"}catch(e){alert(e)}}
+async function start(dry){try{await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){alert(e)}}
+async function refreshRuns(){
+ try{const runs=await call("list_runs");const sel=el("runHistory");const keep=sel.value;sel.replaceChildren();
+ const option=document.createElement("option");option.value="";option.textContent="Choose an earlier run";sel.appendChild(option);
+ for(const run of runs){const o=document.createElement("option");o.value=run.id;o.textContent=(run.nomi||"Unknown")+" · "+(run.completed?"completed":"checkpoint")+" · "+run.id.slice(0,8);sel.appendChild(o)}
+ if(runs.some(r=>r.id===keep))sel.value=keep;
+ }catch(e){el("state").textContent="History: "+String(e)}
+}
+async function switchRun(){
+ const selected=el("runHistory").value;if(!selected)return;
+ try{await call("select_run",selected);el("state").textContent="Selected checkpoint: "+selected;await poll()}
+ catch(e){alert(String(e))}
+}
 async function resume(){try{await call("resume");el("state").textContent="Resuming existing checkpoint…"}catch(e){alert(e)}}
 async function poll(){if(!ready)return;try{let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
 el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
@@ -147,6 +160,6 @@ el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
 el("replies").textContent=(s.replies||[]).map(r=>"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
 }catch(e){el("state").textContent=String(e)}}
 async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
-ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();if(project.key)await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
+ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();if(project.key)await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll();await refreshRuns()}
 window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
 </script></body></html>
