@@ -20,6 +20,24 @@ def plan(options,global_interval=0):
                                   global_interval,None,"chars",{FILE:options})
 
 class ExportOptionsTests(unittest.TestCase):
+    def test_unspecified_inherits_but_zero_disables_export(self):
+        inherited=plan({"mode":"Replace","intro":"","process_every":""},2)
+        disabled=plan({"mode":"Replace","intro":"","process_every":"0"},2)
+        self.assertEqual(sum(m["kind"]=="prompt" for m in inherited),2)
+        self.assertEqual(sum(m["kind"]=="prompt" for m in disabled),0)
+
+    def test_txt_unspecified_inherits_but_zero_disables(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as temp:
+            file=Path(temp)/"journal.txt"
+            body="[Journal]\\nType: Journal\\nNomi: Reflect on entries 1-2\\n\\nENTRY 1\\nFirst day\\n\\nENTRY 2\\nSecond day\\n"
+            file.write_text(body,encoding="utf-8")
+            inherited=uploader.plan_text([str(file)],"Beth","User","US",2026,750,2,None,"chars")
+            file.write_text(body.replace("Type: Journal","Type: Journal\\nProcess Every: 0"),encoding="utf-8")
+            disabled=uploader.plan_text([str(file)],"Beth","User","US",2026,750,2,None,"chars")
+            self.assertTrue(any(m["kind"]=="prompt" for m in inherited))
+            self.assertFalse(any(m["kind"]=="prompt" for m in disabled))
+
     def test_txt_process_every_zero_disables_explicit_reflections(self):
         import tempfile
         with tempfile.TemporaryDirectory() as temp:
