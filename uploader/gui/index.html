@@ -32,8 +32,8 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
 </div></section>
 <section><h2>Settings</h2><div class="stack">
-<label>Nomi name<input id="nomi" placeholder="Exact name of the receiving Nomi" oninput="editSettings()"></label>
-<label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label>
+<label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
+<label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
 <div class="row"><label style="flex:1">Process every (default)<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
@@ -46,12 +46,12 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0;
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[];
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
-el("nomi").value=project.nomi||"";el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
+renderNomis();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
 for(const id of ["title","type","mode","source","date","process","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
 if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
@@ -68,6 +68,22 @@ async function loadSelected(){
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
 function editSettings(){project.nomi=el("nomi").value;project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
+function renderNomis(){
+const sel=el("nomi"),selected=project.nomi||"";
+sel.replaceChildren();
+const opt=document.createElement("option");opt.value="";opt.textContent=nomiChoices.length?"Select a Nomi":"Enter API key and click Load Nomis";sel.appendChild(opt);
+for(const n of nomiChoices){const o=document.createElement("option");o.value=n.name;o.textContent=n.name;sel.appendChild(o)}
+if(selected&&!nomiChoices.some(n=>n.name===selected)){const o=document.createElement("option");o.value=selected;o.textContent=selected+" (saved; not verified)";sel.appendChild(o)}
+sel.value=selected;
+}
+async function loadNomis(){
+ editSettings();
+ const status=el("nomiStatus");status.textContent="Connecting…";
+ try {const results=await call("list_nomis",project.key);
+   nomiChoices=results;renderNomis();
+   status.textContent=results.length?results.length+" Nomis loaded":"Account returned no Nomis";
+ }catch(e){status.textContent="Could not load Nomis";alert("Nomi connection failed: "+String(e))}
+}
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
@@ -80,6 +96,6 @@ el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
 el("replies").textContent=(s.replies||[]).map(r=>"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
 }catch(e){el("state").textContent=String(e)}}
 async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
-ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
+ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();if(project.key)await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
 window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
 </script></body></html>
