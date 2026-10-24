@@ -94,7 +94,7 @@ function editSettings(){
    if(project.nomi_uuid)loadRooms();
  }
  project.key=el("key").value;
- project.process=Number(el("process").value);
+ project.process=el("process").value.trim()===""?5:Number(el("process").value);
  project.reply_wait=Number(el("wait").value);
 }
 function renderNomis(){
