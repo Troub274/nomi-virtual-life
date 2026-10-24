@@ -885,31 +885,38 @@ def _upload_locked(args):
                 print("Pass %d/%d message %d/%d%s"%(p,passes,i,len(messages),detail))
                 if args.delay: time.sleep(args.delay)
             if m["kind"]=="prompt" and key not in reply_committed and key not in abandoned:
-                # Reply requests are POSTs too. Never blindly repeat an uncertain request.
-                record(cp,{"event":"reply_attempt","pass":p,"index":i,
+                # Match the bridge's two-phase state machine. Complete and persist
+                # the content phase before entering a distinct reply phase.
+                record(cp,{"event":"content_complete","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
-                s,response=request_reply_with_backoff(
-                    room,nomi["uuid"],
-                    max_wait=getattr(args,"reply_max_wait",0) or 0)
-                if not legacy.ok(s):
-                    record(cp,{"event":"reply_uncertain","pass":p,"index":i,
-                               "http_status":s,"api_response":response})
-                    if s is not None and legacy.err_type(response) in KNOWN_WAIT_ERRORS:
-                        raise RuntimeError(
-                            "Nomi is still not ready after the reply wait limit; "
-                            "the checkpoint is safe to resume.")
-                    raise RuntimeError("Reply request outcome uncertain: "+
-                                       legacy.err_text("request reply",s,response))
-                reply=response.get("replyMessage") if isinstance(response,dict) else None
-                if not isinstance(reply,dict):
-                    raise RuntimeError("Reply request returned no replyMessage; inspect room and checkpoint")
-                record(cp,{"event":"reply_committed","pass":p,"index":i,
-                           "room_uuid":room,"nomi_uuid":nomi["uuid"],
-                           "prompt":m["text"],"reply":reply,
-                           "reply_api_response":response})
-                body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
-                print("%s replied after pass %d message %d: %s"%
-                      (nomi["name"],p,i,str(body)))
+                phase="reply_ready"
+                while phase=="reply_ready":
+                    phase="reply_inflight"
+                    # Reply requests are POSTs too. Never blindly repeat an uncertain request.
+                    record(cp,{"event":"reply_attempt","pass":p,"index":i,
+                               "room_uuid":room,"nomi_uuid":nomi["uuid"]})
+                    s,response=request_reply_with_backoff(
+                        room,nomi["uuid"],
+                        max_wait=getattr(args,"reply_max_wait",0) or 0)
+                    if not legacy.ok(s):
+                        record(cp,{"event":"reply_uncertain","pass":p,"index":i,
+                                   "http_status":s,"api_response":response})
+                        if s is not None and legacy.err_type(response) in KNOWN_WAIT_ERRORS:
+                            raise RuntimeError(
+                                "Nomi is still not ready after the reply wait limit; "
+                                "the checkpoint is safe to resume.")
+                        raise RuntimeError("Reply request outcome uncertain: "+
+                                           legacy.err_text("request reply",s,response))
+                    reply=response.get("replyMessage") if isinstance(response,dict) else None
+                    if not isinstance(reply,dict):
+                        raise RuntimeError("Reply request returned no replyMessage; inspect room and checkpoint")
+                    record(cp,{"event":"reply_committed","pass":p,"index":i,
+                               "room_uuid":room,"nomi_uuid":nomi["uuid"],
+                               "prompt":m["text"],"reply":reply,
+                               "reply_api_response":response})
+                    body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
+                    print("%s replied after pass %d message %d: %s"%
+                          (nomi["name"],p,i,str(body)))
     final_events=records(cp)
     reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
     transcript=Path(args.replies)
