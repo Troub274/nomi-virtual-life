@@ -21,6 +21,13 @@ Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a suppor
 Unlike the Windows EXE, Linux requires system WebKitGTK/GTK libraries. See the
 **[Linux install notes](uploader/gui/README-LINUX.md)** for requirements and limitations.
 
+## macOS GUI alpha — Apple Silicon and Intel
+
+**[macOS alpha downloads](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha)**
+
+Download the ZIP for your Mac architecture, extract `NomiUploader.app`, and launch it.
+This alpha is unsigned and unnotarized; see the [macOS installation and Gatekeeper guide](uploader/gui/README-MACOS.md).
+
 ## Quick start
 
 Requires Python 3.10+. Optional Word support: `python -m pip install -r uploader/requirements.txt`.
