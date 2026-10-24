@@ -109,8 +109,13 @@ class API:
     def inspect_file(self, filename):
         """Read TXT metadata and a preview without modifying the source file."""
         source = Path(filename)
+        if source.suffix.lower() in (".zip", ".json"):
+            import legacy_v085 as legacy
+            name, rows=legacy.load_conversation(source)
+            preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
+            return {"editable": False, "export": True, "header": {"mode":"Replace","intro":"[nomi], please live and experience these conversations as yourself.","periodic":"[nomi], please live and experience the conversations {first}-{last} as yourself.","process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
         if source.suffix.lower() != ".txt":
-            return {"editable": False, "preview": "Metadata editor is available for TXT files. ZIP, JSON and DOCX are processed by the existing uploader."}
+            return {"editable": False, "preview": "Metadata editor is available for TXT and Nomi ZIP/JSON exports."}
         raw = source.read_text(encoding="utf-8-sig")
         lines = raw.splitlines(keepends=True)
         header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
@@ -226,6 +231,15 @@ class API:
             room = str(self.project.get("room_uuid") or "").strip()
             if not room: raise ValueError("Select or create an upload room first.")
             args += ["--room", room]
+        if any(Path(x["path"]).suffix.lower() in (".zip",".json") and x.get("export_fields") for x in self.project.get("queue",[])):
+            settings={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
+                                 "intro":x["export_fields"].get("intro",""),
+                                 "periodic":x["export_fields"].get("periodic",""),
+                                 "process_every":x["export_fields"].get("process","")}
+                      for x in self.project["queue"] if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
+            opts=DATA/"export-options.json"
+            opts.write_text(json.dumps(settings,ensure_ascii=False,indent=2),encoding="utf-8")
+            args += ["--export-options",str(opts)]
         args += ["--process-every", str(int(self.project.get("process", 5))),
                  "--reply-max-wait", str(float(self.project.get("reply_wait", 900)))]
         args += ["--checkpoint", str(DATA / "upload.jsonl"),
