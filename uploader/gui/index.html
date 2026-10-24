@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nomi Uploader</title><style>
+:root{font:15px system-ui,Segoe UI,sans-serif;color:#e5e7eb;background:#111827}
+*{box-sizing:border-box} body{margin:0} header{padding:18px 26px;background:#1f2937;border-bottom:1px solid #374151}
+h1{font-size:21px;margin:0} main{padding:20px;max-width:1300px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+section{border:1px solid #374151;border-radius:12px;padding:17px;background:#1f2937;min-width:0}
+.full{grid-column:1/-1} h2{margin:0 0 12px;font-size:16px}
+input,select,textarea,button{font:inherit;border-radius:7px;padding:9px;color:#e5e7eb;background:#111827;border:1px solid #4b5563}
+input,textarea,select{width:100%}button{cursor:pointer;background:#374151}button:hover{background:#4b5563}
+button.primary{background:#2563eb;border-color:#2563eb}.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}
+.small{font-size:12px;color:#9ca3af}.stack{display:grid;gap:10px}label{font-size:13px;color:#cbd5e1}
+.queue{display:grid;gap:6px;max-height:310px;overflow:auto} .item{display:flex;align-items:center;gap:6px;padding:7px;border:1px solid #374151;border-radius:7px}
+.item.active{border-color:#60a5fa}.item button{padding:4px 8px}.item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+pre{white-space:pre-wrap;word-break:break-word;max-height:270px;overflow:auto;background:#0b1220;padding:12px;border-radius:8px;font-size:12px}
+progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospace,monospace}
+@media(max-width:850px){main{grid-template-columns:1fr}.full{grid-column:auto}}
+</style></head><body><header><h1>Nomi Uploader</h1><div class="small">Graphical front end to the existing Python uploader — no command line needed</div></header>
+<main>
+<section><h2>Upload queue</h2><div class="row"><button class="primary" onclick="addFiles()">Add files…</button><button onclick="save()">Save project</button></div><p class="small">Files are processed in the order shown. Use ↑ and ↓ to reorder.</p><div class="queue" id="queue"></div></section>
+<section><h2>File header and prompts</h2><p class="small" id="selectedLabel">Select a text file to edit its uploader header.</p>
+<div class="stack">
+<label>Header (TXT files only)</label><textarea id="header" spellcheck="false" placeholder="[Memories]\nType: Journal\nSource: Christine\nProcess Every: 5\nNomi Mode: Replace\nNomi: Christine, reflect on these entries." oninput="editHeader()"></textarea>
+<div class="small">TXT files without existing headers can be given a generated header here. Existing structured files should be edited in the source file. ZIP and JSON export prompts currently use the uploader's built-in processing rules.</div>
+</div></section>
+<section><h2>Settings</h2><div class="stack">
+<label>Nomi name<input id="nomi" placeholder="Exact name of the receiving Nomi" oninput="editSettings()"></label>
+<label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label>
+<div class="row"><label style="flex:1">Process every (default)<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
+<label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
+<p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
+</div></section>
+<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start upload</button><button onclick="resume()">Resume</button></div>
+<p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
+<p class="small">Start sends real messages. Preview never sends messages. Interrupted or uncertain sends are not automatically retried.</p>
+</section>
+<section class="full"><h2>Live output</h2><pre id="log">Waiting for desktop host…</pre></section>
+<section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
+</main>
+<script>
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false;
+const el=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function draw(){
+el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
+el("nomi").value=project.nomi||"";el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
+let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
+el("header").value=f?.header||"";el("header").disabled=!f||!f.path.toLowerCase().endsWith(".txt");
+}
+function selectFile(i){active=i;draw()}
+function move(i,d){let j=i+d;if(j<0||j>=project.queue.length)return;[project.queue[i],project.queue[j]]=[project.queue[j],project.queue[i]];active=j;draw()}
+function removeFile(i){project.queue.splice(i,1);active=Math.min(active,project.queue.length-1);draw()}
+function editHeader(){if(active>=0)project.queue[active].header=el("header").value}
+function editSettings(){project.nomi=el("nomi").value;project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
+async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
+async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
+async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await save()}catch(e){alert(e)}}
+async function start(dry){try{await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"Upload started"}catch(e){alert(e)}}
+async function resume(){try{await call("resume");el("state").textContent="Resuming existing checkpoint…"}catch(e){alert(e)}}
+async function poll(){if(!ready)return;try{let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
+el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
+el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
+el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
+el("replies").textContent=(s.replies||[]).map(r=>"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
+}catch(e){el("state").textContent=String(e)}}
+async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
+ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
+window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
+</script></body></html>
