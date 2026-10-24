@@ -84,20 +84,37 @@ async function loadSelected(){
    if(info.editable){const old=f.fields;const looksEmpty=old && !old.source && !old.date && !old.process && !old.prompts && (!old.title || old.title===f.path.split(/[\\\\/]/).pop().replace(/\\.txt$/i,"")) && (!old.type || old.type==="Knowledge") && (!old.mode || old.mode==="Add");if(!old||looksEmpty){f.fields=info.header;draw()}}
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
-function editSettings(){let before=project.nomi;project.nomi=el("nomi").value;project.nomi_uuid=nomiChoices.find(n=>n.name===project.nomi)?.uuid||"";if(before!==project.nomi){project.room_uuid="";roomChoices=[];renderRooms();if(project.nomi)loadRooms()}project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
+function editSettings(){
+ const before=project.nomi_uuid||"";
+ const chosen=nomiChoices.find(n=>n.uuid===el("nomi").value);
+ project.nomi_uuid=chosen?.uuid||"";
+ project.nomi=chosen?.name||"";
+ if(before!==project.nomi_uuid){
+   project.room_uuid="";roomChoices=[];renderRooms();
+   if(project.nomi_uuid)loadRooms();
+ }
+ project.key=el("key").value;
+ project.process=Number(el("process").value);
+ project.reply_wait=Number(el("wait").value);
+}
 function renderNomis(){
-const sel=el("nomi"),selected=project.nomi||"";
-sel.replaceChildren();
-const opt=document.createElement("option");opt.value="";opt.textContent=nomiChoices.length?"Select a Nomi":"Enter API key and click Load Nomis";sel.appendChild(opt);
-for(const n of nomiChoices){const o=document.createElement("option");o.value=n.name;o.textContent=n.name;sel.appendChild(o)}
-if(selected&&!nomiChoices.some(n=>n.name===selected)){const o=document.createElement("option");o.value=selected;o.textContent=selected+" (saved; not verified)";sel.appendChild(o)}
-sel.value=selected;
+ const sel=el("nomi"),selected=project.nomi_uuid||"";
+ sel.replaceChildren();
+ const opt=document.createElement("option");opt.value="";
+ opt.textContent=nomiChoices.length?"Select a Nomi":"Enter API key and click Load Nomis";
+ sel.appendChild(opt);
+ for(const n of nomiChoices){
+   const o=document.createElement("option");o.value=n.uuid;
+   o.textContent=n.name+" ("+n.uuid.slice(0,8)+")";
+   sel.appendChild(o);
+ }
+ sel.value=nomiChoices.some(n=>n.uuid===selected)?selected:"";
 }
 async function loadNomis(){
  editSettings();
  const status=el("nomiStatus");status.textContent="Connecting…";
  try {const results=await call("list_nomis",project.key);
-   nomiChoices=results;project.nomi_uuid=nomiChoices.find(n=>n.name===project.nomi)?.uuid||"";renderNomis();
+   nomiChoices=results;if(!nomiChoices.some(n=>n.uuid===project.nomi_uuid)){project.nomi_uuid="";project.nomi="";project.room_uuid=""}renderNomis();
    status.textContent=results.length?results.length+" Nomis loaded":"Account returned no Nomis";if(project.nomi)await loadRooms();
  }catch(e){status.textContent="Could not load Nomis";alert("Nomi connection failed: "+String(e))}
 }
