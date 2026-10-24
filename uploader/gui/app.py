@@ -35,7 +35,7 @@ class API:
         self.project = dict(project)
         if active is not None:
             self.project["active_run"]=active
-        CONFIG.write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
+        CONFIG.write_text(json.dumps(self.project, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
 
     def list_nomis(self, key):
@@ -221,6 +221,7 @@ class API:
         if not env["NOMI_API_KEY"] and "--dry-run" not in args and "--status" not in args:
             raise ValueError("Enter your Nomi API key in Settings.")
         env["NOMI_GUI_TARGET_NOMI"] = self.project.get("nomi","")
+        env["NOMI_GUI_TARGET_UUID"] = self.project.get("nomi_uuid","")
         self.proc = subprocess.Popen(self._cli(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                      stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(DATA),
                      env={**env, "PYTHONUNBUFFERED":"1"}, creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
@@ -253,6 +254,7 @@ class API:
         if not dry:
             room = str(self.project.get("room_uuid") or "").strip()
             if not room: raise ValueError("Select or create an upload room first.")
+            if not self.project.get("nomi_uuid"): raise ValueError("Load Nomis and choose a Nomi from the list before uploading.")
             args += ["--room", room]
         if any(Path(x["path"]).suffix.lower() in (".zip",".json") and x.get("export_fields") for x in self.project.get("queue",[])):
             settings={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
@@ -354,10 +356,11 @@ if __name__ == "__main__":
         import builtins
         import legacy_v085
         target = os.environ.get("NOMI_GUI_TARGET_NOMI", "").casefold().strip()
+        target_uuid = os.environ.get("NOMI_GUI_TARGET_UUID", "").strip().casefold()
         def gui_input(prompt=""):
             if "Select Nomi number" in prompt:
                 nomis = legacy_v085.get_nomis()
-                matches = [i for i, n in enumerate(nomis, 1) if n.get("name","").casefold() == target]
+                matches = [i for i, n in enumerate(nomis, 1) if (str(n.get("uuid","")).casefold() == target_uuid if target_uuid else str(n.get("name","")).casefold() == target)]
                 if len(matches) != 1:
                     raise ValueError("Choose an exact, unique Nomi name in the GUI.")
                 return str(matches[0])
@@ -367,7 +370,7 @@ if __name__ == "__main__":
         builtins.input = gui_input
         # Select from the actual API result, without going through console input.
         def gui_choose_nomi(nomis):
-            matches=[n for n in nomis if str(n.get("name","")).casefold().strip()==target]
+            matches=[n for n in nomis if (str(n.get("uuid","")).casefold().strip()==target_uuid if target_uuid else str(n.get("name","")).casefold().strip()==target)]
             if len(matches)!=1:
                 raise ValueError("Select an available, uniquely named Nomi in the GUI before starting.")
             return matches[0]
