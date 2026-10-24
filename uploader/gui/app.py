@@ -277,13 +277,47 @@ class API:
                 raise
         return self._run(args)
 
+    def list_runs(self):
+        """Read-only history; legacy alpha checkpoint remains selectable."""
+        found=[]
+        roots=[("legacy",DATA)]
+        runs=DATA/"runs"
+        if runs.exists():
+            roots.extend((p.name,p) for p in runs.iterdir() if p.is_dir() and re.fullmatch(r"[0-9a-f]{32}",p.name))
+        for token,directory in roots:
+            cp=directory/"upload.jsonl"
+            if not cp.exists() or not cp.stat().st_size: continue
+            start=None
+            for line in cp.read_text(encoding="utf-8").splitlines():
+                try: row=json.loads(line)
+                except ValueError: continue
+                if row.get("event")=="start": start=row; break
+            found.append({"id":token,"nomi":start.get("nomi_name","Unknown") if start else "Not started",
+                "room":start.get("room_uuid","") if start else "",
+                "completed":(directory/"completed.json").exists(),
+                "modified":cp.stat().st_mtime})
+        return sorted(found,key=lambda r:r["modified"],reverse=True)
+
+    def select_run(self, run_id):
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Cannot switch runs during upload.")
+        directory=DATA if run_id=="legacy" else DATA/"runs"/str(run_id)
+        if run_id!="legacy" and not re.fullmatch(r"[0-9a-f]{32}",str(run_id)):
+            raise ValueError("Invalid run ID")
+        if not self._has_checkpoint(directory): raise ValueError("Run has no checkpoint")
+        self.project["active_run"]=None if run_id=="legacy" else run_id
+        self.save(self.project)
+        self.lines=[]
+        self.proc=None
+        return True
+
     def resume(self):
         directory=self._active_dir()
         if not self._has_checkpoint(directory):
             raise ValueError("No checkpoint exists for the selected run.")
-        return self._run(["--resume", "--checkpoint", str(DATA / "upload.jsonl"),
-                          "--completion", str(DATA / "completed.json"),
-                          "--replies", str(DATA / "replies.txt")])
+        return self._run(["--resume","--checkpoint",str(directory/"upload.jsonl"),
+                          "--completion",str(directory/"completed.json"),
+                          "--replies",str(directory/"replies.txt")])
 
     def status(self):
         directory=self._active_dir()
