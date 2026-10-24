@@ -139,7 +139,7 @@ project.room_uuid="";await loadRooms();await save();el("roomStatus").textContent
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
-async function start(dry){try{await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){alert(e)}}
+async function start(dry){if(busy)return;busy=true;try{el("state").textContent="Preparing "+(dry?"preview":"new upload")+"…";await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){el("state").textContent="Could not start upload";alert(String(e))}finally{busy=false}}
 async function refreshRuns(){
  try{const runs=await call("list_runs");const sel=el("runHistory");const keep=sel.value;sel.replaceChildren();
  const option=document.createElement("option");option.value="";option.textContent="Choose an earlier run";sel.appendChild(option);
