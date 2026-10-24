@@ -33,6 +33,22 @@ class API:
         CONFIG.write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
 
+    def list_nomis(self, key):
+        sys.path.insert(0, str(UPLOADER.parent))
+        """Fetch real Nomis using the uploader's own API client; never log the key."""
+        from legacy_v085 import get_nomis
+        old = os.environ.get("NOMI_API_KEY")
+        try:
+            os.environ["NOMI_API_KEY"] = str(key).strip()
+            if not os.environ["NOMI_API_KEY"]:
+                raise ValueError("Enter an API key first.")
+            nomis = get_nomis()
+            return [{"name": n.get("name", ""), "uuid": n.get("uuid", "")}
+                    for n in nomis if n.get("name") and n.get("uuid")]
+        finally:
+            if old is None: os.environ.pop("NOMI_API_KEY", None)
+            else: os.environ["NOMI_API_KEY"] = old
+
     def choose(self):
         import webview
         paths = webview.windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
@@ -67,7 +83,7 @@ class API:
                 elif not lines[i].strip():
                     content_start = i + 1
                 else: break
-            header["prompts"] = "\\n".join(prompts)
+            header["prompts"] = "\n".join(prompts)
         content = "".join(lines[content_start:])
         return {"editable": True, "header": header, "preview": content[:120000], "truncated": len(content)>120000, "existing": existing}
 
@@ -106,7 +122,7 @@ class API:
         header.append("Nomi Mode: " + mode.title())
         for prompt in str(fields.get("prompts") or "").splitlines():
             if prompt.strip(): header.append("Nomi: " + prompt.strip())
-        return "\\n".join(header) + "\\n\\n" + body
+        return "\n".join(header) + "\n\n" + body
 
     def _paths(self):
         out = []
