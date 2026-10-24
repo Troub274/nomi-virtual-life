@@ -110,6 +110,7 @@ class API:
         """Read TXT metadata and a preview without modifying the source file."""
         source = Path(filename)
         if source.suffix.lower() in (".zip", ".json"):
+            sys.path.insert(0, str(UPLOADER.parent))
             import legacy_v085 as legacy
             name, rows=legacy.load_conversation(source)
             preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
