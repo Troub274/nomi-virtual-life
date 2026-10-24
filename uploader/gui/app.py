@@ -59,7 +59,7 @@ class API:
         return out
 
     def _cli(self, args):
-        return ([sys.executable, "--uploader-cli"] if FROZEN else [sys.executable, str(UPLOADER)]) + args
+        return [sys.executable, "--uploader-cli"] + args
 
     def _run(self, args):
         if self.proc and self.proc.poll() is None: raise RuntimeError("An upload is already running.")
@@ -68,7 +68,8 @@ class API:
         env["NOMI_API_KEY"] = self.project.get("key", "").strip() or env.get("NOMI_API_KEY", "")
         if not env["NOMI_API_KEY"] and "--dry-run" not in args and "--status" not in args:
             raise ValueError("Enter your Nomi API key in Settings.")
-        self.proc = subprocess.Popen(self._cli(args), stdout=subprocess.PIPE,
+        env["NOMI_GUI_TARGET_NOMI"] = self.project.get("nomi","")
+        self.proc = subprocess.Popen(self._cli(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                      stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(DATA),
                      env={**env, "PYTHONUNBUFFERED":"1"}, creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
         def reader():
@@ -89,7 +90,7 @@ class API:
         return self._run(args)
 
     def resume(self):
-        return self._run(["--resume", "--easy", "--checkpoint", str(DATA / "upload.jsonl"),
+        return self._run(["--resume", "--checkpoint", str(DATA / "upload.jsonl"),
                           "--completion", str(DATA / "completed.json"),
                           "--replies", str(DATA / "replies.txt")])
 
@@ -119,6 +120,20 @@ if __name__ == "__main__":
         at = sys.argv.index("--uploader-cli")
         sys.argv = [str(UPLOADER)] + sys.argv[at+1:]
         sys.path.insert(0, str(UPLOADER.parent))
+        import builtins
+        import legacy_v085
+        target = os.environ.get("NOMI_GUI_TARGET_NOMI", "").casefold().strip()
+        def gui_input(prompt=""):
+            if "Select Nomi number" in prompt:
+                nomis = legacy_v085.get_nomis()
+                matches = [i for i, n in enumerate(nomis, 1) if n.get("name","").casefold() == target]
+                if len(matches) != 1:
+                    raise ValueError("Choose an exact, unique Nomi name in the GUI.")
+                return str(matches[0])
+            if "Room choice" in prompt:
+                return "1"
+            raise ValueError("Uploader needs interactive confirmation: " + prompt + ". Use CLI recovery for this case.")
+        builtins.input = gui_input
         runpy.run_path(str(UPLOADER), run_name="__main__")
     else:
         import webview
