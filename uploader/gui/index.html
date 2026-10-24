@@ -20,8 +20,16 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section><h2>Upload queue</h2><div class="row"><button class="primary" onclick="addFiles()">Add files…</button><button onclick="save()">Save project</button></div><p class="small">Files are processed in the order shown. Use ↑ and ↓ to reorder.</p><div class="queue" id="queue"></div></section>
 <section><h2>File header and prompts</h2><p class="small" id="selectedLabel">Select a text file to edit its uploader header.</p>
 <div class="stack">
-<label>Header (TXT files only)</label><textarea id="header" spellcheck="false" placeholder="[Memories]\nType: Journal\nSource: Christine\nProcess Every: 5\nNomi Mode: Replace\nNomi: Christine, reflect on these entries." oninput="editHeader()"></textarea>
-<div class="small">TXT files without existing headers can be given a generated header here. Existing structured files should be edited in the source file. ZIP and JSON export prompts currently use the uploader's built-in processing rules.</div>
+<label>Section title<input id="titleField" oninput="updateFields()"></label>
+<div class="row"><label style="flex:1">Content type<select id="typeField" onchange="updateFields()"><option>Knowledge</option><option>Instructions</option><option>Journal</option><option>Chat</option></select></label>
+<label style="flex:1">Nomi mode<select id="modeField" onchange="updateFields()"><option>Add</option><option>Replace</option></select></label></div>
+<div class="row"><label style="flex:1">Source<input id="sourceField" placeholder="Whose material is this?" oninput="updateFields()"></label>
+<label style="flex:1">Date<input id="dateField" placeholder="October 24, 2026" oninput="updateFields()"></label></div>
+<label>Process Every<input id="processField" type="number" min="0" placeholder="Use global default" oninput="updateFields()"></label>
+<label>Nomi prompts (one per line)<textarea id="promptsField" placeholder="Please reflect on these entries..." oninput="updateFields()"></textarea></label>
+<div class="small">Prompts are inserted as Nomi: header lines. Choose Replace to replace uploader defaults; Add keeps the defaults as well.</div>
+<label>Selected file content preview (read-only)</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
+<div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
 </div></section>
 <section><h2>Settings</h2><div class="stack">
 <label>Nomi name<input id="nomi" placeholder="Exact name of the receiving Nomi" oninput="editSettings()"></label>
@@ -38,23 +46,31 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false;
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0;
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
 el("nomi").value=project.nomi||"";el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
-el("header").value=f?.header||"";el("header").disabled=!f||!f.path.toLowerCase().endsWith(".txt");
+for(const id of ["title","type","mode","source","date","process","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
+if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
 }
-function selectFile(i){active=i;draw()}
+async function selectFile(i){active=i;draw();await loadSelected()}
 function move(i,d){let j=i+d;if(j<0||j>=project.queue.length)return;[project.queue[i],project.queue[j]]=[project.queue[j],project.queue[i]];active=j;draw()}
 function removeFile(i){project.queue.splice(i,1);active=Math.min(active,project.queue.length-1);draw()}
-function editHeader(){if(active>=0)project.queue[active].header=el("header").value}
+function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","process","prompts"])f.fields[id]=el(id+"Field").value}
+async function loadSelected(){
+ const f=project.queue[active];if(!f)return;const token=++selectionToken;
+ try {let info=await call("inspect_file",f.path);if(token!==selectionToken)return;
+   el("preview").value=info.preview||"";el("previewNotice").textContent=info.truncated?"Preview limited to first 120,000 characters. Full file is retained.":info.editable?"Source file remains unchanged; edits go to a working copy during upload.":"Header options require TXT input; this format uses the uploader's existing importer.";
+   if(info.editable&&!f.fields){f.fields=info.header;draw()}
+ }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
+}
 function editSettings(){project.nomi=el("nomi").value;project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
-async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await save()}catch(e){alert(e)}}
+async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
 async function start(dry){try{await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"Upload started"}catch(e){alert(e)}}
 async function resume(){try{await call("resume");el("state").textContent="Resuming existing checkpoint…"}catch(e){alert(e)}}
 async function poll(){if(!ready)return;try{let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
@@ -64,6 +80,6 @@ el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
 el("replies").textContent=(s.replies||[]).map(r=>"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
 }catch(e){el("state").textContent=String(e)}}
 async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
-ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
+ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll()}
 window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
 </script></body></html>
