@@ -127,7 +127,7 @@ class API:
         header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
         if header_start is None:
             return {"editable": True, "header": {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}, "preview": "", "existing": False}
-        existing = bool(re.fullmatch(r"\\[[^\\]\\n]+\\]", lines[header_start].strip()))
+        existing = bool(re.fullmatch(r"\[[^\]\n]+\]", lines[header_start].strip()))
         header = {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}
         content_start = header_start
         if existing:
@@ -135,7 +135,7 @@ class API:
             content_start = header_start + 1
             prompts = []
             for i in range(content_start, len(lines)):
-                m = re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):\\s*(.*)$", lines[i].strip(), re.I)
+                m = re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):\s*(.*)$", lines[i].strip(), re.I)
                 if m:
                     k,v = m.group(1).lower(), m.group(2).strip()
                     key = {"type":"type","source":"source","date":"date","process every":"process","nomi mode":"mode","nomi":"prompts"}[k]
