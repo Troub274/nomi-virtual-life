@@ -30,7 +30,11 @@ class API:
 
     def save(self, project):
         if self.proc and self.proc.poll() is None: raise RuntimeError("Cannot modify a running upload.")
-        self.project = project
+        # The active checkpoint belongs to the backend, not the browser's stale copy.
+        active=self.project.get("active_run")
+        self.project = dict(project)
+        if active is not None:
+            self.project["active_run"]=active
         CONFIG.write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
 
