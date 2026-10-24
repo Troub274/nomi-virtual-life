@@ -255,7 +255,7 @@ class API:
             room = str(self.project.get("room_uuid") or "").strip()
             if not room: raise ValueError("Select or create an upload room first.")
             if not self.project.get("nomi_uuid"): raise ValueError("Load Nomis and choose a Nomi from the list before uploading.")
-            args += ["--room", room]
+            args += ["--room", room, "--nomi-uuid", str(self.project["nomi_uuid"])]
         if any(Path(x["path"]).suffix.lower() in (".zip",".json") and x.get("export_fields") for x in self.project.get("queue",[])):
             settings={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
                                  "intro":x["export_fields"].get("intro",""),
