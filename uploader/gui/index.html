@@ -64,7 +64,7 @@ async function loadSelected(){
  const f=project.queue[active];if(!f)return;const token=++selectionToken;
  try {let info=await call("inspect_file",f.path);if(token!==selectionToken)return;
    el("preview").value=info.preview||"";el("previewNotice").textContent=info.truncated?"Preview limited to first 120,000 characters. Full file is retained.":info.editable?"Source file remains unchanged; edits go to a working copy during upload.":"Header options require TXT input; this format uses the uploader's existing importer.";
-   if(info.editable&&!f.fields){f.fields=info.header;draw()}
+   if(info.editable){const old=f.fields;const looksEmpty=old && !old.source && !old.date && !old.process && !old.prompts && (!old.title || old.title===f.path.split(/[\\\\/]/).pop().replace(/\\.txt$/i,"")) && (!old.type || old.type==="Knowledge") && (!old.mode || old.mode==="Add");if(!old||looksEmpty){f.fields=info.header;draw()}}
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
 function editSettings(){project.nomi=el("nomi").value;project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
