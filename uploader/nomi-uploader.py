@@ -368,7 +368,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     if chunk_mode=="chars" and kind=="journal":
                         msg["entry_label"]=str(last_label)
                     add(msg)
-                for prompt in section["prompts"]:
+                for prompt in (section["prompts"] if interval else []):
                     nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                     if nums:
                         target=int(nums.group(2))
@@ -379,7 +379,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                         if target==current:
                             add({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt",
                                  "file":filename,"section":section["title"]})
-            for prompt in section["prompts"]:
+            for prompt in (section["prompts"] if interval else []):
                 nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                 if nums:
                     if entry_range is None or kind!="journal":
