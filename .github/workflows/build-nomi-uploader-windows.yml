@@ -1,4 +1,5 @@
 name: Build Nomi Uploader for Windows
+# Alpha build trigger: automatically publish latest main commit.
 on:
   workflow_dispatch:
   push:
