@@ -266,13 +266,14 @@ def render_prompt(prompt, nomi, user, source):
     return prompt.replace("[nomi]",nomi).replace("[user]",user or "the user").replace("[source]",source)
 
 def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
-              entry_range=None, chunk_mode="bytes"):
+              entry_range=None, chunk_mode="bytes", export_options=None):
     """Create the deterministic message plan.
 
     chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
     compatibility calls. New v1.1 runs use chunk_mode='chars'.
     """
     messages=[]
+    export_options=export_options or {}
     if chunk_mode not in ("bytes","chars"):
         raise ValueError("chunk_mode must be bytes or chars")
     if chunk_mode=="chars" and chunk_limit>MAX_API_CHARS:
@@ -291,14 +292,24 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             if entry_range is not None:
                 raise ValueError("--entries applies to Journal text/DOCX input, not Nomi export ZIP/JSON")
             rows=legacy.prepare_conversation_chunks([path],chunk_limit)
-            add({"text":render_prompt(DEFAULT_PROMPTS["chat"],nomi,user,"Nomi export"),
+            opts=export_options.get(str(path),{})
+            mode=str(opts.get("mode","Add")).lower()
+            if mode not in ("add","replace"): raise ValueError("Export Nomi Mode must be Add or Replace")
+            opening=str(opts.get("intro","")).strip()
+            base=DEFAULT_PROMPTS["chat"] if mode=="add" else ""
+            intro="\n".join(p for p in (base,opening) if p)
+            interval=opts.get("process_every")
+            interval=process_every if interval in (None,"") else int(interval)
+            if interval<0: raise ValueError("Process Every must be >= 0")
+            if intro:
+                add({"text":render_prompt(intro,nomi,user,"Nomi export"),
                  "kind":"intro","file":filename,"section":"Nomi export"})
             for idx,row in enumerate(rows,1):
                 add({"text":row["text"],"kind":"content","file":filename,
                      "section":"Nomi export","entry":idx})
-                if process_every and (idx%process_every==0 or idx==len(rows)):
-                    first=((idx-1)//process_every)*process_every+1
-                    prompt=PERIODIC_PROMPTS["chat"].format(first=first,last=idx)
+                if interval and (idx%interval==0 or idx==len(rows)):
+                    first=((idx-1)//interval)*interval+1
+                    prompt=str(opts.get("periodic") or PERIODIC_PROMPTS["chat"]).format(first=first,last=idx)
                     add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
                          "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
@@ -732,7 +743,7 @@ def _upload_locked(args):
                      "room_uuid":room,"year":year,"order":order,"files":files,
                      "passes":passes,"messages_per_pass":len(messages),
                      "manifest":manifest,"user":args.user,
-                     "process_every":args.process_every,
+                     "process_every":args.process_every,"export_options":export_options,
                      "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
                      "entry_range":entry_range_text(entry_range)}
         if chunk_mode=="chars": start_event["chunk_chars"]=chunk_limit
@@ -1115,6 +1126,7 @@ def main(argv=None):
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
+    parser.add_argument("--export-options",help="JSON map of ZIP/JSON paths to prompt options")
     parser.add_argument("--passes",type=int,default=1)
     parser.add_argument("--entries",
                         help="Journal entry selection: N, START-END, START-, -END, or all")
