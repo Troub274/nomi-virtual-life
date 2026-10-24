@@ -7,6 +7,9 @@ on:
       - 'uploader/nomi-uploader.py'
       - 'uploader/legacy_v085.py'
       - '.github/workflows/build-nomi-uploader-windows.yml'
+concurrency:
+  group: nomi-uploader-windows-alpha
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: windows-latest
@@ -40,6 +43,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          $latest = gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0) { throw "Could not verify current main commit; refusing to publish." }
+          if ($latest.Trim() -ne "${{ github.sha }}") {
+            Write-Host "This build is from an older commit. Skipping release publication to protect the latest ZIP."
+            exit 0
+          }
           $tag = "nomi-uploader-windows-alpha"
           gh release view $tag --repo ${{ github.repository }} 2>$null
           if ($LASTEXITCODE -ne 0) {
