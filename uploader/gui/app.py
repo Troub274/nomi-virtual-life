@@ -355,26 +355,12 @@ if __name__ == "__main__":
         sys.path.insert(0, str(UPLOADER.parent))
         import builtins
         import legacy_v085
-        target = os.environ.get("NOMI_GUI_TARGET_NOMI", "").casefold().strip()
-        target_uuid = os.environ.get("NOMI_GUI_TARGET_UUID", "").strip().casefold()
+        # GUI uploads select the Nomi through --nomi-uuid in the uploader.
+        # Never silently fall back to name matching (Beth and beth can coexist).
         def gui_input(prompt=""):
-            if "Select Nomi number" in prompt:
-                nomis = legacy_v085.get_nomis()
-                matches = [i for i, n in enumerate(nomis, 1) if (str(n.get("uuid","")).casefold() == target_uuid if target_uuid else str(n.get("name","")).casefold() == target)]
-                if len(matches) != 1:
-                    raise ValueError("Choose an exact, unique Nomi name in the GUI.")
-                return str(matches[0])
-            if "Room choice" in prompt:
-                return "1"
-            raise ValueError("Uploader needs interactive confirmation: " + prompt + ". Use CLI recovery for this case.")
+            raise RuntimeError("Unexpected interactive uploader prompt: "+str(prompt)+
+                               " (GUI must supply the required arguments).")
         builtins.input = gui_input
-        # Select from the actual API result, without going through console input.
-        def gui_choose_nomi(nomis):
-            matches=[n for n in nomis if (str(n.get("uuid","")).casefold().strip()==target_uuid if target_uuid else str(n.get("name","")).casefold().strip()==target)]
-            if len(matches)!=1:
-                raise ValueError("Select an available, uniquely named Nomi in the GUI before starting.")
-            return matches[0]
-        legacy_v085.choose_nomi = gui_choose_nomi
         runpy.run_path(str(UPLOADER), run_name="__main__")
     else:
         import webview
