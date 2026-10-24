@@ -39,11 +39,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          latest=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha')
-          if [ "$latest" != "${{ github.sha }}" ]; then
-            echo "Build was superseded; not publishing older binary."
-            exit 0
-          fi
           tag=nomi-uploader-linux-alpha
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --clobber
