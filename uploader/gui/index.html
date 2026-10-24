@@ -84,7 +84,7 @@ async function loadSelected(){
    if(info.editable){const old=f.fields;const looksEmpty=old && !old.source && !old.date && !old.process && !old.prompts && (!old.title || old.title===f.path.split(/[\\\\/]/).pop().replace(/\\.txt$/i,"")) && (!old.type || old.type==="Knowledge") && (!old.mode || old.mode==="Add");if(!old||looksEmpty){f.fields=info.header;draw()}}
  }catch(e){if(token===selectionToken)el("previewNotice").textContent=String(e)}
 }
-function editSettings(){let before=project.nomi;project.nomi=el("nomi").value;if(before!==project.nomi){project.room_uuid="";roomChoices=[];renderRooms();if(project.nomi)loadRooms()}project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
+function editSettings(){let before=project.nomi;project.nomi=el("nomi").value;project.nomi_uuid=nomiChoices.find(n=>n.name===project.nomi)?.uuid||"";if(before!==project.nomi){project.room_uuid="";roomChoices=[];renderRooms();if(project.nomi)loadRooms()}project.key=el("key").value;project.process=Number(el("process").value);project.reply_wait=Number(el("wait").value)}
 function renderNomis(){
 const sel=el("nomi"),selected=project.nomi||"";
 sel.replaceChildren();
@@ -97,11 +97,11 @@ async function loadNomis(){
  editSettings();
  const status=el("nomiStatus");status.textContent="Connecting…";
  try {const results=await call("list_nomis",project.key);
-   nomiChoices=results;renderNomis();
+   nomiChoices=results;project.nomi_uuid=nomiChoices.find(n=>n.name===project.nomi)?.uuid||"";renderNomis();
    status.textContent=results.length?results.length+" Nomis loaded":"Account returned no Nomis";if(project.nomi)await loadRooms();
  }catch(e){status.textContent="Could not load Nomis";alert("Nomi connection failed: "+String(e))}
 }
-function nomiId(){return nomiChoices.find(n=>n.name===project.nomi)?.uuid||""}
+function nomiId(){return project.nomi_uuid||""}
 function renderRooms(){
 const select=el("roomSelect");select.replaceChildren();const base=document.createElement("option");base.value="";base.textContent="Select upload room";select.appendChild(base);
 for(const room of roomChoices){const option=document.createElement("option");option.value=room.uuid;option.textContent=room.name+" ("+room.status+")";select.appendChild(option)}
@@ -139,7 +139,7 @@ project.room_uuid="";await loadRooms();await save();el("roomStatus").textContent
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
 async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
-async function start(dry){if(busy)return;busy=true;try{el("state").textContent="Preparing "+(dry?"preview":"new upload")+"…";await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){el("state").textContent="Could not start upload";alert(String(e))}finally{busy=false}}
+async function start(dry){if(busy)return;busy=true;try{el("state").textContent="Preparing "+(dry?"preview":"new upload")+"…";editSettings();if(!dry&&!project.nomi_uuid)throw Error("Load Nomis and select an actual Nomi from the dropdown before starting.");await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){el("state").textContent="Could not start upload";alert(String(e))}finally{busy=false}}
 async function refreshRuns(){
  try{const runs=await call("list_runs");const sel=el("runHistory");const keep=sel.value;sel.replaceChildren();
  const option=document.createElement("option");option.value="";option.textContent="Choose an earlier run";sel.appendChild(option);
