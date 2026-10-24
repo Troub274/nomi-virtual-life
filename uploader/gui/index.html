@@ -51,9 +51,9 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
 </div></section>
-<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start upload</button><button onclick="resume()">Resume</button></div>
+<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button></div>
 <p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
-<p class="small">Start sends real messages. Preview never sends messages. Interrupted or uncertain sends are not automatically retried.</p>
+<p class="small">Start NEW upload creates a separate checkpoint, even when changing Nomis. Resume continues the currently selected run. Previous run files are retained locally. Preview never sends messages.</p>
 </section>
 <section class="full"><h2>Live output</h2><pre id="log">Waiting for desktop host…</pre></section>
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
