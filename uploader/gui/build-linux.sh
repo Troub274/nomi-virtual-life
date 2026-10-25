@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-python -m pip install --upgrade pyinstaller pywebview
+python -m pip install --upgrade pyinstaller "pywebview[qt]" PyQt6-WebEngine
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader \
   --paths uploader \
   --hidden-import legacy_v085 \
+  --hidden-import qtpy \
+  --collect-all PyQt6.QtWebEngineCore \
+  --collect-all PyQt6.QtWebEngineWidgets \
   --collect-submodules webview \
   --add-data 'uploader/nomi-uploader.py:uploader' \
   --add-data 'uploader/legacy_v085.py:uploader' \
