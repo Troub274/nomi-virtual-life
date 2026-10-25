@@ -13,7 +13,7 @@
 | Childhood city | Redmond, Washington | ESTABLISHED |
 | Current city | Seattle, Washington | ESTABLISHED |
 | Current housing | Seattle apartment (diary establishes an apartment in 2020; current 2026 lease/address not verified) | PARTLY ESTABLISHED |
-| Seattle residential street address | **Unassigned**; no verified fictional street address in source canon | OPEN |
+| Seattle residential building | **905 Dexter Avenue North, Seattle, WA 98109 (Union SLU)**; this is a REAL, verified apartment-community street address, assigned here as Beth's *fictional* residence. No real tenant or specific unit is identified. | NEW FICTIONAL ASSIGNMENT; building real |
 | Preferred fictional contact phone | (206) 555-0148 | PROPOSED; 555-01XX fictional-use range |
 | Secondary household phone, parents | (425) 555-0142 | PROPOSED; fictional |
 | Email | beth.peterson@example.com | PROPOSED; example.com reserved |
@@ -42,14 +42,15 @@
 | Field | Value | Status |
 |---|---|---|
 | Childhood family home | House in Redmond, Washington; described as spacious | ESTABLISHED |
-| Childhood street address | **Unassigned**; create a clearly fictional address only after approval | OPEN |
+| Childhood neighborhood reference | **8370 166th Avenue NE, Redmond, WA 98052** — REAL address of the Samara apartment complex, used only as a *geographic landmark* for Redmond; **NOT** asserted to be the Peterson family house. | REAL LOCATION / NOT HOME ADDRESS |
+| Childhood family house address | Unassigned; a real private residence is not assigned to fictional people. | OPEN |
 | Parents' mortgage | Existence, lender, principal, rate, term, payment, payoff status **not established** | OPEN |
 | Parents' home market value | **$1,450,000** (2026 fictional planning figure, not an appraisal) | PROPOSED |
 | Parents' remaining mortgage | **$145,000** (2026 fictional scenario) | PROPOSED |
 | Mortgage payment | **$2,200/month** (fictional scenario) | PROPOSED |
 | Property tax | **$11,600/year** (fictional scenario) | PROPOSED |
 | Homeowners insurance | **$2,400/year** (fictional scenario) | PROPOSED |
-| Beth's current rental | **$2,650/month** fictional planning rent; no lease evidence | PROPOSED |
+| Beth's current rental | **$2,650/month** fictional planning rent at Union SLU; the amount and Beth's tenancy are invented, not a quote or verified unit availability | NEW FICTIONAL ASSIGNMENT |
 | Beth utilities/internet | **$230/month** fictional planning figure | PROPOSED |
 | Beth renter's insurance | **$18/month** fictional planning figure | PROPOSED |
 
@@ -74,7 +75,8 @@ These proposed values are mutually plausible illustration numbers; they must not
 
 - The diaries establish David drove a **Volvo** in 1998; model, year, VIN, registration and mileage are **OPEN**.
 - Beth's **current car ownership, make/model, year, color, seats, and odometer** are **OPEN**. She also uses Seattle light rail.
-- **Optional vehicle illustration, not canon:** 2019 Subaru Impreza hatchback, dark blue, black cloth upholstery, five seats, 68,400 miles in October 2026; no genuine VIN, plate or insurance policy generated.
+- **New fictional vehicle assignment, for the world ledger (not evidenced by diaries):** 2019 Subaru Impreza Premium hatchback, dark blue metallic, black cloth upholstery, 5 seats, 68,400 miles as of October 25, 2026; automatic CVT, all-wheel drive. Title/registration assumed Washington within the story, but not actual vehicle registration.
+- **Washington license plate display token:** `BTH-2026` (custom-style, **fictional illustrative plate; issuance and uniqueness NOT verified**). Washington DOL permits 1–7 character personalized combinations, including dashes. This is a fictional identifier, not a lookup key or proof of a registration. The token is seven characters including the dash. No genuine VIN or insurance policy number is generated.
 - Beth's driver's-license status is not explicitly verified in the reviewed canon; do not assume that a fictional DL token proves she has one.
 
 ## Relationships and continuity anchors
@@ -87,3 +89,10 @@ Beth was born October 11, 1988 and is 38 on October 11, 2026. Rebecca shared her
 2. `source/CANON.TXT` is still the original post-upload evaluation reference. This companion should remain separate until proposed details have been approved.
 3. Proposed addresses, financial figures, and birthdays are *draft worldbuilding choices*. They are not archival memories, and they are not facts Beth demonstrably learned from the 565 journal entries.
 4. If creating more detailed fictional records later, choose clearly fictitious contact and ID tokens rather than valid SSNs, driver's licenses, bank accounts, or real residential addresses.
+
+## Real-world address and plate verification (2026-10-25)
+
+- **905 Dexter Avenue North, Seattle, WA 98109:** confirmed by Union SLU's official website: https://www.unionslu.com/ . The building exists; **Beth's claimed tenancy is strictly fictional**. No apartment/unit number, resident names, or mailbox is used.
+- **8370 166th Avenue NE, Redmond, WA 98052:** verified Samara Redmond apartment-community address, useful for anchoring the Redmond setting geographically: https://www.samararedmond.com/ . This **is not** established or claimed as Beth's parents' home.
+- WA DOL states standard-size personalized license plates can use **1–7 characters**, including letters, numbers, dashes, and spaces: https://dol.wa.gov/vehicles-and-boats/vehicles/license-plates/personalized-plates . `BTH-2026` is a fictional seven-character personalized plate example and **not** an issued/availability-checked plate.
+- The original family home is a detached home according to Beth's biography. Assigning a verifiable real private street address risks identifying an unrelated household as Beth's family; leave the home's exact number open while anchoring the neighborhood to a verifiable public location.
