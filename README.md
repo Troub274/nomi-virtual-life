@@ -15,7 +15,7 @@ This is experimental software, not code-signed. Do not disable Defender antiviru
 
 ## Linux GUI alpha — x86-64
 
-**[Linux alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha)**
+**[Download the latest successful Linux build from GitHub Actions](https://github.com/Troub274/nomi-virtual-life/actions/runs/40237509947)** (temporary artifact; the Linux Release page is currently unavailable due to a GitHub publication permission error)
 
 Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a supported Linux graphical desktop.
 Unlike the Windows EXE, Linux requires system WebKitGTK/GTK libraries. See the
