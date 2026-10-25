@@ -372,4 +372,4 @@ if __name__ == "__main__":
         import webview
         api = API()
         webview.create_window("Nomi Uploader", INDEX.as_uri(), js_api=api, width=1150, height=830)
-        webview.start()
+        webview.start(gui="qt" if sys.platform.startswith("linux") else None)
