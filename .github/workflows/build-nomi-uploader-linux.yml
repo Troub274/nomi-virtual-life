@@ -56,5 +56,5 @@ jobs:
             gh release upload "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --repo "${{ github.repository }}" --clobber
             gh release edit "$tag" --repo "${{ github.repository }}" --notes-file uploader/gui/README-LINUX.md --prerelease
           else
-            gh release create "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --repo "${{ github.repository }}" --title "Nomi Uploader Linux Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/gui/README-LINUX.md
+            gh release create "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --repo "${{ github.repository }}" --title "Nomi Uploader Linux Alpha" --prerelease --target main --notes-file uploader/gui/README-LINUX.md
           fi
