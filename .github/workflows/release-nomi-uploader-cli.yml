@@ -27,13 +27,22 @@ jobs:
         run: |
           python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py
           python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
-      - name: Package CLI
+      - name: Smoke-test actual downloadable CLI layout
         run: |
           mkdir -p dist/nomi-uploader-cli
           cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt dist/nomi-uploader-cli/
           cp uploader/README.md uploader/RECOVERY.md dist/nomi-uploader-cli/
           cp uploader/CLI-RELEASE.md dist/nomi-uploader-cli/INSTALL.md
-          (cd dist/nomi-uploader-cli && zip -q ../NomiUploader-CLI-Python.zip *)
+          cd dist/nomi-uploader-cli
+          python nomi-uploader.py --help >/dev/null
+          printf '[Smoke Test]\\nType: Knowledge\\n\\nHello from CLI release.\\n' > smoke-test.txt
+          python nomi-uploader.py --dry-run --nomi SmokeTest --checkpoint smoke-checkpoint.jsonl smoke-test.txt
+          rm smoke-test.txt
+          test -s INSTALL.md
+          test -s legacy_v085.py
+      - name: Package CLI
+        run: |
+          (cd dist/nomi-uploader-cli && zip -q ../NomiUploader-CLI-Python.zip nomi-uploader.py legacy_v085.py requirements.txt README.md RECOVERY.md INSTALL.md)
           sha256sum dist/NomiUploader-CLI-Python.zip
       - uses: actions/upload-artifact@v4
         with:
