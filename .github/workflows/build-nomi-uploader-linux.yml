@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Install Linux WebKitGTK development dependencies
@@ -35,14 +35,26 @@ jobs:
           name: NomiUploader-Linux-x86_64
           path: dist/NomiUploader-Linux-x86_64.tar.gz
           if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NomiUploader-Linux-x86_64
+          path: dist
       - name: Publish Linux alpha release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          test -s dist/NomiUploader-Linux-x86_64.tar.gz
           tag=nomi-uploader-linux-alpha
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --clobber
-            gh release edit "$tag" --notes-file uploader/gui/README-LINUX.md --prerelease
+          if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --repo "${{ github.repository }}" --clobber
+            gh release edit "$tag" --repo "${{ github.repository }}" --notes-file uploader/gui/README-LINUX.md --prerelease
           else
-            gh release create "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --title "Nomi Uploader Linux Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/gui/README-LINUX.md
+            gh release create "$tag" dist/NomiUploader-Linux-x86_64.tar.gz --repo "${{ github.repository }}" --title "Nomi Uploader Linux Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/gui/README-LINUX.md
           fi
