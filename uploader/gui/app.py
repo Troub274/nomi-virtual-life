@@ -23,7 +23,7 @@ class API:
         self.proc = None
         self.lines = []
         self.lock = threading.Lock()
-        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900}
+        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": ""}
         if CONFIG.exists():
             try: self.project.update(json.loads(CONFIG.read_text(encoding="utf-8")))
             except (OSError, ValueError): pass
@@ -126,7 +126,7 @@ class API:
         lines = raw.splitlines(keepends=True)
         header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
         if header_start is None:
-            return {"editable": True, "header": {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}, "preview": "", "existing": False}
+            return {"editable": True, "header": {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "headerEvery": "", "headerText": "", "replyPrompt": "", "mode": "Add", "prompts": ""}, "preview": "", "existing": False}
         existing = bool(re.fullmatch(r"\[[^\]\n]+\]", lines[header_start].strip()))
         header = {"title": source.stem, "type": "Knowledge", "source": "", "date": "", "process": "", "mode": "Add", "prompts": ""}
         content_start = header_start
@@ -135,10 +135,10 @@ class API:
             content_start = header_start + 1
             prompts = []
             for i in range(content_start, len(lines)):
-                m = re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):\s*(.*)$", lines[i].strip(), re.I)
+                m = re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Reply Prompt|Nomi Mode|Nomi):\s*(.*)$", lines[i].strip(), re.I)
                 if m:
                     k,v = m.group(1).lower(), m.group(2).strip()
-                    key = {"type":"type","source":"source","date":"date","process every":"process","nomi mode":"mode","nomi":"prompts"}[k]
+                    key = {"type":"type","source":"source","date":"date","process every":"process","header every":"headerEvery","header text":"headerText","reply prompt":"replyPrompt","nomi mode":"mode","nomi":"prompts"}[k]
                     if key == "prompts": prompts.append(v)
                     else: header[key] = v
                     content_start = i + 1
@@ -162,7 +162,7 @@ class API:
             pos = first + 1
             while pos < len(lines):
                 line = lines[pos].strip()
-                if not line or re.match(r"^(Type|Source|Date|Process Every|Nomi Mode|Nomi):", line, re.I):
+                if not line or re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Reply Prompt|Nomi Mode|Nomi):", line, re.I):
                     pos += 1
                 else: break
             body = "".join(lines[pos:])
@@ -175,10 +175,10 @@ class API:
         mode = str(fields.get("mode") or "Add").strip().lower()
         if mode not in ("add","replace"): raise ValueError("Invalid Nomi Mode")
         header = ["[" + title + "]", "Type: " + kind.title()]
-        for key, prop in (("Source", "source"), ("Date", "date"), ("Process Every", "process")):
+        for key, prop in (("Source", "source"), ("Date", "date"), ("Process Every", "process"), ("Header Every", "headerEvery"), ("Header Text", "headerText"), ("Reply Prompt", "replyPrompt")):
             v = str(fields.get(prop) or "").strip()
             if v:
-                if prop == "process" and (not v.isdecimal() or int(v) < 0):
+                if prop in ("process","headerEvery") and (not v.isdecimal() or int(v) < 0):
                     raise ValueError("Process Every must be a nonnegative integer")
                 header.append(key + ": " + v)
         header.append("Nomi Mode: " + mode.title())
@@ -266,11 +266,16 @@ class API:
             settings={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
                                  "intro":x["export_fields"].get("intro",""),
                                  "periodic":x["export_fields"].get("periodic",""),
-                                 "process_every":x["export_fields"].get("process","")}
+                                 "process_every":x["export_fields"].get("process",""),
+                                 "header_every":x["export_fields"].get("headerEvery",""),
+                                 "header_text":x["export_fields"].get("headerText",None)}
                       for x in self.project["queue"] if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
             opts=directory/"export-options.json"
             opts.write_text(json.dumps(settings,ensure_ascii=False,indent=2),encoding="utf-8")
             args += ["--export-options",str(opts)]
+        args += ["--header-every",str(int(self.project.get("header_every",0))),
+                 "--header-text",str(self.project.get("header_text","")),
+                 "--reply-prompt",str(self.project.get("reply_prompt",""))]
         args += ["--process-every", str(int(self.project.get("process", 5))),
                  "--reply-max-wait", str(float(self.project.get("reply_wait", 900)))]
         args += ["--checkpoint", str(directory / "upload.jsonl"),
