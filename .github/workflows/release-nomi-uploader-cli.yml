@@ -36,7 +36,7 @@ jobs:
           cd dist/nomi-uploader-cli
           python nomi-uploader.py --help >/dev/null
           printf '[Smoke Test]\\nType: Knowledge\\n\\nHello from CLI release.\\n' > smoke-test.txt
-          python nomi-uploader.py --dry-run --nomi SmokeTest --checkpoint smoke-checkpoint.jsonl smoke-test.txt
+          python nomi-uploader.py --dry-run --nomi SmokeTest --checkpoint smoke-checkpoint.jsonl --header-every 1 --header-text "Your biography:" --process-every 0 smoke-test.txt
           rm smoke-test.txt
           test -s INSTALL.md
           test -s legacy_v085.py
