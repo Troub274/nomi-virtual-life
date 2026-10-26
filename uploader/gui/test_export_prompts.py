@@ -84,7 +84,6 @@ class ExportOptionsTests(unittest.TestCase):
             self.assertFalse(any(m["kind"]=="prompt" for m in messages))
 
     def test_header_every_two_and_global_reply_prompt(self):
-        messages=plan({"mode":"Replace","intro":"","process_every":"2"},2)
         with patch.object(uploader.legacy,"prepare_conversation_chunks",return_value=ROWS):
             result=uploader.plan_text([FILE],"Ava","User","US",2026,750,2,None,"chars",{FILE:{"mode":"Replace","intro":""}},2,"My biography","Revisit {first}-{last}")
         contents=[m["text"] for m in result if m["kind"]=="content"]
