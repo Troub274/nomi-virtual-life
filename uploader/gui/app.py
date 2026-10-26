@@ -289,6 +289,25 @@ class API:
                 raise
         return self._run(args)
 
+    def pause(self):
+        if not self.proc or self.proc.poll() is not None:
+            raise RuntimeError("No running upload to pause.")
+        marker=Path(str(self._active_dir()/"upload.jsonl")+".pause")
+        marker.write_text("pause",encoding="utf-8")
+        return "Pause requested; completing the current API operation."
+
+    def clear_history(self):
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Cannot clear history while an upload is running.")
+        # Hide completed run history; never delete checkpoints or source data.
+        found=self.list_runs()
+        ids=[r["id"] for r in found if r["completed"]]
+        hidden=set(self.project.get("hidden_run_ids",[]))
+        hidden.update(ids)
+        self.project["hidden_run_ids"]=sorted(hidden)
+        CONFIG.write_text(json.dumps(self.project,ensure_ascii=False,indent=2),encoding="utf-8")
+        return len(ids)
+
     def list_runs(self):
         """Read-only history; legacy alpha checkpoint remains selectable."""
         found=[]
@@ -308,7 +327,8 @@ class API:
                 "room":start.get("room_uuid","") if start else "",
                 "completed":(directory/"completed.json").exists(),
                 "modified":cp.stat().st_mtime})
-        return sorted(found,key=lambda r:r["modified"],reverse=True)
+        hidden=set(self.project.get("hidden_run_ids",[]))
+        return sorted((r for r in found if r["id"] not in hidden),key=lambda r:r["modified"],reverse=True)
 
     def select_run(self, run_id):
         if self.proc and self.proc.poll() is None:
@@ -327,6 +347,7 @@ class API:
         directory=self._active_dir()
         if not self._has_checkpoint(directory):
             raise ValueError("No checkpoint exists for the selected run.")
+        Path(str(directory/"upload.jsonl")+".pause").unlink(missing_ok=True)
         return self._run(["--resume","--checkpoint",str(directory/"upload.jsonl"),
                           "--completion",str(directory/"completed.json"),
                           "--replies",str(directory/"replies.txt")])
