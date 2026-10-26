@@ -1,6 +1,6 @@
-# Nomi Uploader v1.1
+# Nomi Uploader v1.2
 
-**Current:** Nomi Uploader 1.1. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.2. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Set `NOMI_API_KEY` before live uploads.
 
@@ -26,6 +26,51 @@ python examples/run_package.py tammy --restart
 ```
 
 `--restart` is explicit. An unfinished checkpoint is still protected and will not be silently discarded.
+
+## Version 1.2: Headers and replies
+
+The **Header Every** option prepends custom text to content messages at a selected interval.
+The **Process Every** option independently controls reflection requests, with
+**Reply Prompt** replacing the built-in periodic reflection text when specified.
+Both frequency controls accept `0` to disable their respective feature. In the GUI,
+the same global controls appear under Settings; TXT files have per-section overrides
+`Header Every:`, `Header Text:`, `Process Every:`, and `Reply Prompt:`.
+
+To load a book with autobiographical framing on **every content chunk** but no periodic
+reflection:
+
+```sh
+python uploader/nomi-uploader.py --header-every 1 \
+  --header-text "The following is part of your biography." \
+  --process-every 0 autobiography.txt
+```
+
+To frame every fifth chunk and request reflections after every ten logical units:
+
+```sh
+python uploader/nomi-uploader.py --header-every 5 \
+  --header-text "The following is part of your biography." \
+  --process-every 10 --reply-prompt "Reflect on items {first}-{last}." \
+  autobiography.txt
+```
+
+For TXT section-level overrides (the source file itself is not rewritten by the GUI):
+
+```text
+[My life, chapter one]
+Type: Knowledge
+Header Every: 1
+Header Text: The following is part of your biography.
+Process Every: 0
+
+The original chapter text begins here.
+```
+
+Headers are counted against each message's character budget and included in the
+deterministic checkpoint manifest. Header frequency counts **content chunks**, while
+Process Every counts **logical units** (e.g., journal entries or knowledge paragraphs).
+The uploader does not resend or alter a checkpoint's original plan during resume.
+A custom Reply Prompt supports `{first}` and `{last}` unit labels.
 
 ## Raw uploader
 
