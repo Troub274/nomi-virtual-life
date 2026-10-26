@@ -70,5 +70,37 @@ class ExportOptionsTests(unittest.TestCase):
         self.assertEqual([m["kind"] for m in messages],
                          ["intro","content","content","prompt","content","prompt"])
 
+
+    def test_header_every_one_without_reflections(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            file=Path(tmp)/"book.txt"
+            file.write_text("[Biography]\nType: Knowledge\n\n"+"A long autobiographical passage. "*80)
+            messages=uploader.plan_text([str(file)],"Beth","User","US",2026,180,0,None,"chars",None,1,"Your autobiography:","")
+            contents=[m["text"] for m in messages if m["kind"]=="content"]
+            self.assertGreater(len(contents),1)
+            self.assertTrue(all(x.startswith("Your autobiography:\n") for x in contents))
+            self.assertTrue(all(len(x)<=180 for x in contents))
+            self.assertFalse(any(m["kind"]=="prompt" for m in messages))
+
+    def test_header_every_two_and_global_reply_prompt(self):
+        messages=plan({"mode":"Replace","intro":"","process_every":"2"},2)
+        with patch.object(uploader.legacy,"prepare_conversation_chunks",return_value=ROWS):
+            result=uploader.plan_text([FILE],"Ava","User","US",2026,750,2,None,"chars",{FILE:{"mode":"Replace","intro":""}},2,"My biography","Revisit {first}-{last}")
+        contents=[m["text"] for m in result if m["kind"]=="content"]
+        self.assertEqual(contents,["one","My biography\ntwo","three"])
+        self.assertEqual([m["text"] for m in result if m["kind"]=="prompt"],["Revisit 1-2","Revisit 3-3"])
+
+    def test_section_header_zero_overrides_global(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            file=Path(tmp)/"book.txt"
+            file.write_text("[Bio]\nType: Knowledge\nHeader Every: 0\nHeader Text: Different\nProcess Every: 0\n\nPassage")
+            result=uploader.plan_text([str(file)],"Beth","User","US",2026,750,0,None,"chars",None,1,"Global","")
+            content=[m["text"] for m in result if m["kind"]=="content"]
+            self.assertEqual(len(content),1)
+            self.assertNotIn("Global",content[0])
+            self.assertNotIn("Different",content[0])
+
 if __name__=="__main__":
     unittest.main()
