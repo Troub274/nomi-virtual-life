@@ -300,6 +300,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
         messages.append(message)
 
     for filename in files:
+        content_count=0
         path=Path(filename)
         if path.suffix.lower() in (".zip",".json"):
             if entry_range is not None:
@@ -320,7 +321,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 add({"text":render_prompt(intro,nomi,user,"Nomi export"),
                  "kind":"intro","file":filename,"section":"Nomi export"})
             for idx,row in enumerate(rows,1):
-                add({"text":framing(row["text"],idx,he,ht),"kind":"content","file":filename,
+                content_count+=1
+                add({"text":framing(row["text"],content_count,he,ht),"kind":"content","file":filename,
                      "section":"Nomi export","entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
@@ -364,8 +366,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 for j,frag in enumerate(fragments,1):
                     body=prefix+"\nPart: %d/%d\n"%(j,len(fragments))+frag
                     # Header Every counts content chunks, not sections or reflections.
-                    content_index=1+sum(1 for item in messages if item["kind"]=="content")
-                    body=framing(body,content_index,he,ht)
+                    content_count+=1
+                    body=framing(body,content_count,he,ht)
                     size=len(body) if chunk_mode=="chars" else len(body.encode("utf-8"))
                     if size>chunk_limit:
                         unit_name="character" if chunk_mode=="chars" else "byte"
