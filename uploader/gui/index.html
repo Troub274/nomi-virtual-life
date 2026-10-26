@@ -10,14 +10,14 @@ input,select,textarea,button{font:inherit;border-radius:7px;padding:9px;color:#e
 input,textarea,select{width:100%}button{cursor:pointer;background:#374151}button:hover{background:#4b5563}
 button.primary{background:#2563eb;border-color:#2563eb}.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}
 .small{font-size:12px;color:#9ca3af}.stack{display:grid;gap:10px}label{font-size:13px;color:#cbd5e1}
-.queue{display:grid;gap:6px;max-height:310px;overflow:auto} .item{display:flex;align-items:center;gap:6px;padding:7px;border:1px solid #374151;border-radius:7px}
+.queue{display:flex;flex-direction:column;gap:6px;height:310px;min-height:310px;width:100%;overflow:auto;align-items:stretch}.queue .item{flex:0 0 auto;width:100%} .item{display:flex;align-items:center;gap:6px;padding:7px;border:1px solid #374151;border-radius:7px}
 .item.active{border-color:#60a5fa}.item button{padding:4px 8px}.item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
 pre{white-space:pre-wrap;word-break:break-word;max-height:270px;overflow:auto;background:#0b1220;padding:12px;border-radius:8px;font-size:12px}
 progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospace,monospace}
 @media(max-width:850px){main{grid-template-columns:1fr}.full{grid-column:auto}}
 </style></head><body><header><h1>Nomi Uploader</h1><div class="small">Graphical front end to the existing Python uploader — no command line needed</div></header>
 <main>
-<section><h2>Upload queue</h2><div class="row"><button class="primary" onclick="addFiles()">Add files…</button><button onclick="save()">Save project</button></div><p class="small">Files are processed in the order shown. Use ↑ and ↓ to reorder.</p><div class="queue" id="queue"></div></section>
+<section><h2>Upload queue</h2><div class="row"><button class="primary" onclick="addFiles()">Add files…</button><button onclick="save()">Save project</button><span id="saveFeedback" class="small" role="status"></span></div><p class="small">Files are processed in the order shown. Use ↑ and ↓ to reorder.</p><div class="queue" id="queue"></div></section>
 <section><h2>File header and prompts</h2><p class="small" id="selectedLabel">Select a text file to edit its uploader header.</p>
 <div class="stack">
 <label>Section title<input id="titleField" oninput="updateFields()"></label>
@@ -51,8 +51,8 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
 </div></section>
-<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button></div>
-<div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button></div>
+<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button><button onclick="pauseUpload()">Pause / Stop</button></div>
+<div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button><button onclick="clearHistory()">Clear history</button></div>
 <p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
 <p class="small">Start NEW upload creates a separate checkpoint, even when changing Nomis. Resume continues the currently selected run. Previous run files are retained locally. Preview never sends messages.</p>
 </section>
@@ -154,7 +154,10 @@ await call("room_action","delete",project.key,nomiId(),room.uuid);
 project.room_uuid="";await loadRooms();await save();el("roomStatus").textContent="Room deleted";
 }catch(e){alert("Delete result: "+String(e)+"\nRefresh before retrying.")}}
 async function call(method,...args){if(!ready)throw Error("Desktop host not connected");return await window.pywebview.api[method](...args)}
-async function save(){editSettings();await call("save",project);el("state").textContent="Project saved"}
+async function save(){
+ try{editSettings();await call("save",project);el("saveFeedback").textContent="Saved successfully";return true}
+ catch(e){el("saveFeedback").textContent="Save failed";alert("Could not save project: "+String(e));throw e}
+}
 async function addFiles(){try{let paths=await call("choose");for(let path of paths)project.queue.push({path,header:""});if(active<0&&project.queue.length)active=0;draw();await loadSelected();await save()}catch(e){alert(e)}}
 async function start(dry){if(busy)return;busy=true;try{el("state").textContent="Preparing "+(dry?"preview":"new upload")+"…";editSettings();if(!dry&&!project.nomi_uuid)throw Error("Load Nomis and select an actual Nomi from the dropdown before starting.");await save();await call("begin",dry);el("state").textContent=dry?"Generating preview…":"New upload started";if(!dry)await refreshRuns()}catch(e){el("state").textContent="Could not start upload";alert(String(e))}finally{busy=false}}
 async function refreshRuns(){
@@ -167,6 +170,15 @@ async function refreshRuns(){
 async function switchRun(){
  const selected=el("runHistory").value;if(!selected)return;
  try{await call("select_run",selected);el("state").textContent="Selected checkpoint: "+selected;await poll()}
+ catch(e){alert(String(e))}
+}
+async function pauseUpload(){
+ try{const message=await call("pause");el("state").textContent=message;alert(message)}
+ catch(e){alert(String(e))}
+}
+async function clearHistory(){
+ if(!confirm("Clear completed uploads from the visible history? Checkpoints and source files will NOT be deleted; unfinished runs remain listed."))return;
+ try{const count=await call("clear_history");await refreshRuns();el("state").textContent="Cleared "+count+" completed history entries (files retained)."}
  catch(e){alert(String(e))}
 }
 async function resume(){try{await call("resume");el("state").textContent="Resuming existing checkpoint…"}catch(e){alert(e)}}
