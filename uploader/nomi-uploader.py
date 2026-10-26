@@ -18,13 +18,13 @@ try:
 except ImportError:
     import legacy_v085 as legacy
 
-VERSION = "1.1"
+VERSION = "1.2"
 MAX_API_CHARS = 800
 DEFAULT_CHUNK_CHARS = 750
 KNOWN_WAIT_ERRORS = {"NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests"}
 TYPES = {"knowledge", "instructions", "journal", "chat"}
 HEADING = re.compile(r"^\[([^\]\n]+)\]\s*$")
-META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every):\s*(.*)$", re.I)
+META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every|Header Every|Header Text|Reply Prompt):\s*(.*)$", re.I)
 ENTRY = re.compile(r"^(?:ENTRY|EPISODE|JOURNAL ENTRY|DIARY ENTRY)\s*#?\s*(\d+)\b.*$", re.I)
 SPEAKER = re.compile(r"^([^:\n]{1,70}):\s+(.+)$")
 MONTHS = {m.lower():i for i,m in enumerate(("January","February","March","April","May","June","July","August","September","October","November","December"),1)}
@@ -110,12 +110,12 @@ def parse_sections(text, filename):
         if match:
             if current: sections.append(current)
             current={"title":match.group(1),"type":"knowledge","source":None,"date":None,
-                     "prompts":[],"mode":"add","process_every":None,"lines":[]}
+                     "prompts":[],"mode":"add","process_every":None,"header_every":None,"header_text":None,"reply_prompt":None,"lines":[]}
             in_header=True
             continue
         if current is None:
             current={"title":Path(filename).stem,"type":"knowledge","source":None,
-                     "date":None,"prompts":[],"mode":"add","process_every":None,"lines":[]}
+                     "date":None,"prompts":[],"mode":"add","process_every":None,"header_every":None,"header_text":None,"reply_prompt":None,"lines":[]}
             in_header=True
         meta=META.match(line.strip()) if in_header else None
         if meta:
@@ -129,6 +129,11 @@ def parse_sections(text, filename):
             elif k=="process every":
                 current["process_every"]=int(v)
                 if current["process_every"]<0: raise ValueError("Process Every must be >= 0")
+            elif k=="header every":
+                current["header_every"]=int(v)
+                if current["header_every"]<0: raise ValueError("Header Every must be >= 0")
+            elif k=="header text": current["header_text"]=v
+            elif k=="reply prompt": current["reply_prompt"]=v
             elif k=="nomi mode":
                 if v.lower() not in ("add","replace"): raise ValueError("Nomi Mode must be Add or Replace")
                 current["mode"]=v.lower()
@@ -266,7 +271,8 @@ def render_prompt(prompt, nomi, user, source):
     return prompt.replace("[nomi]",nomi).replace("[user]",user or "the user").replace("[source]",source)
 
 def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
-              entry_range=None, chunk_mode="bytes", export_options=None):
+              entry_range=None, chunk_mode="bytes", export_options=None,
+              header_every=0, header_text="", reply_prompt=""):
     """Create the deterministic message plan.
 
     chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
@@ -279,6 +285,13 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
     if chunk_mode=="chars" and chunk_limit>MAX_API_CHARS:
         raise ValueError("Nomi API messages cannot exceed %d characters"%MAX_API_CHARS)
     splitter=split_char_budget if chunk_mode=="chars" else split_budget
+    if header_every<0: raise ValueError("Header Every cannot be negative")
+    def framing(text, index, every, header):
+        if not every or index%every: return text
+        return header+"\n"+text if header else text
+    def reserve_for_header(limit, header, every):
+        if not every or not header: return limit
+        return limit-(len(header)+1 if chunk_mode=="chars" else len((header+"\n").encode("utf-8")))
 
     def add(message):
         if chunk_mode=="chars" and len(message["text"])>chunk_limit:
@@ -291,8 +304,10 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
         if path.suffix.lower() in (".zip",".json"):
             if entry_range is not None:
                 raise ValueError("--entries applies to Journal text/DOCX input, not Nomi export ZIP/JSON")
-            rows=legacy.prepare_conversation_chunks([path],chunk_limit)
             opts=export_options.get(str(path),{})
+            he=header_every if opts.get("header_every") in (None,"") else int(opts["header_every"])
+            ht=header_text if opts.get("header_text") is None else str(opts["header_text"])
+            rows=legacy.prepare_conversation_chunks([path],reserve_for_header(chunk_limit,ht,he))
             mode=str(opts.get("mode","Add")).lower()
             if mode not in ("add","replace"): raise ValueError("Export Nomi Mode must be Add or Replace")
             opening=str(opts.get("intro","")).strip()
@@ -305,11 +320,11 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 add({"text":render_prompt(intro,nomi,user,"Nomi export"),
                  "kind":"intro","file":filename,"section":"Nomi export"})
             for idx,row in enumerate(rows,1):
-                add({"text":row["text"],"kind":"content","file":filename,
+                add({"text":framing(row["text"],idx,he,ht),"kind":"content","file":filename,
                      "section":"Nomi export","entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
-                    prompt=str(opts.get("periodic") or PERIODIC_PROMPTS["chat"]).format(first=first,last=idx)
+                    prompt=str(opts.get("periodic") or reply_prompt or PERIODIC_PROMPTS["chat"]).format(first=first,last=idx)
                     add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
                          "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
@@ -324,6 +339,12 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
             add({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
+            he=section.get("header_every")
+            if he is None: he=header_every
+            ht=section.get("header_text")
+            if ht is None: ht=header_text
+            rp=section.get("reply_prompt")
+            if rp is None: rp=reply_prompt
             interval=section.get("process_every")
             if interval is None: interval=process_every
             if interval<0: raise ValueError("process_every cannot be negative")
@@ -334,7 +355,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 reserve=(prefix+"\nPart: 999/999\n" if chunk_mode=="bytes"
                          else prefix+"\nPart: 99999/99999\n")
                 overhead=len(reserve) if chunk_mode=="chars" else len(reserve.encode("utf-8"))
-                room=chunk_limit-overhead
+                room=reserve_for_header(chunk_limit-overhead,ht,he)
                 if chunk_mode=="bytes":
                     room=max(50,room)
                 elif room<50:
@@ -342,6 +363,9 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                 fragments=splitter(unit["text"],room)
                 for j,frag in enumerate(fragments,1):
                     body=prefix+"\nPart: %d/%d\n"%(j,len(fragments))+frag
+                    # Header Every counts content chunks, not sections or reflections.
+                    content_index=1+sum(1 for item in messages if item["kind"]=="content")
+                    body=framing(body,content_index,he,ht)
                     size=len(body) if chunk_mode=="chars" else len(body.encode("utf-8"))
                     if size>chunk_limit:
                         unit_name="character" if chunk_mode=="chars" else "byte"
@@ -361,7 +385,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                         custom=[p for p in section["prompts"] if not re.search(r"\\b(?:entries|episodes)\\s+\\d+\\s*[-–]\\s*\\d+\\b",p,re.I)]
                     else:
                         custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
-                    template=custom[0] if len(custom)==1 else PERIODIC_PROMPTS[default_key]
+                    template=custom[0] if len(custom)==1 else (rp or PERIODIC_PROMPTS[default_key])
                     prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
                     msg={"text":prompt,"kind":"prompt","file":filename,
                          "section":section["title"],"entry":idx}
@@ -682,6 +706,9 @@ def _upload_locked(args):
         files=init["files"]; passes=init["passes"]
         args.user=init.get("user","")
         args.process_every=init.get("process_every",0)
+        args.header_every=init.get("header_every",0)
+        args.header_text=init.get("header_text","")
+        args.reply_prompt=init.get("reply_prompt","")
         if init.get("chunk_mode")=="chars" or "chunk_chars" in init:
             chunk_mode="chars"
             chunk_limit=int(init.get("chunk_limit",init.get("chunk_chars",DEFAULT_CHUNK_CHARS)))
@@ -714,7 +741,8 @@ def _upload_locked(args):
     else:
         export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if args.export_options else {}
     messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
-                       args.process_every,entry_range,chunk_mode,export_options)
+                       args.process_every,entry_range,chunk_mode,export_options,
+                       args.header_every,args.header_text,args.reply_prompt)
     manifest=digest(messages)
     if old and manifest!=init["manifest"]: raise ValueError("Manifest changed: resume requires identical content and options")
     print("Nomi:",nomi["name"],"Date order:",order,"Year:",year,"Messages per pass:",len(messages),"Passes:",passes)
@@ -756,6 +784,7 @@ def _upload_locked(args):
                      "passes":passes,"messages_per_pass":len(messages),
                      "manifest":manifest,"user":args.user,
                      "process_every":args.process_every,"export_options":export_options,
+                     "header_every":args.header_every,"header_text":args.header_text,"reply_prompt":args.reply_prompt,
                      "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
                      "entry_range":entry_range_text(entry_range)}
         if chunk_mode=="chars": start_event["chunk_chars"]=chunk_limit
@@ -1128,7 +1157,7 @@ def interactive_menu():
 
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
-    parser=argparse.ArgumentParser(description="Nomi Uploader v1.1")
+    parser=argparse.ArgumentParser(description="Nomi Uploader v1.2")
     parser.add_argument("files",nargs="*")
     parser.add_argument("--version",action="version",version=VERSION)
     parser.add_argument("--utility",action="store_true")
@@ -1152,6 +1181,9 @@ def main(argv=None):
     parser.add_argument("--entries",
                         help="Journal entry selection: N, START-END, START-, -END, or all")
     parser.add_argument("--process-every",type=int,default=0,help="Automatic type-aware recollection/analysis after N units; 0 disables")
+    parser.add_argument("--header-every",type=int,default=0,help="Prepend --header-text to each Nth content chunk; 0 disables")
+    parser.add_argument("--header-text",default="",help="Text prepended according to --header-every")
+    parser.add_argument("--reply-prompt",default="",help="Override the default periodic reflection prompt; {first} and {last} allowed")
     parser.add_argument("--chunk-chars",type=int,default=None,
                         help="Maximum characters in a new-run API message (default 750; hard maximum 800)")
     parser.add_argument("--chunk-bytes",type=int,default=None,
@@ -1169,6 +1201,7 @@ def main(argv=None):
         print_checkpoint_status(args.checkpoint)
         return
     if args.process_every<0: parser.error("process-every must be >= 0")
+    if args.header_every<0: parser.error("header-every must be >= 0")
     if args.passes<1: parser.error("passes must be >= 1")
     if args.chunk_chars is not None and args.chunk_bytes is not None:
         parser.error("use --chunk-chars or legacy --chunk-bytes, not both")
