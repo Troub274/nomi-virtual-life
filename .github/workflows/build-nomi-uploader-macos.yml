@@ -60,3 +60,11 @@ jobs:
           else
             gh release create "$tag" dist/NomiUploader-macOS-arm64.zip dist/NomiUploader-macOS-x86_64.zip --title "Nomi Uploader macOS Alpha" --prerelease --target "${{ github.sha }}" --notes-file uploader/gui/README-MACOS.md
           fi
+      - name: Verify published macOS release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for arch in arm64 x86_64; do
+            name="NomiUploader-macOS-${arch}.zip"
+            gh release view nomi-uploader-macos-alpha --json assets --jq '.assets[].name' | grep -Fx "$name"
+          done
