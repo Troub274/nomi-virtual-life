@@ -882,6 +882,14 @@ def _upload_locked(args):
         print("Resuming reflection after explicit Nomi not-ready response: pass %d message %d"%(p,i),flush=True)
     for p in range(1,passes+1):
         for i,m in enumerate(messages,1):
+            # Cooperative pause: do not abandon a request mid-flight.
+            # Check before each new message; checkpoint remains authoritative.
+            pause_marker=Path(str(cp)+".pause")
+            if pause_marker.exists():
+                pause_marker.unlink()
+                record(cp,{"event":"paused","pass":p,"index":i})
+                print("Upload paused at checkpoint before pass %d message %d."%(p,i),flush=True)
+                return
             key=(p,i)
             if key not in confirmed:
                 if key in send_retry_authorized:
