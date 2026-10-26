@@ -26,6 +26,9 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <div class="row"><label style="flex:1">Source<input id="sourceField" placeholder="Whose material is this?" oninput="updateFields()"></label>
 <label style="flex:1">Date<input id="dateField" placeholder="October 24, 2026" oninput="updateFields()"></label></div>
 <label>Process Every<input id="processField" type="number" min="0" placeholder="Use global default" oninput="updateFields()"></label>
+<label>Header Every (0 = disabled)<input id="headerEveryField" type="number" min="0" placeholder="Use global setting" oninput="updateFields()"></label>
+<label>Header Text<input id="headerTextField" placeholder="Use global header text" oninput="updateFields()"></label>
+<label>Reply Prompt<input id="replyPromptField" placeholder="Use global reflection prompt" oninput="updateFields()"></label>
 <label>Nomi prompts (one per line)<textarea id="promptsField" placeholder="Please reflect on these entries..." oninput="updateFields()"></textarea></label>
 <div class="small">Prompts are inserted as Nomi: header lines. Choose Replace to replace uploader defaults; Add keeps the defaults as well.</div>
 <label>Selected file content preview (read-only)</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
@@ -34,6 +37,8 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <label>Prompt mode<select id="exportMode" onchange="editExport()"><option>Replace</option><option>Add</option></select></label>
 <label>Opening prompt<textarea id="exportIntro" oninput="editExport()" placeholder="Message sent before importing conversations"></textarea></label>
 <label>Periodic reflection prompt<textarea id="exportPeriodic" oninput="editExport()" placeholder="Use {first} and {last} for message numbers"></textarea></label>
+<label>Header Every (0 = disabled)<input id="exportHeaderEvery" type="number" min="0" oninput="editExport()"></label>
+<label>Header Text<input id="exportHeaderText" oninput="editExport()"></label>
 <label>Reflect every N chunks (0 = disabled)<input id="exportProcess" type="number" min="0" oninput="editExport()"></label>
 <div class="small">Replace uses only your opening prompt; Add precedes it with the built-in default. Periodic prompts are sent only when the interval is above zero. Conversation content is unchanged.</div>
 </div>
@@ -49,6 +54,9 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <div class="small" id="roomStatus">Select a Nomi to manage its rooms.</div>
 <div class="row"><label style="flex:1">Process every (default)<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
+<div class="row"><label style="flex:1">Header Every (0 = disabled)<input id="headerEvery" type="number" min="0" value="0" oninput="editSettings()"></label></div>
+<label>Header Text<input id="headerText" placeholder="The following is your biography" oninput="editSettings()"></label>
+<label>Reply Prompt<textarea id="replyPrompt" placeholder="Custom reflection prompt" oninput="editSettings()" style="min-height:75px"></textarea></label>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
 </div></section>
 <section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button><button onclick="pauseUpload()">Pause / Stop</button></div>
@@ -60,22 +68,22 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
-renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;
+renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
-for(const id of ["title","type","mode","source","date","process","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
-el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"]])el(id).value=f.export_fields[key]??"";}
+for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",headerEvery:"",headerText:"",replyPrompt:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
+el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"],["exportHeaderEvery","headerEvery"],["exportHeaderText","headerText"]])el(id).value=f.export_fields[key]??"";}
 if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
 }
 async function selectFile(i){active=i;draw();await loadSelected()}
 function move(i,d){let j=i+d;if(j<0||j>=project.queue.length)return;[project.queue[i],project.queue[j]]=[project.queue[j],project.queue[i]];active=j;draw()}
 function removeFile(i){project.queue.splice(i,1);active=Math.min(active,project.queue.length-1);draw()}
-function editExport(){if(active<0)return;const f=project.queue[active];f.export_fields={mode:el("exportMode").value,intro:el("exportIntro").value,periodic:el("exportPeriodic").value,process:el("exportProcess").value}}
-function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","process","prompts"])f.fields[id]=el(id+"Field").value}
+function editExport(){if(active<0)return;const f=project.queue[active];f.export_fields={mode:el("exportMode").value,intro:el("exportIntro").value,periodic:el("exportPeriodic").value,process:el("exportProcess").value,headerEvery:el("exportHeaderEvery").value,headerText:el("exportHeaderText").value}}
+function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"])f.fields[id]=el(id+"Field").value}
 async function loadSelected(){
  const f=project.queue[active];if(!f)return;const token=++selectionToken;
  try {let info=await call("inspect_file",f.path);if(token!==selectionToken)return;
@@ -96,6 +104,9 @@ function editSettings(){
  project.key=el("key").value;
  project.process=el("process").value.trim()===""?5:Number(el("process").value);
  project.reply_wait=Number(el("wait").value);
+ project.header_every=Number(el("headerEvery").value);
+ project.header_text=el("headerText").value;
+ project.reply_prompt=el("replyPrompt").value;
 }
 function renderNomis(){
  const sel=el("nomi"),selected=project.nomi_uuid||"";
