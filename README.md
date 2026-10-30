@@ -15,7 +15,7 @@ This is experimental software, not code-signed. Do not disable Defender antiviru
 
 ## Linux GUI alpha — x86-64
 
-**[Download the latest successful Linux build from GitHub Actions](https://github.com/Troub274/nomi-virtual-life/actions/runs/40237509947)** (temporary artifact; the Linux Release page is currently unavailable due to a GitHub publication permission error)
+**[Download the Linux alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha)** (`NomiUploader-Linux-x86_64.tar.gz`).
 
 Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a supported Linux graphical desktop.
 Unlike the Windows EXE, Linux requires system WebKitGTK/GTK libraries. See the
@@ -46,11 +46,12 @@ python examples/run_package.py beth
 python examples/run_package.py chris
 python examples/run_package.py mary
 python examples/run_package.py tammy
+python examples/run_package.py gwen  # asks for the Nomi.ai username
 ```
 
 Check progress without API calls with `python examples/run_package.py tammy --status`. Use `--restart` only when intentionally beginning another completed run.
 
-The raw v1.1 uploader supports journal ranges such as `--entries 45-100` and uses a 750-character default transport limit under the Nomi API's 800-character ceiling:
+The raw v1.2 uploader supports journal ranges such as `--entries 45-100` and uses a 750-character default transport limit under the Nomi API's 800-character ceiling:
 
 ```sh
 python uploader/nomi-uploader.py diary.txt --entries 45-100
@@ -65,7 +66,7 @@ The exact pre-v1.1 uploader is preserved at `uploader/archive/nomi-uploader-v1.0
 [Beth](examples/beth/README.md) includes 565 journal entries, ready-to-use uploader inputs,
 and a [data-only ZIP](examples/beth/BETH_UPLOADER.zip). Character references and the portrait
 are for viewing, not uploading. [Package migration](examples/README.md) explains migration
-and the [Chris package](examples/chris/README.md).
+and the [Chris package](examples/chris/README.md). The [Gwen package](examples/gwen/README.md) includes her 2026 history and uses `[username]` for customer-specific references. For an existing Gwen, upload only the two new files rather than running her complete package again.
 
 For journal and conversation imports, run `uploader/nomi-uploader.py`. Its internal compatibility
 module preserves API, journal-heading and conversation-export behavior. It is not a
