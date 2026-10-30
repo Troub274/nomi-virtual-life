@@ -55,7 +55,8 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256((folder/name).read_bytes()).hexdigest(), digest)
         config = json.loads((folder/'package.json').read_text(encoding='utf-8'))
         original = json.loads((folder/'reference/CHRISTINE_V1_1000_MANIFEST.json').read_text(encoding='utf-8'))
-        self.assertEqual(len(config['inputs']), 10)
+        self.assertEqual(len(config['inputs']), 11)
+        self.assertEqual(config['inputs'][-1], 'input/CHRIS_PERSONAL_RECORDS.txt')
         dates = []
         with zipfile.ZipFile(folder/'CHRIS_UPLOADER.zip') as z:
             for name, notebook in zip(config['inputs'], original['notebooks']):
@@ -70,8 +71,10 @@ class PackageTests(unittest.TestCase):
                 dates.extend(unit['date'] for unit in units)
         self.assertEqual(len(dates), 1000)
         self.assertEqual(dates, sorted(set(dates)))
-        plan = u.plan_text([str(folder/name) for name in config['inputs']], 'Christine', '', 'US', 2026, 750)
+        plan = u.plan_text([str(folder/name) for name in config['inputs'][:-1]], 'Christine', '', 'US', 2026, 750)
         self.assertEqual(sum(m['kind']=='prompt' for m in plan), 200)
+        profile = u.plan_text([str(folder/config['inputs'][-1])], 'Christine', '', 'US', 2026, 750)
+        self.assertTrue(any(m['kind'] == 'content' for m in profile))
         self.assertTrue(all(len(m['text'].encode('utf-8'))<=750 for m in plan))
 
     def test_package_runner_keeps_state_separate_and_resume_uses_manifest(self):
