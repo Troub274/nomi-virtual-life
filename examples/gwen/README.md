@@ -1,6 +1,6 @@
 # Gwendolin Lynn Mayer — uploader example
 
-Gwen's active autobiography contains **848 numbered entries** in **26 text inputs** (baby book and Notebooks I–XXV), ending December 31, 2025. The subsequent accident, amnesia, cabin fire, and implanted-memory-system continuity is kept in separate reference documents and is **not** silently merged into earlier first-person journals.
+Gwen's active autobiography contains **848 numbered entries** in **26 historical text inputs**, followed by one dated 2026 knowledge input (baby book and Notebooks I–XXV), ending December 31, 2025. The subsequent accident, amnesia, cabin fire, and implanted-memory-system continuity is kept in separate reference documents and is **not** silently merged into earlier first-person journals.
 
 ## Upload
 
@@ -31,11 +31,7 @@ The package runner now fails closed if an input has an invalid journal structure
 or the known editorial contamination. Prior completed uploads are not changed
 by these repository fixes.
 
-**Reference and addendum files are development documents, NOT upload inputs.**
-Do not upload files from `reference/` directly: they have not been normalized
-to `[Title]` / `Type: Knowledge` format or checked for editorial commentary.
-None of those reference documents is included in `package.json`.
-Only the files listed in `package.json` are approved for this package.
+**Upload only the 27 inputs declared in `package.json`.** The 2026 continuity file is `input/GWEN_2026_LIFE_CONTINUITY.txt` and is the last input. The two 2026 files in `reference/` have been cleaned and use `Type: Knowledge`, but are duplicate reference copies and must not be uploaded in addition to the package input. The master canon in `reference/GWEN_MASTER_CANON_V1.txt` still contains editorial tracking labels and must never be uploaded directly.
 
 ## Source and continuity
 
