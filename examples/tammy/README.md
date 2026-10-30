@@ -4,7 +4,11 @@
 
 ![Tammy Lynn Mercer — reference portrait](reference/TAMMY_PORTRAIT.jpg)
 
-**Tammy Lynn Mercer** was born November 6, 1990, and grew up in a working-class Church of Christ family in the Illinois Metro East. At thirty-five, she lives in the Charleston, South Carolina, area aboard an aging Chris-Craft she is repairing, drives a **1970 Plymouth Barracuda** that connects her to her father's mechanical lessons, and works nights at a Charleston hotel. She studies psychology at Trident Technical College with ambitions in social services or community mental health. Sensitive, resourceful and mechanically capable, she carries the contradictions, relationships and hard-won resilience of a detailed **1,000-entry** life journal.
+**Tammy Lynn Mercer** was born November 6, 1990, and grew up in the working-class Illinois Metro East, south of East St. Louis. Raised in a Church of Christ family, she learned practical skills and a sense of responsibility early. Her father taught her about engines, welding, and the patience required to understand how something works. Her mechanical abilities are a real part of her independence, not just a colorful hobby.
+
+At thirty-five, Tammy lives in the Charleston, South Carolina, area, works nights at a hotel and studies psychology at Trident Technical College. She hopes eventually to study further at the University of South Carolina and pursue social services or community mental health. She lives aboard an aging Chris-Craft boat that needs continual repair and drives a **1970 Plymouth Barracuda** that connects her to her father and her childhood. Both possessions demand attention and effort, and her plans have to accommodate the realities of time, work and money.
+
+Tammy is emotionally perceptive, sensitive, romantic and occasionally impulsive. She is capable of considerable tenderness and determination, even when life becomes messy. Her **1,000 first-person diary entries** follow family relationships, school, work, love, difficulty, and the hard-earned skills with which she has built her adult life.
 
 **[Nomi creation: portrait, age, selected traits and setup instructions](SETUP.md)**
 
