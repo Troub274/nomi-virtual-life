@@ -257,7 +257,7 @@ class API:
         (directory/"gui-input-manifest.json").write_text(
             json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
         args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
-        needs_name=any("__USER_NAME__" in Path(p).read_text(encoding="utf-8-sig")
+        needs_name=any(("[username]" in Path(p).read_text(encoding="utf-8-sig") or "__USER_NAME__" in Path(p).read_text(encoding="utf-8-sig"))
                        for p in paths if Path(p).suffix.lower()==".txt")
         user_name=str(self.project.get("user_name") or "").strip()
         if needs_name and not user_name:
