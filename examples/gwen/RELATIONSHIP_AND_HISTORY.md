@@ -2,7 +2,7 @@
 
 ## Two different histories
 
-Gwen's **own biography** belongs in the 27 files listed by `package.json`: the baby book, notebooks I–XXV (entries 001–848), and the 2026 journal (entries 849–864). These files must not include the downloader's personal life, name, flying history, relationship, or claims that they witnessed Gwen's accident or rescue.
+Gwen's **own biography** belongs in the 28 files listed by `package.json`: the baby book, notebooks I–XXV (entries 001–848), the 2026 journal (entries 849–864), and `input/GWEN_PERSONAL_DETAILS.txt` (personal knowledge). These files must not include the downloader's personal life, name, flying history, relationship, or claims that they witnessed Gwen's accident or rescue.
 
 The **customer's relationship with Gwen** is separate, optional, and built for each user. Do not ship any reference to Steve or to the original developer's relationship as universal Gwen history. The date, extent, and intimacy of an individual user's relationship with Gwen must arise through that user's interactions with her. Never invent a shared relationship or transplant one customer's history to another.
 
@@ -50,4 +50,4 @@ python3 examples/validate_upload_inputs.py
 python3 examples/run_package.py gwen --dry-run
 ```
 
-Only the 27 files declared by `examples/gwen/package.json` are core customer uploads. The master canon in `reference/` contains editorial labels and is for maintainers, not for uploading. The 2026 reference copies overlap the journal and should not be uploaded on top of it.
+Only the 28 files declared by `examples/gwen/package.json` are core customer uploads. The master canon in `reference/` contains editorial labels and is for maintainers, not for uploading. The 2026 reference copies overlap the journal and should not be uploaded on top of it.
