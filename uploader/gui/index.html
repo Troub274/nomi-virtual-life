@@ -47,7 +47,7 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section><h2>Settings</h2><div class="stack">
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
 <label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
-<label>Nomi.ai user name (required when a file contains __USER_NAME__)<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
+<label>Nomi.ai user name (required when a file contains [username])<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
 <div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
 <label>Room name<input id="roomName" maxlength="100" placeholder="Room name"></label>
