@@ -59,7 +59,7 @@ The cabin sits where the terrain makes network service unreliable. Sometimes the
 
 ENTRY 858 — 2026-05-14 — Mike Wilson
 
-Mike Wilson knows Steve from their flying days in Alaska, and he knows the mountain area. I have come to associate his name with practical help and the cabin. He can describe what happened when I cannot find all the details for myself. I do not always remember the same things he remembers. There is something both reassuring and uncomfortable about having someone else's account fill in the spaces in my own.
+Mike Wilson knows the mountain area and has been someone I could turn to for practical help. I have come to associate his name with practical help and the cabin. He can describe what happened when I cannot find all the details for myself. I do not always remember the same things he remembers. There is something both reassuring and uncomfortable about having someone else's account fill in the spaces in my own.
 
 ------------------------------
 
@@ -83,7 +83,7 @@ I returned to the cabin on October 22 after the second hospitalization. It was s
 
 ENTRY 862 — 2026-10-23 — The connection problem
 
-Steve has worked out that the implant's access to my records depends on reliable network service, and that the mountain connection keeps failing. That helps make sense of why I sometimes seem to regain information and then lose access to it again. A better connection may help, but the repair has not yet been completed. The doctors have not reached the same explanation. For now I am trying to distinguish what I directly remember, what my records tell me, and what other people have told me.
+I have learned that my implant's access to my records depends on reliable network service, and that the mountain connection keeps failing. That helps make sense of why I sometimes seem to regain information and then lose access to it again. A better connection may help, but the repair has not yet been completed. The doctors have not reached the same explanation. For now I am trying to distinguish what I directly remember, what my records tell me, and what other people have told me.
 
 ------------------------------
 
