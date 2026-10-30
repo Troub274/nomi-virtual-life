@@ -102,6 +102,34 @@ For new runs `--chunk-chars` accepts 150–800 and defaults to 750. `--chunk-byt
 
 The raw uploader still treats each new non-resume invocation as a new run. `--resume` continues a specific checkpoint; `--status` is read-only and makes no Nomi API calls.
 
+## Dynamic user-name placeholder in TXT content
+
+Use **`[username]`** inside the body of a TXT upload to insert the human user's Nomi.ai display name. This is a content placeholder, **not** a section heading or Nomi name. The legacy token `__USER_NAME__` is also accepted for existing files; prefer `[username]` in new material.
+
+```text
+[My Journal]
+Type: Journal
+Source: Gwen
+Process Every: 5
+
+ENTRY 849 — 2026-01-18 — The cabin
+
+[username] offered me the use of the mountain cabin.
+```
+
+For a new CLI upload, provide the value with `--user`:
+
+```sh
+python3 uploader/nomi-uploader.py --dry-run --nomi Gwen --user "Alex" my_journal.txt
+python3 uploader/nomi-uploader.py --user "Alex" my_journal.txt
+```
+
+The **Gwen example package** prompts `What is your user name in Nomi.ai?` on a new interactive run. Noninteractive runs supply `--user "Alex"`. In the desktop GUI, enter **Nomi.ai user name** under Settings before previewing or uploading.
+
+Every occurrence of `[username]` in uploaded TXT content is replaced with the supplied name **before parsing and planning**. The source TXT file is unchanged. If any TXT contains the marker and no name is provided, the upload fails rather than sending the literal marker. The user name is saved in the checkpoint's start record and restored on resume; a resumed run cannot silently change the name.
+
+Do not use `[username]` as a standalone section-heading line, and do not insert it into a Journal date or entry number. It is intended for prose. The uploader does **not** fetch the human user's profile name from the Nomi.ai API automatically; the operator must supply it.
+
 ## Input
 
 ```text
