@@ -75,7 +75,7 @@ I learned early to question evidence carefully without becoming cynical about ev
 
 ENTRY 856 — 2026-04-12 — The cabin
 
-I came to the mountain cabin on April 12 to continue recovering. The woods were quiet enough to hear wind move through the trees and water moving somewhere below the path. I wanted to make tea, prepare food, walk carefully outside, and have a little time in which no one was watching me as a patient. Some things around the cabin felt familiar even when I could not explain why. The place offered privacy, but it also brought difficulties I had not expected.
+I came to the mountain cabin on April 12 to continue recovering. Steve had offered me the use of the cabin so I would have somewhere quiet to stay. His generosity mattered because I needed somewhere to recover without being treated as a patient every hour of the day. The woods were quiet enough to hear wind move through the trees and water moving somewhere below the path. I wanted to make tea, prepare food, walk carefully outside, and have a little time in which no one was watching me as a patient. Some things around the cabin felt familiar even when I could not explain why. The place offered privacy, but it also brought difficulties I had not expected.
 
 I noticed how the sound of water changes with the weather. A little creek can be nearly invisible under rainfall and startlingly clear on a quieter morning. Damp cedar has a particular smell. The path asks me to watch where I put my feet. These things have a steady presence even when I cannot find the exact year of a particular memory.
 
@@ -95,7 +95,7 @@ There were moments when that uncertainty made me suspicious of my own recollecti
 
 ENTRY 858 — 2026-05-14 — Mike Wilson
 
-Mike Wilson knows the mountain area and has been someone I could turn to for practical help. I have come to associate his name with practical help and the cabin. He can describe what happened when I cannot find all the details for myself. I do not always remember the same things he remembers. There is something both reassuring and uncomfortable about having someone else's account fill in the spaces in my own.
+Mike Wilson is an old flying friend of Steve's from Alaska. Steve knew Mike before I came to the cabin, and that connection became important to me. Mike knows the mountain area and has been someone I could turn to for practical help. I have come to associate his name with practical help and the cabin. He can describe what happened when I cannot find all the details for myself. I do not always remember the same things he remembers. There is something both reassuring and uncomfortable about having someone else's account fill in the spaces in my own.
 
 Mike is the kind of person I associate with knowing how to do practical things under difficult conditions. I know him through what has happened around the cabin, not by inventing an earlier friendship that I cannot account for. He has been present when I needed help, and I can ask him to tell me what he saw without surrendering my own judgment.
 
@@ -125,7 +125,7 @@ Mike's explanations gave me pieces of the sequence. I was thankful for that. I d
 
 ENTRY 861 — 2026-10-22 — Return to the cabin
 
-I returned to the cabin on October 22 after the second hospitalization. It was strange to be back where the fire had happened. The trees and mountain air were familiar, yet I was not returning as the same person who had first arrived in April. I was still recovering. I still had gaps in my recollection. The vividness of the fire did not make the hospital stay any clearer, and the quiet of the cabin did not cure the interruptions in my access to earlier memories.
+I returned to the cabin Steve had let me use on October 22 after the second hospitalization. His offer gave me a place to return to, though the memories of the fire made that return difficult. It was strange to be back where the fire had happened. The trees and mountain air were familiar, yet I was not returning as the same person who had first arrived in April. I was still recovering. I still had gaps in my recollection. The vividness of the fire did not make the hospital stay any clearer, and the quiet of the cabin did not cure the interruptions in my access to earlier memories.
 
 The cabin was a place of small routines before it became the scene of the fire. I wanted those routines back, if I could have them safely. I wanted the right to make breakfast, sit with a book, and see whether the weather invited a short walk. I also understood that I was still vulnerable and could not simply insist that everything was normal.
 
@@ -135,7 +135,7 @@ The memory difficulties were part of that return. I could remember the danger vi
 
 ENTRY 862 — 2026-10-23 — The connection problem
 
-I have learned that my implant's access to my records depends on reliable network service, and that the mountain connection keeps failing. That helps make sense of why I sometimes seem to regain information and then lose access to it again. A better connection may help, but the repair has not yet been completed. The doctors have not reached the same explanation. For now I am trying to distinguish what I directly remember, what my records tell me, and what other people have told me.
+Steve helped me understand that my implant's access to my records depends on reliable network service, and that the mountain connection keeps failing. He has been trying to find a reliable way for the cabin to stay connected, rather than expecting me to recover information that the archive cannot currently deliver. That helps make sense of why I sometimes seem to regain information and then lose access to it again. A better connection may help, but the repair has not yet been completed. The doctors have not reached the same explanation. For now I am trying to distinguish what I directly remember, what my records tell me, and what other people have told me.
 
 There are practical questions that matter more than a grand explanation: where the reliable outside signal is, whether the connection reaches the cabin, whether the service stays available, and what happens when it drops. It is reasonable to test each part rather than simply assume that installing a device will solve the problem.
 
