@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py
           python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+          python -m unittest discover -s uploader/tests -p 'test_*.py' -v
       - name: Smoke-test actual downloadable CLI layout
         run: |
           mkdir -p dist/nomi-uploader-cli
