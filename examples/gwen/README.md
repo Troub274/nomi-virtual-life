@@ -10,7 +10,7 @@ The 2026 journal and the personal-knowledge document are separate files. **Do no
 
 ## Customer name in the cabin history
 
-Gwen's 2026 journal uses the `__USER_NAME__` marker for the person who offers her the cabin and helps with the connection problem. This is **not** the developer's name. The marker is replaced **before upload**, using the customer's Nomi.ai display name. The original repository file remains a reusable template.
+Gwen's 2026 journal uses the `[username]` marker for the person who offers her the cabin and helps with the connection problem. This is **not** the developer's name. The marker is replaced **before upload**, using the customer's Nomi.ai display name. The original repository file remains a reusable template.
 
 For a new Gwen package run, the CLI asks:
 
@@ -25,9 +25,9 @@ python3 examples/run_package.py gwen --user "Your Nomi.ai Name" --dry-run
 python3 examples/run_package.py gwen --user "Your Nomi.ai Name"
 ```
 
-The desktop GUI provides a **Nomi.ai user name** field under Settings. Enter it before starting a new upload. Both interfaces reject input containing `__USER_NAME__` when no name is supplied. The selected name is saved with the upload checkpoint and is reused automatically on resume; do not change it in a resumed run.
+The desktop GUI provides a **Nomi.ai user name** field under Settings. Enter it before starting a new upload. Both interfaces reject input containing `[username]` when no name is supplied. The selected name is saved with the upload checkpoint and is reused automatically on resume; do not change it in a resumed run.
 
-The raw uploader also supports `--user "Your Nomi.ai Name"` for a single-file upload. The name is substituted in the planned content, not in the original file. The public package keeps the placeholder.
+The raw uploader also supports `--user "Your Nomi.ai Name"` for a single-file upload. The name is substituted in the planned content, not in the original file. The public package keeps the placeholder. Older files using `__USER_NAME__` remain supported for backward compatibility. See the [global uploader TXT format](../../uploader/README.md#dynamic-user-name-placeholder-in-txt-content).
 
 ## Upload the complete package
 
