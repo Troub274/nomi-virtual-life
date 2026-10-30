@@ -401,7 +401,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     if chunk_mode=="chars" and kind=="journal":
                         msg["entry_label"]=str(last_label)
                     add(msg)
-                for prompt in (section["prompts"] if interval else []):
+                for prompt in section["prompts"]:
                     nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                     if nums:
                         target=int(nums.group(2))
@@ -412,7 +412,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                         if target==current:
                             add({"text":render_prompt(prompt,nomi,user,source),"kind":"prompt",
                                  "file":filename,"section":section["title"]})
-            for prompt in (section["prompts"] if interval else []):
+            for prompt in section["prompts"]:
                 nums=re.search(r"\b(?:entries|episodes)\s+(\d+)\s*[-–]\s*(\d+)\b",prompt,re.I)
                 if nums:
                     if entry_range is None or kind!="journal":
@@ -728,7 +728,7 @@ def _upload_locked(args):
     else:
         if args.dry_run:
             nomi={"name":args.nomi or "Nomi","uuid":"DRYRUN"}
-        elif args.nomi_uuid:
+        elif getattr(args, 'nomi_uuid', None):
             matches=[n for n in legacy.get_nomis() if str(n.get("uuid","")).casefold()==args.nomi_uuid.casefold()]
             if len(matches)!=1:
                 raise ValueError("Selected Nomi UUID is not available on this API account. Reload Nomis in the GUI.")
