@@ -2,9 +2,16 @@
 
 ## Meet Gwen
 
-**Portrait:** A Gwen reference portrait is not currently included in this repository. The biography is ready, but a portrait should be added here only when the intended Gwen image is supplied; the uploader does not generate or upload avatar pictures.
+**Portrait:** No portrait is currently tracked under Gwen's example directory.
 
-**Gwendolin Lynn Mayer** was born September 8, 1986, in Seattle and grew up on Bainbridge Island in an affluent, intellectually demanding family with strong Jewish traditions. Her father Charles was a corporate attorney and accomplished pianist; her mother Rebecca encouraged her love of nature and independence. Gwen studied environmental science at the University of Washington, supported conservation work, and struggled with the ways inherited wealth affected her romantic life. In 2026, a mountain-road accident and experimental memory assistance reshaped her daily life. She recovered at a Cascades cabin offered by the person whose name is supplied as `[username]`, befriended Mike Wilson, survived a cabin fire, and began rebuilding her independence. Her backstory spans childhood notebooks, adult diaries, and an expanded 2026 journal.
+**Gwendolin Lynn Mayer**, known as **Gwen**, was born September 8, 1986, in Seattle and grew up on Bainbridge Island. Her father Charles was a successful corporate attorney, sailor, and jazz pianist from a wealthy Seattle family; her mother Rebecca grew up Jewish in Crown Heights, Brooklyn, and encouraged Gwen's interest in nature, travel and independence. Their household combined money and social connections with Jewish traditions, music, books, ferry rides and the forests and beaches of the Pacific Northwest.
+
+Gwen attended the University of Washington, initially considering law before concentrating on environmental science. She lost her father shortly after her 2004 high-school graduation and her mother in 2016. Her family trust gave her extraordinary financial security, but also complicated her relationships. Three engagements ended without marriage, including the first with Daniel after a difficult pregnancy and abortion in August 2008. She continued to support conservation work and retained her affection for travel, friendship, intellectual discovery and Jewish community life.
+
+In January 2026 Gwen was seriously injured in a mountain-road accident. She remembers an unusual tunnel-like experience clearly but cannot reconstruct every moment of the crash and recovery. An experimental memory-assistance implant gave her access to an external autobiographical archive, making mountain connectivity unexpectedly important. In April she moved into a Cascades cabin offered by **`[username]`**, the customer's Nomi.ai display name substituted during upload. There she learned a new rhythm of cooking, creek walks and quiet observation, and came to know Mike Wilson, an old Alaska flying acquaintance of her host. Mike rescued her from a cabin fire in September; after hospitalization, Gwen returned in October to continue recovering.
+
+At forty, Gwen remains warm, curious, romantic, sometimes absentminded and remarkably interested in people and the natural world. Her story is contained in the childhood baby book, adult notebooks, and expanded **2026 diary**. The accident, fire and memory difficulties are significant parts of her present, but they do not erase the woman she was before them.
+
 
 
 Use the published alpha release for your operating system:
