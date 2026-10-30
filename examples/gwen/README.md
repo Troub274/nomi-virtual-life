@@ -1,48 +1,94 @@
 # Gwendolin Lynn Mayer — uploader example
 
-Gwen's active autobiography contains **848 numbered entries** in **26 historical text inputs**, followed by one dated 2026 journal input (baby book and Notebooks I–XXV), ending December 31, 2025. The subsequent accident, amnesia, cabin fire, and implanted-memory-system continuity is kept in separate reference documents and is **not** silently merged into earlier first-person journals.
+Gwen's public example package contains **28 inputs**, ordered by `package.json`:
 
-## Upload
+1. **26 historical journals:** baby book and Notebooks I–XXV, with **848 entries** ending December 31, 2025.
+2. **2026 journal:** `input/GWEN_2026_LIFE_CONTINUITY.txt`, with **16 dated entries (849–864)** covering the accident, hospital stays, memory assistance, mountain cabin, fire, rescue and recovery.
+3. **Personal knowledge:** `input/GWEN_PERSONAL_DETAILS.txt`, covering identity, household, family, education, finances and administrative reference fields.
 
-For the distinction between Gwen's own history and an individual customer's relationship with her, see [RELATIONSHIP_AND_HISTORY.md](RELATIONSHIP_AND_HISTORY.md). The core package contains no customer-specific personal history. A separate optional relationship template can be filled with the customer's Nomi.ai display name using `build_user_relationship.py`; it is never uploaded automatically.
+The 2026 journal and the personal-knowledge document are separate files. **Do not upload the older condensed 2026 reference copies as well:** they repeat information and are not part of the package.
 
+## Upload the complete package
 
-From repository root:
-
-```sh
-python examples/run_package.py gwen --dry-run
-python examples/run_package.py gwen
-```
-
-The runner reads `package.json` in the order listed. Do not replay completed uploads without checking checkpoints and remote state.
-
-## Publication status and upload safety
-
-The 26 historical input files are present in the repository. On October 29, 2026,
-the editorial `AUTHORSHIP NOTE` and `Upload note` lines were removed from
-the packaged diary inputs. Those lines must never be present in material uploaded
-as autobiographical memories.
-
-Before uploading, run:
+From the repository root:
 
 ```sh
-python examples/validate_upload_inputs.py
-python examples/run_package.py gwen --dry-run
+python3 examples/validate_upload_inputs.py
+python3 examples/run_package.py gwen --dry-run
+python3 examples/run_package.py gwen
 ```
 
-The package runner now fails closed if an input has an invalid journal structure
-or the known editorial contamination. Prior completed uploads are not changed
-by these repository fixes.
+The runner uses the 28 inputs in the order listed by `package.json`. The normal command automatically resumes an unfinished checkpoint; a completed run is not replayed unless explicitly restarted. **Do not restart a completed customer upload without inspecting its checkpoint and the receiving Nomi first.** A completed upload means the messages were transmitted, not that every detail was retained.
 
-**Upload only the 27 inputs declared in `package.json`.** The 2026 journal file is `input/GWEN_2026_LIFE_CONTINUITY.txt` and is the last input. It contains 16 dated entries numbered 849–864; do not upload an abbreviated 2026 summary in its place. The two 2026 files in `reference/` are condensed duplicates, **not** substitutes for the full upload journal, and must not be uploaded in addition to the package input. The master canon in `reference/GWEN_MASTER_CANON_V1.txt` still contains editorial tracking labels and must never be uploaded directly.
+## Upload only the current additions
 
-## Source and continuity
+To inspect and send the two newest files without reloading the historical notebooks:
 
-- `input/`: chronological historical journal and baby-book entries (001–848).
-- `reference/`: original master canon, reconstructed 2026 bridge, present-state addendum, and handoff notes.
-- Portraits remain in the separately preserved complete backup; the large binary images have not yet been committed to GitHub.
-- `CONTINUITY_REVIEW.md`: unresolved discrepancies deliberately left visible.
+```sh
+python3 uploader/nomi-uploader.py --dry-run --nomi Gwen \
+  examples/gwen/input/GWEN_2026_LIFE_CONTINUITY.txt \
+  examples/gwen/input/GWEN_PERSONAL_DETAILS.txt
 
-**Important:** Gwen and her identity details are fictional; this is an experimental Nomi virtual-life package. Nomi upload completion does not itself prove retained memory. The personal letters Steve intends to write have **not** been fabricated.
+python3 uploader/nomi-uploader.py \
+  examples/gwen/input/GWEN_2026_LIFE_CONTINUITY.txt \
+  examples/gwen/input/GWEN_PERSONAL_DETAILS.txt
+```
 
-This is a creative/simulation dataset, not real medical history. All brain-implant narrative features are fictional.
+The second command is **live**. Select the intended Gwen and room. Do not repeat either file if already delivered. If only the personal-details document is new to an existing Gwen, specify only that file. The uploader's raw command starts a fresh run, so review any existing completed transmissions before proceeding.
+
+## Parser format and safeguards
+
+The loader accepts `Type: Journal`, `Type: Knowledge`, `Type: Instructions`, and `Type: Chat`. It does **not** accept `Type: Reference`.
+
+Gwen's diary format:
+
+```text
+[Gwendolin Lynn Mayer — My Journal, 2026]
+Type: Journal
+Source: Gwen
+Process Every: 5
+
+ENTRY 849 — 2026-01-18 — The winter road
+
+I remember...
+```
+
+The journal's `Source: Gwen` is intentional: the uploader compares it with the selected Nomi name so the entries are processed as her own experiences. All journal entries require recognizable dates.
+
+Her knowledge format:
+
+```text
+[Gwendolin Lynn Mayer — My Personal Records and Household]
+Type: Knowledge
+Source: Gwen
+Process Every: 5
+
+My full name is Gwendolin Lynn Mayer.
+```
+
+Knowledge paragraphs are processed as units and do not require `ENTRY` headings. `Process Every: 5` requests periodic processing after five complete units. Review [uploader/README.md](../../uploader/README.md) for the complete v1.2 input specification.
+
+The files in `input/` must not contain editorial instructions such as authorship notes, status tags, uncertainty labels or references to the construction process. `examples/validate_upload_inputs.py` checks package inputs and rejects flagged patterns; run it before publishing. This is a structural safeguard, not a guarantee of narrative consistency.
+
+The example's government identifiers, contact references and account-related fields are **nonissued demonstration values**. They are not credentials or usable documents. Never replace them with a customer's real SSN, license number, financial account or private contact information.
+
+## Separate the customer's history from Gwen's
+
+Gwen's biography must not inherit the current customer's childhood, friendships, flying history, hospital involvement or shared experiences. See [RELATIONSHIP_AND_HISTORY.md](RELATIONSHIP_AND_HISTORY.md) for the history boundaries and optional customer-specific relationship file.
+
+The uploader does not automatically substitute the Nomi.ai user's display name. To create the optional relationship file:
+
+```sh
+python3 examples/gwen/build_user_relationship.py --user-name "Name From Nomi.ai"
+```
+
+The generated `examples/gwen/local/GWEN_USER_RELATIONSHIP.txt` is **not** included in `package.json`. Review it independently before uploading. The template in `reference/` contains literal replacement markers and must not be uploaded as-is.
+
+## Maintainer-only material
+
+- `reference/GWEN_MASTER_CANON_V1.txt` contains editorial continuity tracking and **must not be uploaded**.
+- The two `reference/` 2026 addendums overlap with the fully dated upload journal; do not send them in addition.
+- `CONTINUITY_REVIEW.md` describes outstanding authoring and continuity questions, not instructions for Gwen.
+- The original portrait assets are in a separate backup rather than this GitHub example.
+
+This is a virtual-life creative example; its implant and related memory-service history are narrative elements, not real medical claims.
