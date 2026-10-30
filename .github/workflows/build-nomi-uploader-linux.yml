@@ -27,6 +27,8 @@ jobs:
           echo "$GITHUB_WORKSPACE/.venv-linux/bin" >> "$GITHUB_PATH"
       - name: Verify upload planning
         run: python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+      - name: Full uploader regression gate
+        run: python -m unittest discover -s uploader/tests -p 'test_*.py' -v
       - name: Package Linux binary
         run: bash uploader/gui/build-linux.sh
       - name: Upload Linux build artifact
