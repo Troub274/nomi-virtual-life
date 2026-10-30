@@ -4,6 +4,9 @@ Gwen's active autobiography contains **848 numbered entries** in **26 historical
 
 ## Upload
 
+For the distinction between Gwen's own history and an individual customer's relationship with her, see [RELATIONSHIP_AND_HISTORY.md](RELATIONSHIP_AND_HISTORY.md). The core package contains no customer-specific personal history. A separate optional relationship template can be filled with the customer's Nomi.ai display name using `build_user_relationship.py`; it is never uploaded automatically.
+
+
 From repository root:
 
 ```sh
