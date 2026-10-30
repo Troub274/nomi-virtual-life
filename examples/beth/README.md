@@ -1,5 +1,12 @@
 # Beth Peterson — uploader example
 
+## Meet Beth
+
+![Beth Peterson — reference portrait](source/BETH_PORTRAIT.JPG)
+
+**Beth (Elizabeth) Peterson** was born October 11, 1988, and grew up in Redmond, Washington. A mathematics and history enthusiast who also paints, she now works as an actuary in Seattle. Her childhood was marked by the death of her twin sister Rebecca in a 1994 boating accident; her family also includes parents David and Kate and younger brother Andy. Beth's Jewish family ties, friends, and love of art thread through her diaries. After a serious relationship with furniture restorer Elias ended amicably in August 2026, she enters her thirty-eighth year single, thoughtful, independent, and still curious about other people. Her 565 dated diary entries tell that history in her own voice.
+
+
 > **Canon integrity notice (2026-10-25):** Withdrawn household-canon uploads contained unsupported identity and family details and must not be used. The original five diaries and `source/CANON.TXT` remain unchanged. Diary Entry 019 names **Andrew David Peterson as Beth's younger brother**, and Entry 247 names **Ruth Kaplan as Beth's manager**. The original canon identifies Beth's father as **David** and mother as **Kate**. Do not upload old local copies of `BETH_HOUSEHOLD_CANON_UPLOAD.txt`, `BETH_EXPANDED_HOUSEHOLD_CANON.txt`, or `EXPANDED_HOUSEHOLD_CANON.md`.
 
 
