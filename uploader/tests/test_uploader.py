@@ -148,12 +148,12 @@ class UploaderTests(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
             file = pathlib.Path(tmp) / "gwen.txt"
-            original = ("[Gwen journal]\\nType: Journal\\nSource: Gwen\\n"
-                        "Process Every: 0\\n\\nENTRY 849 — 2026-01-18\\n"
-                        "[username] offered the cabin. __USER_NAME__ called Mike.\\n")
+            original = ("[Gwen journal]\nType: Journal\nSource: Gwen\n"
+                        "Process Every: 0\n\nENTRY 849 — 2026-01-18\n"
+                        "[username] offered the cabin. __USER_NAME__ called Mike.\n")
             file.write_text(original, encoding="utf-8")
             plan = u.plan_text([str(file)], "Gwen", "Alex", "US", 2026, 750)
-            content = "\\n".join(m["text"] for m in plan if m["kind"] == "content")
+            content = "\n".join(m["text"] for m in plan if m["kind"] == "content")
             self.assertIn("Alex offered the cabin. Alex called Mike.", content)
             self.assertNotIn("[username]", content)
             self.assertEqual(file.read_text(encoding="utf-8"), original)
