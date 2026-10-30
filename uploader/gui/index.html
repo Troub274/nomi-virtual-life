@@ -47,6 +47,7 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section><h2>Settings</h2><div class="stack">
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
 <label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
+<label>Nomi.ai user name (required when a file contains __USER_NAME__)<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
 <div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
 <label>Room name<input id="roomName" maxlength="100" placeholder="Room name"></label>
@@ -68,12 +69,12 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:"",user_name:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
-renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";
+renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";el("userName").value=project.user_name??"";
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
 for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",headerEvery:"",headerText:"",replyPrompt:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
 el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"],["exportHeaderEvery","headerEvery"],["exportHeaderText","headerText"]])el(id).value=f.export_fields[key]??"";}
