@@ -13,9 +13,29 @@ python examples/run_package.py gwen
 
 The runner reads `package.json` in the order listed. Do not replay completed uploads without checking checkpoints and remote state.
 
-## Publication status
+## Publication status and upload safety
 
-**Partial upload:** The GitHub publishing connection rejected Notebook VI (2006) and Notebook XI (2011) during transfer. They are **not** missing from the original complete backup, but the GitHub package is **not yet safe to run**: its `package.json` references both absent inputs. Do not launch the uploader until these two original files are committed and checked. The 2026 continuity/reference documents **are** committed. The two portrait files also remain only in the complete backup for now.
+The 26 historical input files are present in the repository. On October 29, 2026,
+the editorial `AUTHORSHIP NOTE` and `Upload note` lines were removed from
+the packaged diary inputs. Those lines must never be present in material uploaded
+as autobiographical memories.
+
+Before uploading, run:
+
+```sh
+python examples/validate_upload_inputs.py
+python examples/run_package.py gwen --dry-run
+```
+
+The package runner now fails closed if an input has an invalid journal structure
+or the known editorial contamination. Prior completed uploads are not changed
+by these repository fixes.
+
+**Reference and addendum files are development documents, NOT upload inputs.**
+Do not upload files from `reference/` directly: they have not been normalized
+to `[Title]` / `Type: Knowledge` format or checked for editorial commentary.
+None of those reference documents is included in `package.json`.
+Only the files listed in `package.json` are approved for this package.
 
 ## Source and continuity
 
