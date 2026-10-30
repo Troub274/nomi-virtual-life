@@ -114,7 +114,7 @@ def main():
             if not sys.stdin.isatty():
                 parser.error('Gwen requires --user "Nomi.ai Display Name" in noninteractive mode')
             selected_user = input('What is your user name in Nomi.ai? ').strip()
-        if not selected_user or any(c in selected_user for c in '\\r\\n[]'):
+        if not selected_user or any(c in selected_user for c in (chr(10), chr(13), '[', ']')):
             parser.error('A valid Nomi.ai user name is required')
     cmd = command(args.package, args.dry_run, args.resume, args.restart, args.status,
                   delay=args.delay, user=selected_user)
