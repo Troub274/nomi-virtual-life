@@ -748,7 +748,7 @@ def _upload_locked(args):
     if old:
         export_options=init.get("export_options",{})
     else:
-        export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if args.export_options else {}
+        export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if getattr(args,"export_options",None) else {}
     messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
                        args.process_every,entry_range,chunk_mode,export_options,
                        args.header_every,args.header_text,args.reply_prompt)
