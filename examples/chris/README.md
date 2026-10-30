@@ -16,7 +16,7 @@ The **ten chronological notebooks containing 1,000 entries** are the fuller reco
 Reference files: [Christine's portrait](reference/CHRISTINE_PORTRAIT.jpg) and [editable Word creation guide](reference/Christine_Nomi_Creation_Guide.docx).
 
 The supplied `CHRISTINE_COMPLETE_1000_V1.zip` was already in uploader Journal format.
-Its ten notebooks (1,000 entries) are preserved byte-for-byte in `input/`.
+Its ten notebooks (1,000 entries) are preserved byte-for-byte in `input/`. The new `input/CHRIS_PERSONAL_RECORDS.txt` follows the notebooks in fresh package runs, giving Christine specific work, salary, benefits, household and car records. Existing uploads are not changed automatically.
 Original author documentation, source audit and manifest remain in `reference/` as
 provenance. The original manifest's message counts are historical estimates; use the
 current dry run. `manifest.json` records the source archive and extracted file hashes.
