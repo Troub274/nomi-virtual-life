@@ -330,7 +330,14 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
                          "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
-        for section in parse_sections(read_text(path),filename):
+        raw_text=read_text(path)
+        if "__USER_NAME__" in raw_text:
+            if not user or not user.strip():
+                raise ValueError("This file requires the Nomi.ai user display name: supply --user NAME before uploading: "+filename)
+            if any(c in user for c in "\r\n[]"):
+                raise ValueError("Invalid user display name: no line breaks or brackets")
+            raw_text=raw_text.replace("__USER_NAME__",user.strip())
+        for section in parse_sections(raw_text,filename):
             source=section["source"] or (nomi if section["type"]=="journal" else "System")
             all_units=split_units(section,order,year)
             kind=section["type"]
