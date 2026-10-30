@@ -1,5 +1,12 @@
 ## Latest uploader downloads
 
+## Meet Gwen
+
+**Portrait:** A Gwen reference portrait is not currently included in this repository. The biography is ready, but a portrait should be added here only when the intended Gwen image is supplied; the uploader does not generate or upload avatar pictures.
+
+**Gwendolin Lynn Mayer** was born September 8, 1986, in Seattle and grew up on Bainbridge Island in an affluent, intellectually demanding family with strong Jewish traditions. Her father Charles was a corporate attorney and accomplished pianist; her mother Rebecca encouraged her love of nature and independence. Gwen studied environmental science at the University of Washington, supported conservation work, and struggled with the ways inherited wealth affected her romantic life. In 2026, a mountain-road accident and experimental memory assistance reshaped her daily life. She recovered at a Cascades cabin offered by the person whose name is supplied as `[username]`, befriended Mike Wilson, survived a cabin fire, and began rebuilding her independence. Her backstory spans childhood notebooks, adult diaries, and an expanded 2026 journal.
+
+
 Use the published alpha release for your operating system:
 [Windows](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha) ·
 [macOS (Intel or Apple Silicon)](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha) ·
