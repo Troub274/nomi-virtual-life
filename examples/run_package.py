@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_upload_inputs import check
 
 
