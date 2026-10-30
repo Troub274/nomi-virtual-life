@@ -697,6 +697,13 @@ def upload(args):
 
 
 def _upload_locked(args):
+    # Programmatic callers and older tests supply only the original v1.0
+    # namespace. Keep later optional CLI additions backwards compatible.
+    for name, default in (("nomi_uuid", None), ("export_options", None),
+                          ("header_every", 0), ("header_text", ""),
+                          ("reply_prompt", "")):
+        if not hasattr(args, name):
+            setattr(args, name, default)
     migrating=getattr(args,"new_room_on_resume",False)
     tokens=getattr(args,"abandon_reply",[]) or []
     if (migrating or tokens) and not args.resume: raise ValueError("migration flags require --resume")
