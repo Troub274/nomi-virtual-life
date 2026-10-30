@@ -23,7 +23,7 @@ class API:
         self.proc = None
         self.lines = []
         self.lock = threading.Lock()
-        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": ""}
+        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": "", "user_name": ""}
         if CONFIG.exists():
             try: self.project.update(json.loads(CONFIG.read_text(encoding="utf-8")))
             except (OSError, ValueError): pass
@@ -257,6 +257,15 @@ class API:
         (directory/"gui-input-manifest.json").write_text(
             json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
         args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
+        needs_name=any("__USER_NAME__" in Path(p).read_text(encoding="utf-8-sig")
+                       for p in paths if Path(p).suffix.lower()==".txt")
+        user_name=str(self.project.get("user_name") or "").strip()
+        if needs_name and not user_name:
+            raise ValueError("Enter your Nomi.ai user name before uploading this file.")
+        if user_name:
+            if any(c in user_name for c in "\r\n[]"):
+                raise ValueError("Invalid Nomi.ai user name.")
+            args += ["--user", user_name]
         if not dry:
             room = str(self.project.get("room_uuid") or "").strip()
             if not room: raise ValueError("Select or create an upload room first.")
