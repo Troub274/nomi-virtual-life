@@ -1,3 +1,13 @@
+## Latest uploader downloads
+
+Use the published alpha release for your operating system:
+[Windows](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha) ·
+[macOS (Intel or Apple Silicon)](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha) ·
+[Linux](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha) ·
+[Python CLI](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-cli-alpha).
+
+For a **new Gwen**, run `python3 examples/run_package.py gwen` from a source checkout; it asks for your Nomi.ai username. For an **existing Gwen**, do not repeat the complete package: upload only `input/GWEN_2026_LIFE_CONTINUITY.txt` and `input/GWEN_PERSONAL_DETAILS.txt`, with your username supplied through `--user` or the GUI Settings field.
+
 # Gwendolin Lynn Mayer — uploader example
 
 Gwen's public example package contains **28 inputs**, ordered by `package.json`:
@@ -46,11 +56,11 @@ The runner uses the 28 inputs in the order listed by `package.json`. The normal 
 To inspect and send the two newest files without reloading the historical notebooks:
 
 ```sh
-python3 uploader/nomi-uploader.py --dry-run --nomi Gwen \
+python3 uploader/nomi-uploader.py --dry-run --nomi Gwen --user "Your Nomi.ai Name" \
   examples/gwen/input/GWEN_2026_LIFE_CONTINUITY.txt \
   examples/gwen/input/GWEN_PERSONAL_DETAILS.txt
 
-python3 uploader/nomi-uploader.py \
+python3 uploader/nomi-uploader.py --user "Your Nomi.ai Name" \
   examples/gwen/input/GWEN_2026_LIFE_CONTINUITY.txt \
   examples/gwen/input/GWEN_PERSONAL_DETAILS.txt
 ```
