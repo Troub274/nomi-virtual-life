@@ -15,7 +15,7 @@ Tammy is emotionally perceptive, sensitive, romantic and occasionally impulsive.
 Reference images: [Tammy portrait](reference/TAMMY_PORTRAIT.jpg) and [Barracuda reference](reference/TAMMY_CAR_REFERENCE.jpg).
 This package contains Tammy Lynn Mercer's complete 1,000-entry first-person journal, from age nine through October 20, 2026, plus private life-reference documents and photographs.
 
-The journal is split into ten ordered files of 100 entries each. Every input section uses `Type: Journal`, `Source: Tammy`, and `Process Every: 5`.
+The journal is split into ten ordered files of 100 entries each. Fresh package runs now append `input/TAMMY_PERSONAL_RECORDS.txt` with first-person work, school, marina, car, family and budget details adapted from her established reference ledger. Every input section uses `Type: Journal`, `Source: Tammy`, and `Process Every: 5`.
 
 The private reference folder contains Tammy's family dates, contacts, addresses, finances, property, preferences, relationships, education, work, and current-life details.
 
