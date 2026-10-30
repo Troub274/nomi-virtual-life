@@ -24,6 +24,8 @@ jobs:
       - name: Verify ZIP/JSON prompt planning
         shell: pwsh
         run: python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+      - name: Full uploader regression gate
+        run: python -m unittest discover -s uploader/tests -p 'test_*.py' -v
       - name: Package Windows executable
         shell: pwsh
         run: ./uploader/gui/build-windows.ps1
