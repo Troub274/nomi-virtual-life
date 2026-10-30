@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from validate_upload_inputs import check
 
 
 PACKAGES = ['beth', 'chris', 'mary', 'tammy', 'gwen']
@@ -71,6 +72,30 @@ def main():
 
     root = Path(__file__).resolve().parents[1]
     state, checkpoint, completion, replies = state_paths(root, args.package)
+
+    # Fail closed: validate even on resume/restart; status remains read-only.
+    if not args.status:
+        folder = root/'examples'/args.package
+        cfg = json.loads((folder/'package.json').read_text(encoding='utf-8'))
+        problems = []
+        seen = set()
+        for name in cfg['inputs']:
+            file = (folder/name).resolve()
+            if folder.resolve() not in file.parents or not file.is_file():
+                problems.append(f'{name}: missing or invalid input path')
+                continue
+            issues, ids = check(file)
+            problems.extend(f'{name}: {issue}' for issue in issues)
+            for number in ids:
+                if number in seen:
+                    problems.append(f'{name}: repeated diary ENTRY {number} across inputs')
+                seen.add(number)
+        if problems:
+            print('BLOCKED: example package failed upload safety validation:')
+            for issue in problems:
+                print('  '+issue)
+            print('No upload started; fix the source inputs before retrying.')
+            return 2
 
     if (not args.dry_run and not args.resume and not args.restart and not args.status
             and checkpoint.exists() and checkpoint.stat().st_size and completion.exists()):
