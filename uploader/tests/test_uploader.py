@@ -144,6 +144,22 @@ class UploaderTests(unittest.TestCase):
         self.assertTrue(all("live and experience the conversations" in m["text"]
                             for m in messages if m["kind"]=="prompt"))
 
+    def test_username_substitution_preserves_source_file(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            file = pathlib.Path(tmp) / "gwen.txt"
+            original = ("[Gwen journal]\\nType: Journal\\nSource: Gwen\\n"
+                        "Process Every: 0\\n\\nENTRY 849 — 2026-01-18\\n"
+                        "[username] offered the cabin. __USER_NAME__ called Mike.\\n")
+            file.write_text(original, encoding="utf-8")
+            plan = u.plan_text([str(file)], "Gwen", "Alex", "US", 2026, 750)
+            content = "\\n".join(m["text"] for m in plan if m["kind"] == "content")
+            self.assertIn("Alex offered the cabin. Alex called Mike.", content)
+            self.assertNotIn("[username]", content)
+            self.assertEqual(file.read_text(encoding="utf-8"), original)
+            with self.assertRaisesRegex(ValueError, "user display name"):
+                u.plan_text([str(file)], "Gwen", "", "US", 2026, 750)
+
     def test_room_filter_and_protection(self):
         import tempfile
         import json
