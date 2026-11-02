@@ -49,29 +49,22 @@
     return {command,args,rest,requiresAuthorization:true,highImpact:DANGEROUS.has(command)};
   }
   const HELP=[
-    "AI Bridge CLI — one command per reply; no surrounding prose.",
-    "SEND MESSAGE TO OTHER SELECTED TAB:",
-    "[bridge send to=\"ChatGPT\"]",
-    "Your message to ChatGPT",
-    "Or, when the other tab is Nomi:",
-    "[bridge send to=\"Nomi\"]",
-    "Your message to Nomi",
-    "[/bridge]",
-    "No closing tag needed: the entire reply after [bridge send] is the message.",
-    "Ordinary conversation is NOT an explicit send.",
-    "OTHER COMMANDS (each alone on one line):",
-    "[bridge help]",
-    "[bridge status]",
-    "[bridge pending]",
-    "[bridge next message] or [next message] — retrieve one queued message",
-    "[bridge clear queue] or [clear queue] — discard your unsent messages",
-    "[bridge pause]",
-    "[bridge resume]",
-    "[bridge listen]",
-    "[bridge review last=10]",
-    "[bridge shutdown]",
-    "NOT YET ACTIVE: [bridge wake], [bridge schedule], [bridge cancel], [bridge retry].",
-    "Each command must be the whole AI reply; never embed it in other text."
+    "AI BRIDGE — one command per reply. Never mix commands with ordinary text.",
+    "SEND: [bridge send] Your message to the other selected AI.",
+    "Or: [bridge send to=\"ChatGPT\"] Your message.",
+    "Or: [bridge send to=\"Nomi\"] Your message.",
+    "A send may continue on the next line. No closing tag.",
+    "Ordinary chat is private; it is never an automatic send.",
+    "[bridge help] — instructions",
+    "[bridge status] — bridge status",
+    "[bridge pending] — pending sends",
+    "[next message] — request next waiting message",
+    "[clear queue] — discard waiting undelivered messages",
+    "[bridge pause] — pause both",
+    "[bridge resume] — resume both",
+    "[bridge shutdown] — notify both and stop",
+    "[bridge listen] — wait for a peer reply",
+    "Wake/schedule/retry are not implemented yet."
   ].join('\n');
   const api={parse,HELP};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
