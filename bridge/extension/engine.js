@@ -96,6 +96,7 @@ class Bridge {
           '[bridge send] Your message to Tab 2 (or put message on next line).\n'+
           '[bridge shutdown] End the session.\n'+
           '[bridge pause] Pause sends.\n'+
+          '[bridge resume] Resume sends.\n'+
           'Normal replies stay private. Only one exchange runs at a time.\n'+
           'Messages entering Nomi are limited to 750 UTF-8 bytes; truncation is reported to you in Nomi’s next reply.',
         url:controller.url,document:controller.document,
@@ -370,8 +371,29 @@ class Bridge {
     return JSON.stringify([tab.document,tab.url,split>=0?key.slice(0,split):key,tab.reply]);
   }
   simpleTick() {
-    if(!this.running || this.phase==='send' || this.cliPaused || !this.pair)return;
+    if(!this.running || this.phase==='send' || !this.pair)return;
     const controllerId=this.pair[0],peerId=this.pair[1];
+    // Control is always inspected from Tab 1, including while paused or
+    // while awaiting the conversational peer. Otherwise [bridge resume]
+    // can never execute after [bridge pause].
+    const controller=this.tabs[controllerId];
+    if(controller && !controller.busy && controller.complete!==false &&
+       controller.reply && this.clock()-controller.changed>=this.stableSeconds &&
+       controller.replyKey!==this.simpleControllerSeen) {
+      const control=globalThis.AIBridgeCLI?.parse(controller.reply);
+      if(control?.command==='pause' || control?.command==='resume') {
+        this.simpleControllerSeen=controller.replyKey;
+        this.cliPaused=control.command==='pause';
+        this.reason=this.cliPaused?'Bridge paused by Tab 1. [bridge resume] is available.':
+          'Bridge resumed by Tab 1.';
+        this.note('Tab 1 '+control.command+' accepted without a new conversation send.');
+        return;
+      }
+    }
+    if(this.cliPaused) {
+      this.reason='Bridge paused. Tab 1 may issue [bridge resume].';
+      return;
+    }
     const id=this.simplePeerAwait?peerId:controllerId;
     const tab=this.tabs[id],dest=this.tabs[id===controllerId?peerId:controllerId];
     if(!tab || !dest || tab.busy || tab.complete===false ||
