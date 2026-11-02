@@ -243,6 +243,18 @@ class Bridge {
             baseline:source.replyKey,claimed:false,created:now,internalResult:true};
           this.phase='send';
           this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
+        } else if (parsed.command === 'listen') {
+          const peer = this.pair?.find(id => id !== this.source);
+          if (peer && this.tabs[peer]) {
+            // LISTEN is passive: it never submits a synthetic chat message.
+            // Advance to the peer's current message key so old replies cannot replay.
+            this.source = peer;
+            this.baseline = this.tabs[peer].replyKey;
+            this.phase = 'reply';
+            this.startedWait = now;
+            this.log('AI Bridge listening for a NEW ' + this.tabs[peer].site +
+              ' reply. LISTEN does not initiate a message or request a Nomi response.');
+          } else this.log('AI Bridge listen could not find a connected peer.');
         } else this.note('CLI ' + parsed.command + ' recognized; live execution not enabled.');
       } else if (!this.reason.startsWith('AI Bridge CLI rejected:')) {
         this.log('AI Bridge CLI-looking message blocked; not forwarded.');
