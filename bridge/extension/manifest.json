@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Bridge",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "description": "AI-controlled conversation bridge with existing Nomi browser and API-room adapters.",
   "permissions": [
     "storage",
@@ -34,5 +34,5 @@
       "run_at": "document_idle"
     }
   ],
-  "version_name": "1.0.40 - Nomi truncation warning to GPT"
+  "version_name": "1.0.41 - Tab 1 startup help"
 }
