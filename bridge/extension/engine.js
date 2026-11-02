@@ -333,8 +333,18 @@ class Bridge {
       if (this.command?.claimed) {
         this.reason = 'Send claimed; waiting for destination UI to accept the existing bridge draft. No duplicate will be submitted.';
       } else if (now - this.command.created > 90) {
-        this.phase = 'uncertain';
-        this.stop('Send was not claimed within 90 seconds. Check both chats, then Reset.');
+        if (this.command.queuedOutbound && this.command.queueItem) {
+          const item=this.command.queueItem;
+          this.outboundQueue ||= [];
+          this.outboundQueue.unshift(item);
+          this.outboundCredits ||= {};
+          this.outboundCredits[item.target]=(this.outboundCredits[item.target]||0)+1;
+          this.command=null;this.phase='reply';
+          this.log('Queued delivery was not claimed; safely returned to waiting queue.');
+        } else {
+          this.phase = 'uncertain';
+          this.stop('Send was not claimed within 90 seconds. Check both chats, then Reset.');
+        }
       }
       return;
     }
@@ -601,6 +611,11 @@ class Bridge {
     // First notification has already been confirmed. Do not recheck the now-changing
     // origin conversation while sending the second shutdown notice.
     if (cmd.shutdownSecond && this.shutdownFirstAck) return true;
+    // A queued message was accepted from a verified participant at enqueue
+    // time. Its source may legitimately have produced later replies while it
+    // waited; do not require that old reply to remain the newest DOM message.
+    if (cmd.queuedOutbound) return !!snapshot && !snapshot.error &&
+      snapshot.document===cmd.sourceDocument && snapshot.url===cmd.sourceUrl;
     const valid = snapshot && !snapshot.error && !snapshot.busy && snapshot.complete !== false &&
       snapshot.reply === cmd.sourceReply &&
       snapshot.document === cmd.sourceDocument && snapshot.url === cmd.sourceUrl;
@@ -627,7 +642,11 @@ class Bridge {
   acknowledge(tab, data) {
     const cmd = this.command;
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
-    if (data.error) {this.phase = 'uncertain'; this.stop(`Send stopped: ${data.error}. Check both chats, then Reset.`);}
+    if (data.error) {
+      if(cmd.queuedOutbound)this.failedQueueItem=cmd.queueItem;
+      this.phase = 'uncertain';
+      this.stop(`Send stopped: ${data.error}. Check both chats, then Reset.`);
+    }
     else {
       this.lastDelivery = {from: this.tabs[cmd.source]?.site, to: this.tabs[tab].site,
         readCharacters: cmd.sourceReply?.length, sentCharacters: cmd.text.length,
