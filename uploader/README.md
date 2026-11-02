@@ -2,7 +2,26 @@
 
 **Current:** Nomi Uploader 1.3 — improved recovery / resume. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
-Requires Python 3.10+; optional `python-docx` for DOCX. Set `NOMI_API_KEY` before live uploads.
+Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
+
+## Downloads and setup (all platforms)
+
+**One unified v1.3 release:** [Nomi Uploader 1.3](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3).
+The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
+the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
+as an asset on that **same release**.
+
+Configure the API key once using the GUI startup flow or
+`python nomi-uploader.py --config`. Choose plaintext storage or password
+encryption. Both interfaces use `nomi-uploader.ini` in the existing application
+data tree, alongside checkpoints. `NOMI_API_KEY` remains an optional automation
+override, not a requirement.
+
+For platform-specific instructions, see
+[CLI in GUI download](gui/CLI-IN-GUI-DOWNLOAD.md),
+[Windows](gui/WINDOWS-ALPHA.md),
+[Linux](gui/README-LINUX.md), and [macOS](gui/README-MACOS.md).
+See [Recovery](RECOVERY.md) for expert checkpoint troubleshooting.
 
 ## Easiest way to use it
 
