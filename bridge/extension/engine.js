@@ -156,6 +156,7 @@ class Bridge {
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
+    this.simpleCommandHistory={};this.simpleAccepted={};
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -387,7 +388,7 @@ class Bridge {
     }
     // React can replace a GPT message node and change its DOM count / ID.
     // Treat unchanged controller commands as one message despite repaint.
-    const exactCommand=JSON.stringify([tab.document,tab.url,tab.reply.trim()]);
+    const exactCommand=JSON.stringify([tab.document,tab.url,tab.reply.replace(/\s+/gu,' ').trim()]);
     this.simpleCommandHistory ||= {};
     const observedAt=this.clock();
     for(const [key,at] of Object.entries(this.simpleCommandHistory))
