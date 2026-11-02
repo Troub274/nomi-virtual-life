@@ -10,7 +10,7 @@ function limitNomiMessage(text) {
 class Bridge {
   constructor(clock = () => Date.now() / 1000, saved = {}) {
     Object.assign(this, {tabs: {}, running: false, pair: null, source: null, phase: 'idle', command: null,
-      baseline: null, remindChatGPT: false, lastDelivery: null, turns: 0, events: [], stableSeconds: 8, startedWait: 0,
+      baseline: null, remindChatGPT: false, lastDelivery: null, turns: 0, cliTransactions: 0, events: [], stableSeconds: 2, startedWait: 0,
       reason: 'Choose two tabs and press Play.'}, saved);
     this.clock = clock;
     if (saved.pendingNomi?.length) {
@@ -61,10 +61,10 @@ class Bridge {
     if (JSON.stringify(this.pair) !== JSON.stringify(pair) || this.phase === 'idle') {
       this.pair = pair;
       this.source = pair[data.first === 'second' || (!data.tabs && data.first === 'nomi') ? 1 : 0];
-      this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0;
+      this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0; this.cliTransactions = 0;
     }
-    const settle = Number(data.settle ?? 8);
-    this.stableSeconds = Number.isFinite(settle) ? Math.max(3, Math.min(60, settle)) : 8;
+    const settle = Number(data.settle ?? 2);
+    this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
     this.tabRetry=null;
     this.cliPaused=false;
@@ -270,11 +270,11 @@ class Bridge {
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
-            parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
+            parsed.command === 'help' ? (parsed.args.topic === 'schedule' ? '[AI Bridge schedule help]\\nWake scheduler not yet active. Planned syntax: [bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"] or [bridge wake in="30 minutes"].' : globalThis.AIBridgeCLI.HELP) :
             parsed.command !== 'status' ? '[AI Bridge] NOT_IMPLEMENTED: ' + parsed.command + '. No action was taken.' :
             '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
             '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
-            '\\nTurns: ' + this.turns + '\\nPending send: ' + (this.command?'yes':'no') +
+            '\\nConversation turns: ' + this.turns + '\\nCLI transactions: ' + (this.cliTransactions||0) + '\\nPending send: ' + (this.command?'yes':'no') +
             '\\n[End status]\\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
           this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
             text,url:source.url,document:source.document,sourceReply:source.reply,
@@ -348,18 +348,20 @@ class Bridge {
       if (cmd.truncated && this.tabs[cmd.source]?.site === 'chatgpt') this.remindChatGPT = true;
       if (cmd.includesReminder) this.remindChatGPT = false;
       if (cmd.internalResult) {
+        this.cliTransactions = (this.cliTransactions || 0) + 1;
         this.internalResultTab = cmd.target;
         this.internalResultBaseline = cmd.baseline;
       }
       this.source = cmd.target; this.baseline = cmd.baseline; this.phase = 'reply';
-      this.turns++; this.startedWait = this.clock();
+      if (!cmd.internalResult) this.turns++;
+      this.startedWait = this.clock();
       this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
     this.command = null; return {};
   }
   state() {
     this.tick();
-    return {running: this.running, paused: !!this.cliPaused, phase: this.phase, turns: this.turns, reason: this.reason, pair: this.pair,
+    return {running: this.running, paused: !!this.cliPaused, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
