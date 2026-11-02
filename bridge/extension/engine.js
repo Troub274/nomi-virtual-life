@@ -209,7 +209,8 @@ class Bridge {
     }
     if (now - source.changed < this.stableSeconds) {this.reason = 'Detected ' + speaker + ' reply; waiting for it to finish changing.'; return;}
     // An internal status/help answer is not a conversation turn to forward.
-    if (this.internalResultTab === this.source && this.internalResultBaseline !== source.replyKey) {
+    if (this.internalResultTab === this.source && this.internalResultBaseline !== source.replyKey &&
+        !source.reply.trim().toLowerCase().startsWith('[bridge ')) {
       this.internalResultTab = null;
       this.internalResultBaseline = null;
       this.baseline = source.replyKey;
@@ -217,6 +218,11 @@ class Bridge {
       this.startedWait = now;
       this.log('AI Bridge internal command response consumed; not forwarded.');
       return;
+    }
+    // A fresh CLI command after an internal result must be processed, not swallowed.
+    if (this.internalResultTab === this.source && this.internalResultBaseline !== source.replyKey) {
+      this.internalResultTab = null;
+      this.internalResultBaseline = null;
     }
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
