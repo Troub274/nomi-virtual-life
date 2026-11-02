@@ -118,12 +118,13 @@ class Bridge {
   }
   capturePendingCli(id) {
     if (!this.running || !this.pair?.includes(id) || !this.command ||
-        this.phase !== 'send' || this.command.source === id) return;
+        this.phase !== 'send') return;
     const tab=this.tabs[id];
     if (!tab?.reply || tab.busy || tab.complete===false ||
         !tab.reply.trim().toLowerCase().startsWith('[bridge ')) return;
     this.cliSeen ||= {};
     if (this.cliSeen[id] === tab.replyKey) return;
+    if (this.command.source === id && this.command.sourceReply === tab.reply) return;
     this.waitingCli ||= [];
     const fingerprint=JSON.stringify([id,tab.document,tab.reply]);
     if (this.waitingCli.some(item=>item.fingerprint===fingerprint)) return;
@@ -143,7 +144,10 @@ class Bridge {
     // Dispatch from actual recorded issuer and its current transcript.
     this.cliSeen ||= {};
     delete this.cliSeen[item.id];
-    this.dispatchPeerCli(item.id);
+    if (item.id === this.source) {
+      if (tab.replyKey === this.baseline) this.baseline=null;
+      this.tick();
+    } else this.dispatchPeerCli(item.id);
   }
   dispatchPeerCli(id) {
     // CLI inspection is independent of conversational turn ownership.
