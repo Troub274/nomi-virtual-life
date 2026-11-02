@@ -46,7 +46,7 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 </div></section>
 <section><h2>Settings</h2><div class="stack">
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
-<label>Nomi API key<input id="key" type="password" placeholder="Nomi API key" oninput="editSettings()"></label><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
+<label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label><button onclick="changeApiKey()">Change / Reset API Key</button><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
 <label>Nomi.ai user name (required when a file contains [username])<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
 <div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
@@ -102,7 +102,7 @@ function editSettings(){
    project.room_uuid="";roomChoices=[];renderRooms();
    if(project.nomi_uuid)loadRooms();
  }
- project.key=el("key").value;
+ project.key="";
  project.process=el("process").value.trim()===""?5:Number(el("process").value);
  project.reply_wait=Number(el("wait").value);
  project.header_every=Number(el("headerEvery").value);
@@ -237,7 +237,48 @@ el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploade
 el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
 el("replies").textContent=(s.replies||[]).map(r=>"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
 }catch(e){el("state").textContent=String(e)}}
+async function changeApiKey(){
+ const key=prompt("Enter replacement Nomi API key:");
+ if(!key)return;
+ const encrypt=confirm("Encrypt with a password? OK = encrypt, Cancel = plaintext");
+ let password=null;
+ if(encrypt){
+   password=prompt("New encryption password:");
+   if(!password||password!==prompt("Confirm password:")){alert("Password missing or mismatch.");return}
+ }
+ await call("auth_save",key,encrypt,password);
+ project.key="";el("key").value="";
+ await loadNomis();
+}
+async function configureCredentials(){
+ const state=await call("auth_status");
+ if(state.encrypted){
+   while(true){
+     const password=prompt("Nomi Uploader: Enter your API key encryption password.\nCancel to reset the API key.");
+     if(password===null){
+       if(!confirm("Reset the encrypted API key? Your projects and checkpoints will be preserved."))return false;
+       break;
+     }
+     try{await call("auth_unlock",password);return true}
+     catch(e){alert("Cannot unlock key: "+String(e))}
+   }
+ } else if(state.configured) {await call("auth_unlock",null);return true;}
+ const key=prompt("Nomi API key (first-time setup or reset):");
+ if(!key)return false;
+ const encrypt=confirm("Encrypt your Nomi API key with a password?\nOK: password required at every launch.\nCancel: save in plaintext.");
+ let password=null;
+ if(encrypt){
+   password=prompt("Create encryption password:");
+   if(!password){alert("A non-empty password is required.");return false}
+   if(password!==prompt("Confirm encryption password:")){alert("Passwords do not match.");return false}
+ }
+ await call("auth_save",key,encrypt,password);
+ return true;
+}
 async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
-ready=true;const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();if(project.key)await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll();await refreshRuns()}
+ready=true;
+const unlocked=await configureCredentials();
+if(!unlocked){el("state").textContent="API key not configured or locked. Restart to configure.";return}
+const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll();await refreshRuns()}
 window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
 </script></body></html>
