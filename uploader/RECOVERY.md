@@ -3,10 +3,31 @@
 **Quick lookup:** [Error → Recovery Command Quick Reference](ERROR_RECOVERY_QUICK_REFERENCE.md) — symptom-to-command table, checkpoint inspection, and tested incident examples.
 
 
-**Applies to:** Nomi Uploader v1.1, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
+**Applies to:** Nomi Uploader v1.3, repository `Troub274/nomi-virtual-life`, `uploader/nomi-uploader.py` and `uploader/legacy_v085.py`  
 **Prepared:** October 13, 2026  
-**Updated:** October 21, 2026 — v1.1 automatic package resume, checkpoint status, entry ranges, character transport limits  
+**Updated:** November 2, 2026 — v1.3 normal resume, manual restart and current recovery guidance  
 **Status:** Operational manual. The exact v1.0 uploader is preserved at `uploader/archive/nomi-uploader-v1.0.py`.
+
+## v1.3 GUI recovery (current)
+
+Use **Normal Resume** when the GUI recommends it. For an ambiguous
+send or reply, the GUI identifies the affected message and asks before
+authorizing a potentially duplicate retry. If the existing journal or source
+plan is no longer usable, choose **Manual Restart** and enter the pass and
+message index in the **newly regenerated plan**. That appends a hard
+`manual_restart` boundary to the same append-only journal; earlier records are
+retained as history. If the source grew from 100 to 110 planned messages, a
+restart at 23 now means 23 of 110. Manual Restart may resend already-delivered
+content. No manual JSONL editing is necessary for normal operation.
+
+The raw CLI equivalent is:
+```sh
+python uploader/nomi-uploader.py --resume --manual-restart 1:23 \
+  --checkpoint PATH --completion COMPLETION_PATH --replies REPLIES_PATH revised.txt
+```
+
+The procedures below document historical incidents and advanced recovery
+flags. Prefer the GUI controls for ordinary use.
 
 ## v1.1 normal-user recovery
 
