@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-python -m pip install --upgrade pyinstaller "pywebview[qt]" PyQt6-WebEngine
+python -m pip install --upgrade pyinstaller "pywebview[qt]" PyQt6-WebEngine cryptography
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader \
   --paths uploader \
   --hidden-import legacy_v085 \
