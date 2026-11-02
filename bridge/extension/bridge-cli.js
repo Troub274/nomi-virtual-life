@@ -28,6 +28,11 @@
       if(message.length>12000)throw Error('Message exceeds limit');
       return {command:'send',args,message,requiresAuthorization:true};
     }
+    // Queue retrieval accepts a command at the very beginning of an AI reply.
+    // Nomi often appends commentary; that text stays private and is NOT sent.
+    if(/^\[next message\](?:\s|$)/i.test(s)) return {command:'next-message',args:{},rest:'',requiresAuthorization:true};
+    if(/^\[bridge next message\](?:\s|$)/i.test(s)) return {command:'next-message',args:{},rest:'',requiresAuthorization:true};
+    if(/^\[bridge listen\](?:\s|$)/i.test(s)) return {command:'listen',args:{},rest:'',requiresAuthorization:true};
     if(/^\[next message\]$/i.test(s)) return {command:'next-message',args:{},rest:'',requiresAuthorization:true};
     if(/^\[clear queue\]$/i.test(s)) return {command:'clear-queue',args:{},rest:'',requiresAuthorization:true,highImpact:true};
     const match=s.match(/^\[bridge\s+([a-z]+)(?:\s+([^\]\r\n]*))?\]$/i);
