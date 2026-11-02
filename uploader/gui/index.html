@@ -157,6 +157,11 @@ function buildLayout(){
  }
 
  document.getElementById("view-history").append(replies);
+ const historyPanel=document.createElement("section");
+ historyPanel.innerHTML='<h2>Upload Run History</h2><p class="small">Selectable run history for support and diagnostics. Select an entry above to inspect its checkpoint.</p><div class="copy-tools"><button type="button" onclick="copyOutput(\'historyText\',\'historyCopyFeedback\')">Copy History</button><span id="historyCopyFeedback" class="small"></span></div><textarea id="historyText" class="copyable-output" readonly spellcheck="false" style="min-height:220px;font-family:ui-monospace,monospace" aria-label="Selectable upload history">No history loaded.</textarea>';
+ document.getElementById("view-history").prepend(historyPanel);
+ const historyControls=document.getElementById("runHistory").closest(".row");
+ historyPanel.insertBefore(historyControls,historyPanel.querySelector(".copy-tools"));
  // Keep settings available in the destination step, with appearance as its own panel.
  const appearance=document.createElement("section");
  appearance.innerHTML='<h2>Appearance</h2><label>Color theme <select id="theme-choice" onchange="applyTheme(this.value)"><option value="dark">Nomi Dark</option><option value="light">Nomi Light</option><option value="system">Follow system</option></select></label>';
@@ -314,6 +319,10 @@ async function refreshRuns(){
  try{const runs=await call("list_runs");const sel=el("runHistory");const keep=sel.value;sel.replaceChildren();
  const option=document.createElement("option");option.value="";option.textContent="Choose an earlier run";sel.appendChild(option);
  for(const run of runs){const o=document.createElement("option");o.value=run.id;o.textContent=(run.nomi||"Unknown")+" · "+(run.completed?"completed":"checkpoint")+" · "+run.id.slice(0,8);sel.appendChild(o)}
+ const historyText=el("historyText");
+ if(historyText)historyText.value=runs.length?runs.map(run=>
+  "Nomi: "+(run.nomi||"Unknown")+"\nRun ID: "+run.id+"\nStatus: "+(run.completed?"Completed":"Checkpoint / unfinished")+"\nLast modified: "+(run.modified?new Date(run.modified*1000).toLocaleString():"Unknown")+"\nRoom UUID: "+(run.room||"Unknown")
+ ).join("\n\n-------------------------\n\n"):"No saved upload runs.";
  if(runs.some(r=>r.id===keep))sel.value=keep;
  }catch(e){el("state").textContent="History: "+String(e)}
 }
