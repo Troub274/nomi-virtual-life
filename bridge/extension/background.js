@@ -191,7 +191,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         return result;
       }
       if (message.path === '/api/claim') {
-        if (data.checkOnly && (!bridge.command || !await verifySource(bridge.command))) return {allowed:false};
+        // After a transaction has been claimed, the destination owns the immutable
+        // prepared draft. A new source reply must not revoke that in-flight send.
+        // Authorization still comes from the current transaction ID and phase.
+        if (data.checkOnly && (!bridge.command || (!bridge.command.claimed && !await verifySource(bridge.command)))) return {allowed:false};
         return bridge.claim(tab, data.id, data.checkOnly);
       }
       if (message.path === '/api/ack') {
