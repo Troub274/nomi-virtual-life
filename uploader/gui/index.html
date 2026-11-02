@@ -194,7 +194,27 @@ async function clearHistory(){
  try{const count=await call("clear_history");await refreshRuns();el("state").textContent="Cleared "+count+" completed history entries (files retained)."}
  catch(e){alert(String(e))}
 }
-async function resume(){try{await call("resume");el("state").textContent="Resuming existing checkpoint…"}catch(e){alert(e)}}
+async function resume(){
+ try{
+   const status=await call("recovery_status");
+   if(status.state==="NO_CHECKPOINT")throw Error("No checkpoint for the selected upload.");
+   if(status.state==="COMPLETE")throw Error("This upload has already completed.");
+   const sends=status.uncertain_sends||[], replies=status.ambiguous_replies||[];
+   const sendTokens=sends.map(p=>p.join(":")), replyTokens=replies.map(p=>p.join(":"));
+   if(sendTokens.length){
+     if(!confirm("UNCERTAIN CONTENT SEND(S): "+sendTokens.join(", ")+"\\n\\nThe last message may already be in Nomi. Resending could DUPLICATE content. Inspect the room first.\\n\\nAuthorize resending these exact messages?"))return;
+   }
+   if(replyTokens.length){
+     if(!confirm("UNCERTAIN REFLECTION REPLY(S): "+replyTokens.join(", ")+"\\n\\nThe source messages were confirmed. Requesting another reply could produce an extra Nomi response. No content will be resent.\\n\\nAuthorize these exact reply requests?"))return;
+   }
+   if(sendTokens.length||replyTokens.length){
+     await call("recover_resume",sendTokens,replyTokens);
+   }else{
+     await call("recover_resume",[],[]);
+   }
+   el("state").textContent="Resuming checkpoint ("+status.state+")…";
+ }catch(e){el("state").textContent="Resume failed: "+String(e);alert(String(e))}
+}
 async function poll(){if(!ready)return;try{let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
 el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
