@@ -522,6 +522,7 @@ class Bridge {
             '\n[End status]\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
           if (parsed.command==='next-message' && this.queuedFor(this.source)>0 &&
               this.releaseOutbound(this.source)) {
+            this.outboundCredits[this.source]=Math.max(0,(this.outboundCredits[this.source]||0)-1);
             this.note('Next queued message released directly; no redundant CLI receipt.');
           } else if (['pause','resume'].includes(parsed.command)) {
             const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
