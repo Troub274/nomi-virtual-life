@@ -4,7 +4,7 @@ This is the same Nomi Uploader GUI and authoritative Python upload engine as Win
 
 ## Downloads
 
-Visit the [macOS alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha).
+Visit the [macOS alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3).
 
 - **NomiUploader-macOS-arm64.zip** for Apple Silicon (M1/M2/M3/M4 and later).
 - **NomiUploader-macOS-x86_64.zip** for Intel Macs.
