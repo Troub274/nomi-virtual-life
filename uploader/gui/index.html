@@ -1,22 +1,35 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nomi Uploader</title><style>
-:root{font:15px system-ui,Segoe UI,sans-serif;color:#e5e7eb;background:#111827}
-*{box-sizing:border-box} body{margin:0} header{padding:18px 26px;background:#1f2937;border-bottom:1px solid #374151}
-h1{font-size:21px;margin:0} main{padding:20px;max-width:1300px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}
-section{border:1px solid #374151;border-radius:12px;padding:17px;background:#1f2937;min-width:0}
-.full{grid-column:1/-1} h2{margin:0 0 12px;font-size:16px}
-input,select,textarea,button{font:inherit;border-radius:7px;padding:9px;color:#e5e7eb;background:#111827;border:1px solid #4b5563}
-input,textarea,select{width:100%}button{cursor:pointer;background:#374151}button:hover{background:#4b5563}
-button.primary{background:#2563eb;border-color:#2563eb}.row{display:flex;gap:8px;align-items:center}.row>*{min-width:0}
-.small{font-size:12px;color:#9ca3af}.stack{display:grid;gap:10px}label{font-size:13px;color:#cbd5e1}
-.queue{display:flex;flex-direction:column;gap:6px;height:310px;min-height:310px;width:100%;overflow:auto;align-items:stretch}.queue .item{flex:0 0 auto;width:100%} .item{display:flex;align-items:center;gap:6px;padding:7px;border:1px solid #374151;border-radius:7px}
-.item.active{border-color:#60a5fa}.item button{padding:4px 8px}.item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
-pre{white-space:pre-wrap;word-break:break-word;max-height:270px;overflow:auto;background:#0b1220;padding:12px;border-radius:8px;font-size:12px}
-progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospace,monospace}
-@media(max-width:850px){main{grid-template-columns:1fr}.full{grid-column:auto}}
+:root{font:15px system-ui,Segoe UI,sans-serif;--bg:#0d0e12;--surface:#181b22;--raised:#1f232c;--text:#e8eaf0;--muted:#888d9b;--accent:#a855f7;--accent2:#7c3aed;--border:#ffffff14;--warning:#f5a623;--input:#12141a}
+:root[data-theme="light"]{--bg:#f5f3fa;--surface:#fff;--raised:#ebe7f3;--text:#252135;--muted:#625b70;--accent:#7c3aed;--accent2:#6d28d9;--border:#30204325;--input:#f8f6fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}header{padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:15px}h1{font-size:23px;margin:0}header .small{margin-top:3px}
+main{max-width:1350px;margin:auto;padding:22px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+section{border:1px solid var(--border);border-radius:14px;padding:20px;background:var(--surface);min-width:0}h2{font-size:17px;margin:0 0 13px}
+input,select,textarea,button{font:inherit;border-radius:8px;padding:10px;color:var(--text);background:var(--input);border:1px solid var(--border)}input,textarea,select{width:100%}button{cursor:pointer;background:var(--raised);transition:background .15s}button:hover{filter:brightness(1.13)}button.primary{background:linear-gradient(120deg,var(--accent),var(--accent2));border:0;color:white;font-weight:650}button:disabled{opacity:.5;cursor:default}a{color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.row>*{min-width:0}.small{font-size:12px;color:var(--muted)}.stack{display:grid;gap:12px}label{font-size:13px;color:var(--muted);display:block}
+.queue{display:flex;flex-direction:column;gap:7px;min-height:240px;max-height:360px;width:100%;overflow:auto;align-items:stretch}.queue .item{flex:0 0 auto;width:100%}.item{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid var(--border);border-radius:9px}.item.active{border-color:var(--accent)}.item button{padding:5px 9px}.item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;background:var(--input);padding:14px;border-radius:9px;font-size:12px;user-select:text}progress{width:100%;height:20px;accent-color:var(--accent)}textarea{min-height:120px;font-family:ui-monospace,monospace}
+.nav{max-width:1350px;margin:18px auto 0;padding:0 22px;display:flex;flex-wrap:wrap;gap:8px}.nav button{background:var(--surface);min-width:130px}.nav button[aria-selected="true"]{border-color:var(--accent);color:var(--text);box-shadow:inset 0 -3px 0 var(--accent)}
+.view{display:none}.view.active{display:block}.two-column{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:16px;align-items:start}.two-column>section{height:100%}.editor-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.editor-tabs button[aria-selected="true"]{border-color:var(--accent)}.edit-panel{display:none}.edit-panel.active{display:block}
+.actions{border:1px solid var(--accent);border-radius:12px;padding:16px;background:var(--raised);margin:0 0 16px}.actions h2{margin:0 0 8px}.actions .message{white-space:pre-wrap;user-select:text}.actions button{margin-top:10px}
+.status-line{white-space:pre-wrap;user-select:text;cursor:text;min-height:20px}.copyable-output{user-select:text;-webkit-user-select:text;cursor:text;white-space:pre-wrap;overflow-wrap:anywhere}.copy-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.copy-tools button{padding:6px 12px}.toolhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.badge-text{color:var(--accent);font-size:12px;font-weight:600}
+@media(max-width:850px){.two-column{grid-template-columns:1fr}main{padding:12px}.nav{padding:0 12px}header{padding:14px}}
 </style></head><body><header><h1>Nomi Uploader</h1><div class="small">Graphical front end to the existing Python uploader — no command line needed</div></header>
-<main>
+<nav class="nav" aria-label="Uploader sections">
+<button id="nav-destination" aria-selected="true" onclick="showView('destination')">1 · Destination</button>
+<button id="nav-files" aria-selected="false" onclick="showView('files')">2 · Files</button>
+<button id="nav-upload" aria-selected="false" onclick="showView('upload')">3 · Upload</button>
+<button id="nav-history" aria-selected="false" onclick="showView('history')">4 · History</button>
+<button id="nav-settings" aria-selected="false" onclick="showView('settings')">Settings</button>
+</nav>
+<main id="workspace">
+<div id="view-destination" class="view active"></div>
+<div id="view-files" class="view"><div class="two-column" id="files-columns"></div></div>
+<div id="view-upload" class="view"></div>
+<div id="view-history" class="view"></div>
+<div id="view-settings" class="view"></div>
+
 <section><h2>Upload queue</h2><div class="row"><button class="primary" onclick="addFiles()">Add files…</button><button onclick="save()">Save project</button><span id="saveFeedback" class="small" role="status"></span></div><p class="small">Files are processed in the order shown. Use ↑ and ↓ to reorder.</p><div class="queue" id="queue"></div></section>
 <section><h2>File header and prompts</h2><p class="small" id="selectedLabel">Select a text file to edit its uploader header.</p>
 <div class="stack">
@@ -44,9 +57,11 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 </div>
 <div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
 </div></section>
-<section><h2>Settings</h2><div class="stack">
+<section><h2>Destination</h2><div class="stack">
+<label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label>
+<button onclick="changeApiKey()">Change / Reset API Key</button>
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
-<label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label><button onclick="changeApiKey()">Change / Reset API Key</button><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
+<div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
 <label>Nomi.ai user name (required when a file contains [username])<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
 <div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
@@ -68,6 +83,133 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <section class="full"><h2>Live output</h2><pre id="log">Waiting for desktop host…</pre></section>
 <section class="full"><h2>Saved replies</h2><pre id="replies">No reflections recorded yet.</pre></section>
 </main>
+<script>
+const viewNames=["destination","files","upload","history","settings"];
+function showView(name){
+ if(!viewNames.includes(name))return;
+ for(const n of viewNames){
+  document.getElementById("view-"+n).classList.toggle("active",n===name);
+  document.getElementById("nav-"+n).setAttribute("aria-selected",String(n===name));
+ }
+}
+function selectEditorTab(name){
+ for(const n of ["metadata","prompts","preview"]){
+  document.getElementById("edit-"+n)?.classList.toggle("active",n===name);
+  document.getElementById("tab-"+n)?.setAttribute("aria-selected",String(n===name));
+ }
+}
+function applyTheme(setting){
+ localStorage.setItem("nomi-uploader-theme",setting);
+ document.documentElement.dataset.theme=setting==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):setting;
+ const picker=document.getElementById("theme-choice");if(picker)picker.value=setting;
+}
+function copyText(text,feedbackId){
+ const value=String(text??"");
+ const feedback=document.getElementById(feedbackId);
+ const fallback=()=>{const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.left="-9999px";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw new Error("Clipboard unavailable");};
+ const succeeded=()=>{if(feedback)feedback.textContent="Copied";};
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(succeeded).catch(()=>{try{fallback();succeeded()}catch(e){if(feedback)feedback.textContent="Copy failed";}});}
+ else {try{fallback();succeeded()}catch(e){if(feedback)feedback.textContent="Copy failed";}}
+}
+function copyOutput(id,feedbackId){copyText(document.getElementById(id)?.value??document.getElementById(id)?.textContent??"",feedbackId)}
+function copyStatus(){
+ const ids=["recoveryRecommendation","state","stats","log"];
+ const content=ids.map(id=>id+": "+(document.getElementById(id)?.textContent||"")).join("\n\n");
+ navigator.clipboard?.writeText(content).then(()=>{document.getElementById("copyFeedback").textContent="Copied";}).catch(()=>{
+  const t=document.createElement("textarea");t.value=content;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();document.getElementById("copyFeedback").textContent="Copied";
+ });
+}
+async function checkForUpdates(){
+ const status=document.getElementById("updateStatus"),link=document.getElementById("updateLink"),notes=document.getElementById("updateNotes");
+ status.textContent="Checking GitHub releases…";link.hidden=true;notes.textContent="";
+ try{
+  const response=await fetch("https://api.github.com/repos/Troub274/nomi-virtual-life/releases?per_page=20",{headers:{"Accept":"application/vnd.github+json"}});
+  if(!response.ok)throw new Error("GitHub HTTP "+response.status);
+  const releases=await response.json();
+  const candidates=releases.filter(r=>!r.draft&&/^nomi-uploader-v\\d+\\.\\d+/.test(r.tag_name));
+  const version=r=>r.tag_name.replace(/^nomi-uploader-v/,"").match(/\\d+/g).map(Number);
+  candidates.sort((a,b)=>{const av=version(a),bv=version(b);for(let i=0;i<3;i++){const d=(bv[i]||0)-(av[i]||0);if(d)return d}return 0});
+  if(!candidates.length){status.textContent="No unified updater releases published yet.";return}
+  const latest=candidates[0];
+  status.textContent="Latest published: "+latest.tag_name+" · "+(latest.published_at||"").slice(0,10);
+  const platform=/Mac/.test(navigator.platform)?"macOS":/Win/.test(navigator.platform)?"Windows":"Linux";
+  const architecture=platform==="macOS"?" (choose Intel or Apple Silicon)":""; 
+  notes.textContent="Your system: "+platform+architecture+". Download the package, then install it manually. The app will not install updates.";
+  link.href=latest.html_url;link.hidden=false;
+ }catch(e){status.textContent="Update check unavailable: "+String(e.message||e)}
+}
+function buildLayout(){
+ const sectionByHeading={};
+ document.querySelectorAll("#workspace > section").forEach(x=>{sectionByHeading[x.querySelector("h2")?.textContent?.trim()]=x});
+ const queue=sectionByHeading["Upload queue"],editor=sectionByHeading["File header and prompts"],settings=sectionByHeading["Destination"],run=sectionByHeading["Run controls"],log=sectionByHeading["Live output"],replies=sectionByHeading["Saved replies"];
+ document.getElementById("files-columns").append(queue,editor);
+ document.getElementById("view-destination").append(settings);
+ document.getElementById("view-upload").append(run,log);
+ // Global reflection and replay defaults belong in Settings; file overrides stay in Files.
+ const defaults=document.createElement("section");
+ defaults.innerHTML='<h2>Upload Defaults</h2><p class="small">These defaults apply to the upload unless an individual file overrides them. Changes update the working configuration immediately.</p><div id="upload-default-fields" class="stack"></div>';
+ document.getElementById("view-settings").append(defaults);
+ const fields=defaults.querySelector("#upload-default-fields");
+ for(const id of ["process","wait","headerEvery","headerText","replyPrompt"]){
+  const input=document.getElementById(id);
+  const label=input?.closest("label");
+  if(label)fields.append(label);
+ }
+
+ document.getElementById("view-history").append(replies);
+ const historyPanel=document.createElement("section");
+ historyPanel.innerHTML='<h2>Upload Run History</h2><p class="small">Selectable run history for support and diagnostics. Select an entry above to inspect its checkpoint.</p><div class="copy-tools"><button type="button" onclick="copyOutput(\'historyText\',\'historyCopyFeedback\')">Copy History</button><span id="historyCopyFeedback" class="small"></span></div><textarea id="historyText" class="copyable-output" readonly spellcheck="false" style="min-height:220px;font-family:ui-monospace,monospace" aria-label="Selectable upload history">No history loaded.</textarea>';
+ document.getElementById("view-history").prepend(historyPanel);
+ const historyControls=document.getElementById("runHistory").closest(".row");
+ historyPanel.insertBefore(historyControls,historyPanel.querySelector(".copy-tools"));
+ // Keep settings available in the destination step, with appearance as its own panel.
+ const appearance=document.createElement("section");
+ appearance.innerHTML='<h2>Appearance</h2><label>Color theme <select id="theme-choice" onchange="applyTheme(this.value)"><option value="dark">Nomi Dark</option><option value="light">Nomi Light</option><option value="system">Follow system</option></select></label>';
+ const credentials=document.createElement("section");
+ credentials.innerHTML='<h2>API Credentials</h2><p class="small">The API key is shared by the GUI and CLI. Change or reset it here, or from the Destination page. The key is never shown in this panel.</p><button onclick="changeApiKey()">Change / Reset API Key</button>';
+ document.getElementById("view-settings").prepend(credentials);
+ document.getElementById("view-settings").append(appearance);
+ const updates=document.createElement("section");
+ updates.innerHTML='<h2>Software Updates</h2><p class="small">Updates are downloaded by you and installed manually; uploads are never interrupted.</p><p id="updateStatus" class="status-line">Not checked yet</p><p id="updateNotes" class="small"></p><div class="row"><button onclick="checkForUpdates()">Check now</button><a id="updateLink" href="#" target="_blank" rel="noopener noreferrer" hidden>View release and download</a></div>';
+ document.getElementById("view-settings").append(updates);
+
+ const action=document.createElement("aside");action.className="actions";
+ action.innerHTML='<h2>Recommended Action</h2><div class="message" id="recommendedActionText">Select an upload checkpoint to see the recommended next action.</div><button onclick="showView(\'history\')">Review History</button>';
+ run.prepend(action);
+ const advanced=document.createElement("section");
+ advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><p class="small">Normal Resume already offers confirmation for ambiguous operations; use these controls when you want to choose the specific recovery type.</p>';
+ run.insertBefore(advanced,run.querySelector(".row"));
+
+ // Keep output selectable, and provide per-output copy actions even on restrictive webviews.
+ for(const [id,title] of [["state","Status"],["log","Log / errors"],["replies","Replies"],["recoveryRecommendation","Recovery status"],["recommendedActionText","Recommended action"]]){
+  const output=document.getElementById(id);if(!output)continue;
+  output.classList.add("copyable-output");
+  const wrap=document.createElement("div");wrap.className="copy-tools";
+  const btn=document.createElement("button");btn.type="button";btn.textContent="Copy "+title;
+  const feedback=document.createElement("span");feedback.className="small";feedback.id="copy-feedback-"+id;
+  btn.addEventListener("click",()=>copyOutput(id,feedback.id));
+  wrap.append(btn,feedback);
+  output.insertAdjacentElement("afterend",wrap);
+ }
+ const copy=document.createElement("button");copy.textContent="Copy Status";copy.onclick=copyStatus;
+ const fb=document.createElement("span");fb.id="copyFeedback";fb.className="small";
+ log.insertBefore(fb,log.querySelector("pre"));log.insertBefore(copy,fb);
+ const dropdown=document.createElement("div");dropdown.className="editor-tabs";
+ dropdown.innerHTML='<button id="tab-metadata" aria-selected="true" onclick="selectEditorTab(\'metadata\')">Metadata</button><button id="tab-prompts" aria-selected="false" onclick="selectEditorTab(\'prompts\')">Prompts</button><button id="tab-preview" aria-selected="false" onclick="selectEditorTab(\'preview\')">Preview</button>';
+ editor.insertBefore(dropdown,editor.querySelector(".stack"));
+ const edit=editor.querySelector(".stack");edit.id="edit-metadata";edit.classList.add("edit-panel","active");
+ const prompts=document.createElement("div");prompts.id="edit-prompts";prompts.className="edit-panel stack";
+ const preview=document.createElement("div");preview.id="edit-preview";preview.className="edit-panel stack";
+ for(const id of ["promptsField","replyPromptField","headerTextField","headerEveryField","processField"]){const c=document.getElementById(id);if(c?.closest("label"))prompts.append(c.closest("label"))}
+ const exportEditor=document.getElementById("exportEditor");if(exportEditor)prompts.append(exportEditor);
+ const p=document.getElementById("preview");if(p?.closest("label"))preview.append(p.closest("label"));else if(p)preview.append(p);
+ const notice=document.getElementById("previewNotice");if(notice)preview.append(notice);
+ editor.append(prompts,preview);
+ applyTheme(localStorage.getItem("nomi-uploader-theme")||"dark");
+ // No automatic download; checks are explicitly requested by the user.
+}
+document.addEventListener("DOMContentLoaded",buildLayout);
+</script>
 <script>
 let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:"",user_name:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
 const el=id=>document.getElementById(id);
@@ -177,6 +319,10 @@ async function refreshRuns(){
  try{const runs=await call("list_runs");const sel=el("runHistory");const keep=sel.value;sel.replaceChildren();
  const option=document.createElement("option");option.value="";option.textContent="Choose an earlier run";sel.appendChild(option);
  for(const run of runs){const o=document.createElement("option");o.value=run.id;o.textContent=(run.nomi||"Unknown")+" · "+(run.completed?"completed":"checkpoint")+" · "+run.id.slice(0,8);sel.appendChild(o)}
+ const historyText=el("historyText");
+ if(historyText)historyText.value=runs.length?runs.map(run=>
+  "Nomi: "+(run.nomi||"Unknown")+"\nRun ID: "+run.id+"\nStatus: "+(run.completed?"Completed":"Checkpoint / unfinished")+"\nLast modified: "+(run.modified?new Date(run.modified*1000).toLocaleString():"Unknown")+"\nRoom UUID: "+(run.room||"Unknown")
+ ).join("\n\n-------------------------\n\n"):"No saved upload runs.";
  if(runs.some(r=>r.id===keep))sel.value=keep;
  }catch(e){el("state").textContent="History: "+String(e)}
 }
@@ -207,6 +353,26 @@ async function manualRestart(){
    el("state").textContent="Manual restart requested at "+p+":"+i;
  }catch(e){el("state").textContent="Manual restart failed: "+String(e);alert(String(e))}
 }
+async function scopedRecovery(kind){
+ try{
+  const status=await call("recovery_status");
+  const sends=(status.uncertain_sends||[]).map(p=>p.join(":"));
+  const replies=(status.ambiguous_replies||[]).map(p=>p.join(":"));
+  const tokens=kind==="send"?sends:replies;
+  if(!tokens.length){alert("No eligible "+(kind==="send"?"uncertain content sends":"uncertain reply requests")+" in this checkpoint.");return}
+  const description=kind==="send"?"Resend unconfirmed content? Nomi may already have received it. Duplicates are possible.":"Request a reply again? The original response may already exist. An extra reply is possible.";
+  if(!confirm(description+"\\n\\nAffected positions: "+tokens.join(", ")+"\\n\\nThis action will resume the selected upload."))return;
+  await call("recover_resume",kind==="send"?tokens:[],kind==="reply"?tokens:[]);
+  el("state").textContent="Authorized "+(kind==="send"?"content resend":"reply retry")+" and resumed checkpoint";
+ }catch(e){el("state").textContent="Recovery failed: "+String(e);alert(String(e))}
+}
+function renderRecoveryOptions(status){
+ const sends=status.uncertain_sends||[], replies=status.ambiguous_replies||[];
+ const sendBtn=el("recoverSendButton"),replyBtn=el("recoverReplyButton"),summary=el("advancedRecoveryStatus");
+ if(!sendBtn||!replyBtn)return;
+ sendBtn.disabled=!sends.length;replyBtn.disabled=!replies.length;
+ summary.textContent=sends.length+" uncertain content send(s), "+replies.length+" uncertain reply request(s). Buttons are enabled only when the selected checkpoint records a matching operation.";
+}
 async function resume(){
  try{
    const status=await call("recovery_status");
@@ -230,7 +396,9 @@ async function resume(){
 }
 async function poll(){if(!ready)return;try{
 let recovery=await call("recovery_status");
+renderRecoveryOptions(recovery);
 el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
+el("recommendedActionText").textContent=(recovery.recommendation||"Select an upload checkpoint.")+"\n"+(recovery.next?"Next message: "+recovery.next.join(":"):"")+"\n"+(recovery.state||"");
 let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
 el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";

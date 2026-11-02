@@ -1,0 +1,96 @@
+name: Nomi Uploader 1.3i Preview Builds
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/uploader-1.3i-interface
+    paths:
+      - 'uploader/**'
+      - '.github/workflows/uploader-1.3i-preview.yml'
+concurrency:
+  group: nomi-uploader-1.3i-preview
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r uploader/requirements.txt
+      - run: python -m unittest discover -s uploader/gui -p test_export_prompts.py -v
+      - run: python -m unittest discover -s uploader/tests -p 'test_*.py' -v
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: ./uploader/gui/build-windows.ps1
+        shell: pwsh
+      - shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/windows-package/cli | Out-Null
+          Copy-Item dist/NomiUploader.exe dist/windows-package/
+          Copy-Item uploader/nomi-uploader.py,uploader/legacy_v085.py,uploader/requirements.txt,uploader/README.md,uploader/RECOVERY.md dist/windows-package/cli/
+          Copy-Item uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/windows-package/
+          Compress-Archive -Path dist/windows-package/* -DestinationPath dist/NomiUploader-Windows.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uploader-windows
+          path: dist/NomiUploader-Windows.zip
+  linux:
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev gir1.2-webkit2-4.1 gir1.2-gtk-3.0 python3-gi python3-venv
+      - run: |
+          /usr/bin/python3 -m venv --system-site-packages .venv-linux
+          echo "$GITHUB_WORKSPACE/.venv-linux/bin" >> "$GITHUB_PATH"
+      - run: bash uploader/gui/build-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uploader-linux
+          path: dist/NomiUploader-Linux-x86_64.tar.gz
+  macos:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: bash uploader/gui/build-macos.sh ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uploader-macos-${{ matrix.arch }}
+          path: dist/NomiUploader-macOS-${{ matrix.arch }}.zip
+  cli:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p dist/cli
+          cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt uploader/README.md uploader/RECOVERY.md dist/cli/
+          cp uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/cli/
+          cd dist
+          zip -rq NomiUploader-Python-CLI.zip cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uploader-cli
+          path: dist/NomiUploader-Python-CLI.zip
