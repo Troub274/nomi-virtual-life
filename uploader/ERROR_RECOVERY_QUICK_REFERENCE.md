@@ -1,6 +1,6 @@
 # Nomi Uploader — Error → Recovery Command Quick Reference
 
-Applies to `python3 uploader/nomi-uploader.py` (current v1.1 CLI). Run commands from the repository root. **Use the same checkpoint, inputs and manifest** as the interrupted run; `--resume` reads the saved file list and planning options, so filenames need not be repeated.
+Applies to `python3 uploader/nomi-uploader.py` (current v1.3 CLI). Run commands from the repository root. **Use the same checkpoint, inputs and manifest** as the interrupted run; `--resume` reads the saved file list and planning options, so filenames need not be repeated.
 
 For packaged examples, the first recovery command is usually just the same command again:
 
@@ -10,9 +10,9 @@ python examples/run_package.py tammy
 
 It resumes automatically. Check status safely with `python examples/run_package.py tammy --status`.
 
-For a raw checkpoint, `python3 uploader/nomi-uploader.py --resume --easy --checkpoint PATH` gives the same friendly recovery prompts. The expert commands below are still useful when you want explicit control.
+For a raw checkpoint, first run `python3 uploader/nomi-uploader.py --status --checkpoint PATH` (read-only and no API key required). Then `python3 uploader/nomi-uploader.py --resume --easy --checkpoint PATH` gives friendly recovery prompts. The expert commands below are still useful when you want explicit control.
 
-**Before any operator-authorized retry**, preserve the checkpoint:
+**Before any operator-authorized retry or manual restart**, preserve the checkpoint:
 
 ```bash
 cp -p nomi_uploader_checkpoint.jsonl nomi_uploader_checkpoint.jsonl.backup
@@ -33,7 +33,7 @@ For a custom checkpoint, replace `--checkpoint FILE.jsonl` in each example and b
 | `No pending confirmed reflection at PASS:INDEX` | **No reply-recovery command.** Inspect checkpoint; if it is an attempted but unconfirmed **send**, use `--retry-uncertain-send PASS:INDEX` instead. | This is why Mary's `--recover-noreply 1:536` and `--recover-uncertain-reply 1:536` were rejected. |
 | `No pending uncertain content send at PASS:INDEX` | **No resend.** Check whether the message was already confirmed or index is wrong. | Do not force a duplicate. |
 | `No recorded uncertain reply result at PASS:INDEX` | **No automatic override.** Inspect `reply_attempt` and checkpoint events. | `--recover-uncertain-reply` requires recorded `reply_uncertain`. |
-| `Manifest changed: resume requires identical content and options` | Restore the original input files and file order, then `python3 uploader/nomi-uploader.py --resume` | Do not edit the manifest or checkpoint to bypass validation. |
+| `Manifest changed: resume requires identical content and options` | For normal resume, restore the original inputs/order/settings and use `--resume`. If you intentionally revised the files, consider `--resume --manual-restart PASS:INDEX` with the revised files/options. | Manual restart rebuilds the plan and appends a new journal generation. It can resend content; `PASS:INDEX` refers to the **new** plan, not the old one. Never edit the checkpoint by hand. |
 | `No checkpoint to resume` | Find the correct checkpoint and use `python3 uploader/nomi-uploader.py --resume --checkpoint PATH` | Do not create a new run by accident. |
 | `Unfinished checkpoint exists; use --resume or a different --checkpoint` | `python3 uploader/nomi-uploader.py --resume` | Keep the unfinished run's checkpoint. |
 | `Existing rooms ... protected or unavailable` | Inspect with `python3 uploader/nomi-uploader.py --utility` | Do not delete protected rooms or checkpoints to unblock the selector. Room selection behavior depends on checkout version. |
@@ -94,8 +94,8 @@ python3 uploader/nomi-uploader.py --resume --recover-uncertain-reply 1:559
 1. **Never delete or manually rewrite the checkpoint** to force progress.
 2. **Never resend a confirmed prompt** just because its reply is missing.
 3. **Never treat HTTP 502 or a timeout as proof the POST failed.** Recovery flags explicitly accept a duplication risk.
-4. **Never change source files, order or planning settings during resume.**
+4. **Normal resume requires the original source files, order and planning settings.** Changed material requires an explicit **manual restart** with recalculated positions and possible replay.
 5. **Never run two processes against the same checkpoint.**
-6. **Do not assume a fresh room continues an old checkpoint.** Only use room migration if your installed uploader version explicitly supports and records it.
+6. **Do not assume a fresh room continues an old checkpoint.** Room migration requires the CLI's explicit authorization flags and an eligible pending reply.\n7. **Use Normal Resume before Manual Restart whenever possible.** Manual Restart is a deliberate recovery-generation boundary, not a substitute for an ordinary resume.
 
 For detailed rationale, see [RECOVERY.md](RECOVERY.md). For the exact flags in your installed checkout, run `python3 uploader/nomi-uploader.py --help`.
