@@ -1,12 +1,8 @@
 name: Build Nomi Uploader for Linux
+# Legacy workflow. New releases use release-nomi-uploader-unified.yml.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'uploader/gui/**'
-      - 'uploader/nomi-uploader.py'
-      - 'uploader/legacy_v085.py'
-      - '.github/workflows/build-nomi-uploader-linux.yml'
+
 concurrency:
   group: nomi-uploader-linux-alpha
   cancel-in-progress: true
