@@ -399,6 +399,7 @@ class Bridge {
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
   }
   tick() {
+    if (this.simpleMode && (this.mode||'direct')==='direct') return this.simpleTick();
     if (!this.running) return;
     this.pumpOutbound();
     if(this.phase==='send')return;
