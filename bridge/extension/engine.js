@@ -385,7 +385,7 @@ class Bridge {
             const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
             this.queuePairNotice(parsed.command,
               '[AI Bridge ' + parsed.command + ']\\nState: ' + stateWord +
-              '. Requested by ' + source.site + '. Both participants notified.\\n[End notice]',
+              '. Requested by ' + source.site + '. Notification delivery in progress.\\n[End notice]',
               this.source);
           } else {
             this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
