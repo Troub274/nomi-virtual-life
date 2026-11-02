@@ -1,13 +1,9 @@
 name: Build Nomi Uploader for Windows
 # Alpha build trigger: automatically publish latest main commit.
+# Legacy workflow. New releases use release-nomi-uploader-unified.yml.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'uploader/gui/**'
-      - 'uploader/nomi-uploader.py'
-      - 'uploader/legacy_v085.py'
-      - '.github/workflows/build-nomi-uploader-windows.yml'
+
 concurrency:
   group: nomi-uploader-windows-alpha
   cancel-in-progress: true
