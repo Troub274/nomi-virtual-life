@@ -153,7 +153,7 @@ class Bridge {
     const items=this.outboundQueue||[], index=items.findIndex(x=>x.target===target);
     if(index<0)return false;
     const dest=this.tabs[target],item=items[index];
-    if(!dest || !dest.ready || dest.busy || dest.draft || this.clock()-dest.seen>70)return false;
+    if(!dest || !dest.ready || dest.busy || dest.complete===false || dest.draft || this.clock()-dest.seen>70)return false;
     const pending=this.queuedFor(target), sequence=(this.deliveredCounts||{})[target]||0;
     const label=item.parts>1
       ? '[Bridge part '+item.part+' of '+item.parts+'; '+(pending-1)+' queued after this]\n'
@@ -662,6 +662,16 @@ class Bridge {
   acknowledge(tab, data) {
     const cmd = this.command;
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
+    if (data.error && cmd.queuedOutbound &&
+        data.error === 'Destination began generating before insertion; draft not modified') {
+      this.outboundQueue ||= [];
+      this.outboundQueue.unshift(cmd.queueItem);
+      this.outboundCredits ||= {};
+      this.outboundCredits[tab]=(this.outboundCredits[tab]||0)+1;
+      this.command=null;this.phase='reply';
+      this.reason='Recipient started generating; queued send deferred until idle.';
+      return {};
+    }
     if (data.error) {
       if(cmd.queuedOutbound)this.failedQueueItem=cmd.queueItem;
       this.phase = 'uncertain';
