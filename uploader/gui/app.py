@@ -470,6 +470,39 @@ class API:
         Path(str(directory/"upload.jsonl")+".pause").unlink(missing_ok=True)
         return self._run(args)
 
+    def advanced_resume(self, operation, position):
+        """Expose legacy reply recovery and room migration through validated CLI flags.
+
+        The CLI checks checkpoint evidence and room protection; GUI does not
+        synthesize journal events or override an ambiguous operation.
+        """
+        flags={
+            "noreply": ["--recover-noreply"],
+            "migrate": ["--new-room-on-resume", "--abandon-reply"],
+        }
+        if operation not in flags:
+            raise ValueError("Unsupported advanced recovery operation.")
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Stop the active upload before recovery.")
+        if not re.fullmatch(r"[1-9]\\d*:[1-9]\\d*", str(position)):
+            raise ValueError("Position must be PASS:INDEX (positive integers).")
+        directory=self._active_dir()
+        if not self._has_checkpoint(directory):
+            raise ValueError("No selected checkpoint to recover.")
+        status=self.recovery_status()
+        if status["state"] in ("COMPLETE", "NO_CHECKPOINT"):
+            raise ValueError("The selected run cannot be resumed.")
+        args=["--resume", "--checkpoint", str(directory/"upload.jsonl"),
+              "--completion",str(directory/"completed.json"),
+              "--replies",str(directory/"replies.txt")]
+        if operation=="noreply":
+            args.extend(["--recover-noreply",position])
+        else:
+            args.extend(["--new-room-on-resume","--abandon-reply",position])
+        # Only the CLI may decide if this operation matches checkpoint evidence.
+        Path(str(directory/"upload.jsonl")+".pause").unlink(missing_ok=True)
+        return self._run(args)
+
     def resume(self):
         """Resume the current selected run using backend recovery checks."""
         directory=self._active_dir()
