@@ -18,7 +18,7 @@ try:
 except ImportError:
     import legacy_v085 as legacy
 
-VERSION = "1.2"
+VERSION = "1.3"
 MAX_API_CHARS = 800
 DEFAULT_CHUNK_CHARS = 750
 KNOWN_WAIT_ERRORS = {"NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests"}
@@ -444,6 +444,30 @@ def records(path):
         raise ValueError("Incomplete checkpoint tail; preserve file and inspect before repair")
     return [json.loads(s) for s in raw.splitlines() if s.strip()]
 
+def active_records(path):
+    """Project latest append-only manual restart boundary onto one active generation."""
+    history=records(Path(path))
+    boundaries=[i for i,e in enumerate(history) if e.get("event")=="manual_restart"]
+    if not boundaries: return history
+    at=boundaries[-1]
+    boundary=history[at]
+    start=dict(boundary["start"])
+    start["event"]="start"
+    first_pass=int(boundary["pass"])
+    first_index=int(boundary["index"])
+    count=int(start["messages_per_pass"])
+    prompts={tuple(v) for v in boundary.get("prefix_prompts",[])}
+    synthetic=[]
+    for p in range(1,int(start["passes"])+1):
+        for i in range(1,count+1):
+            if (p,i)>=(first_pass,first_index): break
+            synthetic.append({"event":"confirmed","pass":p,"index":i,
+                              "kind":"prompt" if (p,i) in prompts else "content"})
+            if (p,i) in prompts:
+                synthetic.append({"event":"reply_committed","pass":p,"index":i,
+                                  "synthetic":True})
+    return [start]+synthetic+history[at+1:]
+
 def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
                                max_wait=0):
     """Wait through explicit Nomi not-ready responses; stop on ambiguous errors.
@@ -592,7 +616,7 @@ def migrate_resume(cp, old, nomi, room):
 
 def checkpoint_summary(path):
     cp=Path(path)
-    old=records(cp)
+    old=active_records(cp)
     if not old:
         return {"state":"NO_CHECKPOINT","checkpoint":str(cp)}
     init=old[0]
@@ -711,7 +735,9 @@ def _upload_locked(args):
     if migrating and (args.room or args.dry_run or getattr(args,"recover_noreply",[]) or getattr(args,"recover_uncertain_reply",[]) or getattr(args,"retry_uncertain_send",[])):
         raise ValueError("migration cannot be combined with --room, --dry-run or recovery flags")
     cp=Path(args.checkpoint)
-    old=records(cp) if args.resume else []
+    manual=getattr(args,"manual_restart",None)
+    if manual and not args.resume: raise ValueError("--manual-restart requires --resume")
+    old=active_records(cp) if args.resume else []
     if args.resume and not old: raise ValueError("No checkpoint to resume")
     if old:
         init=old[0]
@@ -719,19 +745,25 @@ def _upload_locked(args):
         nomi={"uuid":init["nomi_uuid"],"name":init["nomi_name"]}
         year=init["year"]; order=init["order"]; room=migration_room(old)
         if args.room and args.room!=room: raise ValueError("--room cannot override checkpoint room")
-        files=init["files"]; passes=init["passes"]
-        args.user=init.get("user","")
-        args.process_every=init.get("process_every",0)
-        args.header_every=init.get("header_every",0)
-        args.header_text=init.get("header_text","")
-        args.reply_prompt=init.get("reply_prompt","")
+        files=(args.files if manual and args.files else init["files"])
+        passes=(args.passes if manual else init["passes"])
+        if not manual:
+            args.user=init.get("user","")
+        if not manual:
+            args.process_every=init.get("process_every",0)
+            args.header_every=init.get("header_every",0)
+            args.header_text=init.get("header_text","")
+            args.reply_prompt=init.get("reply_prompt","")
         if init.get("chunk_mode")=="chars" or "chunk_chars" in init:
             chunk_mode="chars"
             chunk_limit=int(init.get("chunk_limit",init.get("chunk_chars",DEFAULT_CHUNK_CHARS)))
         else:
             chunk_mode="bytes"
             chunk_limit=int(init.get("chunk_limit",init.get("chunk_bytes",750)))
-        entry_range=parse_entry_range(init.get("entry_range"))
+        entry_range=parse_entry_range(getattr(args,"entries",None) if manual else init.get("entry_range"))
+        if manual:
+            chunk_mode="chars"
+            chunk_limit=int(getattr(args,"chunk_chars",None) or DEFAULT_CHUNK_CHARS)
     else:
         if args.dry_run:
             nomi={"name":args.nomi or "Nomi","uuid":"DRYRUN"}
@@ -752,7 +784,7 @@ def _upload_locked(args):
         else:
             chunk_mode="chars"; chunk_limit=int(char_limit or DEFAULT_CHUNK_CHARS)
     if not files: raise ValueError("Specify at least one document")
-    if old:
+    if old and not manual:
         export_options=init.get("export_options",{})
     else:
         export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if getattr(args,"export_options",None) else {}
@@ -760,7 +792,33 @@ def _upload_locked(args):
                        args.process_every,entry_range,chunk_mode,export_options,
                        args.header_every,args.header_text,args.reply_prompt)
     manifest=digest(messages)
-    if old and manifest!=init["manifest"]: raise ValueError("Manifest changed: resume requires identical content and options")
+    if old and not manual and manifest!=init["manifest"]:
+        raise ValueError("Manifest changed: resume requires identical content and options")
+    if manual:
+        if not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*",manual):
+            raise ValueError("--manual-restart expects PASS:INDEX")
+        p0,i0=map(int,manual.split(":"))
+        if p0>passes or i0>len(messages):
+            raise ValueError("Manual restart position exceeds the recalculated plan")
+        # Validate entire replacement plan before appending the irreversible boundary.
+        new_start=dict(init)
+        new_start.update({"event":"start","version":VERSION,"files":files,
+            "passes":passes,"messages_per_pass":len(messages),"manifest":manifest,
+            "user":args.user,"process_every":args.process_every,
+            "header_every":args.header_every,"header_text":args.header_text,
+            "reply_prompt":args.reply_prompt,"export_options":export_options,
+            "entry_range":entry_range_text(entry_range),"chunk_mode":chunk_mode,
+            "chunk_limit":chunk_limit,"chunk_chars":chunk_limit})
+        prefix_prompts=[[p,i] for p in range(1,passes+1)
+                        for i,m in enumerate(messages,1)
+                        if (p,i)<(p0,i0) and m["kind"]=="prompt"]
+        prior_generations=sum(1 for event in records(cp) if event.get("event")=="manual_restart")
+        record(cp,{"event":"manual_restart","generation":prior_generations+2,
+                   "pass":p0,"index":i0,"start":new_start,
+                   "prefix_prompts":prefix_prompts,
+                   "reason":"explicit operator restart with regenerated plan"})
+        old=active_records(cp)
+        init=old[0]
     print("Nomi:",nomi["name"],"Date order:",order,"Year:",year,"Messages per pass:",len(messages),"Passes:",passes)
     if args.dry_run:
         for i,m in enumerate(messages,1): print("%4d %-8s %s / %s: %s"%(i,m["kind"],m["file"],m["section"],m["text"][:130].replace("\n"," | ")))
@@ -806,7 +864,7 @@ def _upload_locked(args):
         if chunk_mode=="chars": start_event["chunk_chars"]=chunk_limit
         else: start_event["chunk_bytes"]=chunk_limit
         record(cp,start_event)
-        old=records(cp)
+        old=active_records(cp)
     attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="attempt"}
     confirmed={(r["pass"],r["index"]) for r in old if r.get("event")=="confirmed"}
     reply_attempts={(r["pass"],r["index"]) for r in old if r.get("event")=="reply_attempt"}
@@ -1180,6 +1238,8 @@ def main(argv=None):
     parser.add_argument("--status",action="store_true",
                         help="Read-only checkpoint status; makes no Nomi API calls")
     parser.add_argument("--resume",action="store_true")
+    parser.add_argument("--manual-restart",metavar="PASS:INDEX",
+                        help="Explicit restart at message in newly planned content; requires --resume; appends a hard journal boundary")
     parser.add_argument("--easy",action="store_true",
                         help="Friendly recovery prompts for genuinely ambiguous checkpoint states")
     parser.add_argument("--new-room-on-resume",action="store_true",help="Move a stuck-reply run to a fresh room; requires --abandon-reply")
