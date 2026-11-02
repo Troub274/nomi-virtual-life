@@ -1,5 +1,7 @@
 const WORLD_OBSERVER_BUILD = 'prototype-cli-hotfix';
 const versionLabel = document.getElementById('build-version');
+const displayVersion = document.getElementById('display-version');
+if (displayVersion) displayVersion.textContent = chrome.runtime.getManifest().version;
 if (versionLabel) versionLabel.textContent = 'v' + chrome.runtime.getManifest().version + ' · ' + WORLD_OBSERVER_BUILD;
 const $ = id => document.getElementById(id);
 try {
@@ -390,7 +392,7 @@ $('copy-status').onclick = async () => {
       selectedGPTTab:state.pair?.[0]||null, waitingOnTab:state.source||null,
       tabRetry:state.tabRetry||null,
       room: state.room && {autoChat:state.room.autoChat,userTurn:state.room.userTurn,memberCount:state.room.members.length}, running: state.running, phase: state.phase, reason: state.reason,
-      turns: state.turns, lastDelivery: state.lastDelivery, events: state.events, tabs: state.tabs.map(t => ({id:t.id,site:t.site, selectedGPT:t.id===state.pair?.[0],
+      turns: state.turns, cliTransactions: state.cliTransactions, lastDelivery: state.lastDelivery, events: state.events, tabs: state.tabs.map(t => ({id:t.id,site:t.site, selectedGPT:t.id===state.pair?.[0],
         connected:t.connected, ready:t.ready,
         busy:t.busy, draft:t.draft, replyCharacters:t.reply?.length || 0, complete:t.complete, completion:t.completion, matches:t.matches, diagnostic:t.diagnostic}))};
     await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
