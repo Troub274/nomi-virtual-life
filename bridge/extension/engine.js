@@ -233,7 +233,7 @@ class Bridge {
       restorePhase=this.phase, restoreWait=this.startedWait;
     this.source=id; this.baseline=null; this.phase='reply'; this.startedWait=now;
     this.tick();
-    if (this.command?.source===id) {
+    if (this.command) {
       this.command.cliRestore={source:restoreSource,baseline:restoreBaseline,phase:restorePhase,startedWait:restoreWait};
       if (this.pairNotice) {
         this.pairNotice.restoreSource=restoreSource;
@@ -520,7 +520,10 @@ class Bridge {
             '\nMode: ' + (this.mode||'direct') + '\nPhase: ' + this.phase +
             '\nConversation turns: ' + this.turns + '\nCLI transactions: ' + (this.cliTransactions||0) + '\nPending send: ' + (this.command?'yes':'no') +
             '\n[End status]\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
-          if (['pause','resume'].includes(parsed.command)) {
+          if (parsed.command==='next-message' && this.queuedFor(this.source)>0 &&
+              this.releaseOutbound(this.source)) {
+            this.note('Next queued message released directly; no redundant CLI receipt.');
+          } else if (['pause','resume'].includes(parsed.command)) {
             const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
             this.queuePairNotice(parsed.command,
               '[AI Bridge ' + parsed.command + ']\nState: ' + stateWord +
