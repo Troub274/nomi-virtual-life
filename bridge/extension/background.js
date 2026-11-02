@@ -1,4 +1,4 @@
-importScripts('engine.js', 'group.js', 'heartbeat.js', 'api-room.js', 'api-checkpoint.js', 'world-observer.js', 'api-driver.js');
+importScripts('bridge-cli.js', 'engine.js', 'group.js', 'heartbeat.js', 'api-room.js', 'api-checkpoint.js', 'world-observer.js', 'api-driver.js');
 let bridge;
 const dashboardUrl = chrome.runtime.getURL('dashboard.html');
 // One click opens the primary interface. Reuse an existing dashboard tab.
