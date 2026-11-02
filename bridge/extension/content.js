@@ -252,6 +252,8 @@
         await sleep(delay);
         delay = Math.min(delay * 2, 8000);
       }
+      // Nonblocking diagnostics; never delay or reissue the actual click.
+      void api('/api/click-attempt', {id: command.id}).catch(() => {});
       button.click();
       for (let attempt = 0; attempt < 100; attempt++) {
         await sleep(100);
