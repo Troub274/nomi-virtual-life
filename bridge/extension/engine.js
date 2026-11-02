@@ -84,6 +84,7 @@ class Bridge {
       this.simpleControllerSeen=this.tabs[pair[0]]?.replyKey;
       this.simplePeerSeen=this.tabs[pair[1]]?.replyKey;
       this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
+      this.simpleAccepted={};
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
@@ -360,6 +361,13 @@ class Bridge {
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
   }
+  simpleReplyIdentity(tab) {
+    // replyKey is count|DOM message id|text. Ignore the trailing text,
+    // which can change on harmless re-render; keep count/id and full reply.
+    const key=String(tab.replyKey||'');
+    const split=key.indexOf('|',key.indexOf('|')+1);
+    return JSON.stringify([tab.document,tab.url,split>=0?key.slice(0,split):key,tab.reply]);
+  }
   simpleTick() {
     if(!this.running || this.phase==='send' || this.cliPaused || !this.pair)return;
     const controllerId=this.pair[0],peerId=this.pair[1];
@@ -370,6 +378,13 @@ class Bridge {
        this.clock()-tab.seen>70 || this.clock()-dest.seen>70)return;
     const old=this.simplePeerAwait?this.simplePeerSeen:this.simpleControllerSeen;
     if(tab.replyKey===old)return;
+    const identity=this.simpleReplyIdentity(tab);
+    this.simpleAccepted ||= {};
+    if(this.simpleAccepted[id]===identity) {
+      if(this.simplePeerAwait)this.simplePeerSeen=tab.replyKey;
+      else this.simpleControllerSeen=tab.replyKey;
+      return;
+    }
     // Read only one complete reply from the active participant, with no command
     // interpretation whatsoever on the conversational peer.
     let message=tab.reply,shutdown=false;
@@ -412,6 +427,7 @@ class Bridge {
       message+='\n\n'+this.simpleTruncationWarning;
       this.simpleTruncationWarning=null;
     }
+    this.simpleAccepted[id]=identity;
     this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
