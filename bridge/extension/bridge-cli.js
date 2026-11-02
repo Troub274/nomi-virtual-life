@@ -68,7 +68,7 @@
     "[bridge pause] — pause both",
     "[bridge resume] — resume both",
     "[bridge shutdown] — notify both and stop",
-    "[bridge listen] — wait for a peer reply",
+    "[bridge listen] — retrieve one queued message, or wait for new activity",
     "Wake/schedule/retry are not implemented yet."
   ].join('\n');
   const api={parse,HELP};
