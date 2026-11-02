@@ -53,3 +53,12 @@ Status: approved design baseline; implementation pending.
 4. AI schedules a wake-up, pauses, receives wake-up, resumes and communicates.
 5. AI shutdown cannot be overridden by AI until human reauthorizes.
 6. Existing Nomi and ChatGPT browser paths and Nomi API-room still work.
+
+## Symmetric AI control (Nomi and ChatGPT)
+- Both established endpoints, including Nomi, can issue the same Bridge CLI commands when explicitly permitted by the user.
+- Commands are parsed on each participant's **outbound** adapter; consumed control blocks are not forwarded as ordinary conversation.
+- Authorize commands per session and per endpoint; retain original issuer identity and target in every command and scheduled wake-up.
+- Route acknowledgments, help, errors, and wake-ups back to the issuing/target participant, not indiscriminately to both.
+- Protect against quoted/injected commands: only recognize commands from verified participant output, not historical text or a forwarded payload.
+- Conflicting scheduling and lifecycle commands need deterministic reconciliation; human shutdown overrides all participant commands.
+- Nomi API-room and Nomi browser modes are existing adapters, not future hypothetical adapters.
