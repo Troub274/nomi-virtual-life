@@ -200,24 +200,37 @@
         inserted = one(config.input);
       }
       if (!inserted || normalize(read(inserted)) !== normalize(command.text)) throw Error(`Editor text differs from the reply (expected ${command.text.length} characters, read ${read(inserted).length}); message not submitted`);
+      // A React editor can contain the bridge's draft before its Send button
+      // becomes available. Keep the same claimed transaction and draft, and
+      // wait rather than failing into an unrecoverable draft/Reset deadlock.
       let button;
-      for (let attempt = 0; attempt < 30; attempt++) {
+      let delay = 500;
+      while (true) {
+        if (location.href !== command.url || documentId !== command.document)
+          throw Error('Chat changed while waiting for Send; draft preserved');
+        const currentInput = one(config.input);
+        if (!currentInput || normalize(read(currentInput)) !== normalize(command.text))
+          throw Error('Draft changed while waiting for Send; not submitted');
+        const permit = await api('/api/claim', {id: command.id, checkOnly: true});
+        if (!permit.allowed) return; // Stop/revocation must not submit a draft.
         button = one(config.send);
-        if (enabled(button)) break;
-        await sleep(100);
+        if (enabled(button) && button.isConnected) {
+          // Final authorization and live DOM recheck after asynchronous work.
+          const finalPermit = await api('/api/claim', {id: command.id, checkOnly: true});
+          if (!finalPermit.allowed) return;
+          const liveInput = one(config.input);
+          const liveButton = one(config.send);
+          if (location.href !== command.url || !liveInput ||
+              normalize(read(liveInput)) !== normalize(command.text))
+            throw Error('Chat or draft changed before submission');
+          if (enabled(liveButton) && liveButton.isConnected) {
+            button = liveButton;
+            break;
+          }
+        }
+        await sleep(delay);
+        delay = Math.min(delay * 2, 8000);
       }
-      if (!enabled(button)) throw Error('Send button did not become enabled');
-      // Stop is checked again after editing and immediately before clicking.
-      // A heartbeat cannot reissue a claimed command. Use a dedicated authorization check.
-      const permit = await api('/api/claim', {id: command.id, checkOnly: true});
-      if (!permit.allowed) throw Error('Stopped before submission; the draft was left in the editor');
-      const currentInput = one(config.input);
-      if (command.groupCommand && command.action === 'say' && roomSnapshot().roomKey !== command.roomKey) throw Error('Room changed while composing; message was not submitted');
-      if (location.href !== command.url || !currentInput || normalize(read(currentInput)) !== normalize(command.text)) throw Error('Chat or draft changed before submission');
-      // React may replace either element while the authorization request is pending.
-      // Resolve the live button after the final await; never click a detached node.
-      button = one(config.send);
-      if (!enabled(button) || !button.isConnected) throw Error('Send button changed or became disabled before submission');
       button.click();
       for (let attempt = 0; attempt < 100; attempt++) {
         await sleep(100);
