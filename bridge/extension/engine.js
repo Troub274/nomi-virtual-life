@@ -67,11 +67,13 @@ class Bridge {
     this.stableSeconds = Number.isFinite(settle) ? Math.max(3, Math.min(60, settle)) : 8;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
     this.tabRetry=null;
+    this.cliPaused=false;
     this.running = true; this.startedWait = this.clock();
     this.log('Running: waiting for a completed reply.'); this.tick();
   }
   reset() {
     if (this.running) throw Error('Stop before resetting.');
+    this.cliPaused=false;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -166,7 +168,7 @@ class Bridge {
     // The 15-minute idle watchdog belongs to browser chat relay modes.
     // The World Engine may legitimately wait for GPT or a private exchange
     // for hours. In API mode only in-flight sends use safety timeouts.
-    if (this.mode !== 'api-room' && now - this.startedWait > 900) {
+    if (!this.cliPaused && this.mode !== 'api-room' && now - this.startedWait > 900) {
       this.stop('No completed reply for 15 minutes. Check the chat, then press Play to continue waiting.'); return;
     }
     const source = this.tabs[this.source];
@@ -231,7 +233,7 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (['status','help','pending','review','schedule'].includes(parsed.command)) {
+        if (['status','help','pending','review','schedule','pause','resume'].includes(parsed.command)) {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
@@ -254,7 +256,11 @@ class Bridge {
             'The existing periodic extension heartbeat is not a user-scheduled wake-up.\\n' +
             'Use the dashboard for current bridge controls; wake scheduling requires integration.\\n' +
             '[End schedule]';
-          const text = parsed.command === 'schedule' ? scheduleReport :
+          if (parsed.command === 'pause') this.cliPaused = true;
+          if (parsed.command === 'resume') {this.cliPaused = false; this.startedWait = now;}
+          const text = parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
+            parsed.command === 'resume' ? '[AI Bridge] Resumed. Relay forwarding enabled.' :
+            parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
             parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
@@ -286,6 +292,7 @@ class Bridge {
       }
       return;
     }
+    if (this.cliPaused) {this.reason = 'AI Bridge paused. Waiting for [bridge resume] from the active AI.'; return;}
     const target = this.pair.find(id => id !== this.source);
     const dest = this.tabs[target];
     const receiver = ['nomi', 'api-room'].includes(dest.site) ? 'Nomi' : 'ChatGPT';
@@ -356,7 +363,7 @@ class Bridge {
   }
   state() {
     this.tick();
-    return {running: this.running, phase: this.phase, turns: this.turns, reason: this.reason, pair: this.pair,
+    return {running: this.running, paused: !!this.cliPaused, phase: this.phase, turns: this.turns, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
