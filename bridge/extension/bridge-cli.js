@@ -64,7 +64,7 @@
     '[/bridge]',
     'Wake, cancel, and retry may not yet be implemented by the active engine.',
     'Shutdown requires human reauthorization to restart.'
-  ].join('\\n');
+  ].join('\n');
   const api={parse,HELP};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.AIBridgeCLI=api;
