@@ -119,7 +119,7 @@
         reply: text, replyKey: `${replies.length}|${messageId}|${text}`,
         busy: generating, complete, completion,
         ready: !!config.verified && !!input && (sends.length === 1 || generating || (!read(input) && sends.length === 0)),
-        draft: !!read(input), error: '',
+        draft: !!read(input), draftText: read(input), error: '',
         matches: replies.length,
         diagnostic: !config.verified ? 'Open extension setup and verify the Nomi selectors.' :
           !input ? 'Input selector must match exactly one visible editor.' :
@@ -161,17 +161,21 @@
     // Claim once. A failed or lost acknowledgement never causes a second click.
     const check = snapshot();
     if (command.url !== location.href || command.document !== documentId) throw Error('Chat changed before send');
-    if (!check.ready || check.busy || check.draft) throw Error('Chat not ready or contains a draft');
+    if (!check.ready || check.busy || (check.draft && !command.prefilledDraft)) throw Error('Chat not ready or contains a draft');
+    if (command.prefilledDraft && check.draftText !== command.text.trim()) throw Error('Prefilled draft changed');
     handled.add(command.id);
     const claim = await api('/api/claim', {id: command.id});
     if (!claim.allowed) { handled.delete(command.id); return; }
     try {
       if (site === 'nomi' && command.text.length > 800) throw Error('Nomi messages are limited to 800 characters');
       const input = one(config.input);
-      if (!input || read(input)) throw Error('Editor changed before send');
+      if (!input || (read(input) && !command.prefilledDraft)) throw Error('Editor changed before send');
+      if (command.prefilledDraft && read(input) !== command.text.trim()) throw Error('Prefilled draft changed');
       if (input.maxLength > 0 && command.text.length > input.maxLength) throw Error('Reply exceeds the destination’s message length limit');
-      input.focus();
-      if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
+      if (!command.prefilledDraft) input.focus();
+      if (command.prefilledDraft) {
+        // Use the existing matching draft; do not alter or retype it.
+      } else if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
         const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
         Object.getOwnPropertyDescriptor(prototype, 'value').set.call(input, command.text);
         input.dispatchEvent(new Event('input', {bubbles: true}));
