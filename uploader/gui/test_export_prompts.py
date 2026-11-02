@@ -149,17 +149,21 @@ class ExportOptionsTests(unittest.TestCase):
     def test_frozen_macos_tls_uses_certifi_ca_without_shell_exports(self):
         import ssl
         import sys
+        from types import SimpleNamespace
         from unittest.mock import patch
         import legacy_v085
-        import certifi
+        known_context=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        fake_certifi=SimpleNamespace(where=lambda:"/packaged/certifi/cacert.pem")
         with patch.object(legacy_v085.sys,"platform","darwin"), \
              patch.object(legacy_v085.sys,"frozen",True,create=True), \
+             patch.dict(sys.modules,{"certifi":fake_certifi}), \
+             patch("ssl.create_default_context",return_value=known_context) as factory, \
              patch.dict(legacy_v085.os.environ,{},clear=True):
             context=legacy_v085.api_ssl_context()
-            self.assertIsInstance(context,ssl.SSLContext)
-            self.assertEqual(context.verify_mode,ssl.CERT_REQUIRED)
-            self.assertTrue(context.check_hostname)
-            self.assertGreater(len(context.get_ca_certs()),50)
+        factory.assert_called_once_with(cafile="/packaged/certifi/cacert.pem")
+        self.assertIs(context,known_context)
+        self.assertEqual(context.verify_mode,ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
 
 if __name__=="__main__":
     unittest.main()
