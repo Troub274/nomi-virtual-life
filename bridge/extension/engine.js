@@ -116,6 +116,35 @@ class Bridge {
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
+  capturePendingCli(id) {
+    if (!this.running || !this.pair?.includes(id) || !this.command ||
+        this.phase !== 'send' || this.command.source === id) return;
+    const tab=this.tabs[id];
+    if (!tab?.reply || tab.busy || tab.complete===false ||
+        !tab.reply.trim().toLowerCase().startsWith('[bridge ')) return;
+    this.cliSeen ||= {};
+    if (this.cliSeen[id] === tab.replyKey) return;
+    this.waitingCli ||= [];
+    const fingerprint=JSON.stringify([id,tab.document,tab.reply]);
+    if (this.waitingCli.some(item=>item.fingerprint===fingerprint)) return;
+    this.waitingCli.push({id,document:tab.document,url:tab.url,
+      text:tab.reply,replyKey:tab.replyKey,fingerprint});
+    this.cliSeen[id]=tab.replyKey;
+    this.note('Queued CLI request from tab '+id+' behind active delivery ('+this.waitingCli.length+' waiting).');
+  }
+  drainPendingCli() {
+    if (!this.running || this.phase==='send' || !this.waitingCli?.length) return;
+    const item=this.waitingCli.shift(), tab=this.tabs[item.id];
+    if (!tab || tab.document!==item.document || tab.url!==item.url ||
+        tab.reply!==item.text) {
+      this.note('Queued CLI source changed before dispatch; not replaying stale text.');
+      return;
+    }
+    // Dispatch from actual recorded issuer and its current transcript.
+    this.cliSeen ||= {};
+    delete this.cliSeen[item.id];
+    this.dispatchPeerCli(item.id);
+  }
   dispatchPeerCli(id) {
     // CLI inspection is independent of conversational turn ownership.
     if (!this.running || !this.pair?.includes(id) || id===this.source ||
@@ -181,6 +210,7 @@ class Bridge {
       }
     } else if (this.running && this.pair?.includes(id) && snapshot.error) this.stop(snapshot.error);
     this.tick();
+    this.capturePendingCli(id);
     this.dispatchPeerCli(id);
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
@@ -576,7 +606,9 @@ class Bridge {
         this.log('AI Bridge shutdown notices submitted to both participants. Session stopped; only dashboard Play can reauthorize.');
       } else this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
-    this.command = null; return {};
+    this.command = null;
+    this.drainPendingCli();
+    return {};
   }
   state() {
     this.tick();
