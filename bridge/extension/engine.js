@@ -90,12 +90,12 @@ class Bridge {
       this.reason='Sending controller startup instructions to Tab 1.';
       const controller=this.tabs[pair[0]];
       this.command={id:crypto.randomUUID(),source:pair[0],target:pair[0],
-        text:'[AI Bridge started — Tab 1 controller]\\n'+
-          'You control this bridge; Tab 2 is conversational only.\\n'+
-          '[bridge send] Your message to Tab 2 (or put message on next line).\\n'+
-          '[bridge shutdown] End the session.\\n'+
-          '[bridge pause] Pause sends.\\n'+
-          'Normal replies stay private. Only one exchange runs at a time.\\n'+
+        text:'[AI Bridge started — Tab 1 controller]\n'+
+          'You control this bridge; Tab 2 is conversational only.\n'+
+          '[bridge send] Your message to Tab 2 (or put message on next line).\n'+
+          '[bridge shutdown] End the session.\n'+
+          '[bridge pause] Pause sends.\n'+
+          'Normal replies stay private. Only one exchange runs at a time.\n'+
           'Messages entering Nomi are limited to 750 UTF-8 bytes; truncation is reported to you in Nomi’s next reply.',
         url:controller.url,document:controller.document,
         sourceReply:controller.reply,sourceKey:controller.replyKey,
