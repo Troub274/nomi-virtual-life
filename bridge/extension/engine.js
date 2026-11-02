@@ -206,6 +206,16 @@ class Bridge {
       return;
     }
     if (now - source.changed < this.stableSeconds) {this.reason = 'Detected ' + speaker + ' reply; waiting for it to finish changing.'; return;}
+    // An internal status/help answer is not a conversation turn to forward.
+    if (this.internalResultTab === this.source && this.internalResultBaseline !== source.replyKey) {
+      this.internalResultTab = null;
+      this.internalResultBaseline = null;
+      this.baseline = source.replyKey;
+      this.phase = 'reply';
+      this.startedWait = now;
+      this.log('AI Bridge internal command response consumed; not forwarded.');
+      return;
+    }
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
@@ -220,7 +230,20 @@ class Bridge {
         const summary = parsed.command === 'status' ?
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
-        this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '. Live execution not enabled yet.');
+        this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
+        if (['status','help'].includes(parsed.command)) {
+          const text = parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
+            '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
+            '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
+            '\\nTurns: ' + this.turns + '\\nPending send: ' + (this.command?'yes':'no') +
+            '\\n[End status]\\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
+          this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
+            text,url:source.url,document:source.document,sourceReply:source.reply,
+            sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
+            baseline:source.replyKey,claimed:false,created:now,internalResult:true};
+          this.phase='send';
+          this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
+        } else this.note('CLI ' + parsed.command + ' recognized; live execution not enabled.');
       } else if (!this.reason.startsWith('AI Bridge CLI rejected:')) {
         this.log('AI Bridge CLI-looking message blocked; not forwarded.');
       }
@@ -284,6 +307,10 @@ class Bridge {
       this.log('Send confirmed: ' + cmd.text.length + ' characters to ' + this.tabs[tab].site + '.');
       if (cmd.truncated && this.tabs[cmd.source]?.site === 'chatgpt') this.remindChatGPT = true;
       if (cmd.includesReminder) this.remindChatGPT = false;
+      if (cmd.internalResult) {
+        this.internalResultTab = cmd.target;
+        this.internalResultBaseline = cmd.baseline;
+      }
       this.source = cmd.target; this.baseline = cmd.baseline; this.phase = 'reply';
       this.turns++; this.startedWait = this.clock();
       this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
