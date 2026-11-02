@@ -6,7 +6,7 @@ The GUI and Python uploader are the same as on Windows and macOS. This build use
 
 This is an experimental unsigned build, not a universal AppImage, Flatpak, or Debian package. Linux libraries and desktop display support remain system dependencies. Use a graphical desktop (Wayland or X11). First-run failures should be reported with distribution version and error output.
 
-Your API key and checkpoints are saved under `~/.local/share/NomiUploader/` unless `LOCALAPPDATA` is set. Do not manually edit or delete checkpoints. The API key is currently stored in plain text in local settings, so do not use this alpha on shared or untrusted machines.
+Your API key and checkpoints are saved under `~/.local/share/NomiUploader/` unless `LOCALAPPDATA` is set. Do not manually edit or delete checkpoints. API-key storage is selected during first-run configuration: plaintext or password-encrypted. Encryption requires unlocking at each launch; do not use a shared or untrusted machine to store sensitive credentials.
 
 The program is community software and is not official Nomi.ai software. See the [project README](https://github.com/Troub274/nomi-virtual-life) and [uploader guide](https://github.com/Troub274/nomi-virtual-life/blob/main/uploader/README.md).
 
