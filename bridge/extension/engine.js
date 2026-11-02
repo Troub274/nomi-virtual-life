@@ -379,7 +379,7 @@ class Bridge {
           if (this.cliPaused) error = 'Bridge is paused; use [bridge resume] first.';
           else if (!dest) error = 'No connected destination.';
           else if (!['nomi','chatgpt'].includes(dest.site)) error = 'Selected destination does not support direct send.';
-          else if (!([dest.site, 'Nomi', 'ChatGPT', ...(dest.site === 'chatgpt' ? ['Sera', 'Seraphina'] : []), dest.name].filter(Boolean)
+          else if (recipient && !([dest.site, 'Nomi', 'ChatGPT', ...(dest.site === 'chatgpt' ? ['Sera', 'Seraphina'] : []), dest.name].filter(Boolean)
               .some(n => n.toLowerCase() === recipient.toLowerCase())))
             error = 'Recipient does not match selected destination: ' + dest.site + '.';
           else if (!dest.ready || dest.busy || dest.draft || now - dest.seen > 70)
