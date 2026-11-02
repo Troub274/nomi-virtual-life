@@ -35,13 +35,13 @@
     const {args,rest}=argsOf(match[2]||'');
     if(command==='next' && rest==='message') command='next-message';
     if(command==='clear' && rest==='queue') command='clear-queue';
-    if((command==='next'||command==='clear') && !['message','queue'].includes(rest))throw Error('Use [bridge next message] or [bridge clear queue]');
+    if((command==='next-message'||command==='clear-queue') && Object.keys(args).length) throw Error('Queue controls do not take arguments');
     if(command==='wake'){
       if(rest && !/^(?:in|at)\s+.+$/i.test(rest))throw Error('Use wake at="time" or wake in="duration"');
       if(!args.at&&!args.in&&!rest)throw Error('Wake time required');
     }else if(command==='help') {
       if(rest)throw Error('Use help topic="schedule"');
-    } else if(rest && !((command==='review'&&/^\d+$/.test(rest))||(command==='retry'&&/^\S+$/.test(rest))||(command==='cancel'&&/^\S+$/.test(rest)))) {
+    } else if(rest && !((command==='review'&&/^\d+$/.test(rest))||(command==='retry'&&/^\S+$/.test(rest))||(command==='cancel'&&/^\S+$/.test(rest))||((command==='next-message'&&rest==='message')||(command==='clear-queue'&&rest==='queue')))) {
       throw Error('Unexpected CLI arguments');
     }
     return {command,args,rest,requiresAuthorization:true,highImpact:DANGEROUS.has(command)};
