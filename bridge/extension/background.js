@@ -190,6 +190,14 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         }
         return result;
       }
+      // Diagnostic only: record actual click attempts by transaction ID.
+      // This is not a second send, claim, or acknowledgment.
+      if (message.path === '/api/click-attempt') {
+        const cmd=bridge.command;
+        if(cmd?.id===data.id && cmd.target===tab && cmd.claimed)
+          bridge.note('Browser Send click attempted: transaction '+cmd.id+' to tab '+tab+'.');
+        return {};
+      }
       if (message.path === '/api/claim') {
         // After a transaction has been claimed, the destination owns the immutable
         // prepared draft. A new source reply must not revoke that in-flight send.
