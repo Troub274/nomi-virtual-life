@@ -72,6 +72,7 @@ class Bridge {
     if (this.command && !this.command.claimed) this.command.created = this.clock();
     this.tabRetry=null;
     this.cliShutdown=false;
+    this.shutdownPending=false;
     this.cliPaused=false;
     this.running = true; this.startedWait = this.clock();
     this.log('Running: waiting for a completed reply.');
@@ -114,7 +115,7 @@ class Bridge {
     if (this.running) throw Error('Stop before resetting.');
     this.cliPaused=false;
     this.cliShutdown=false;
-    this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];
+    this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.shutdownPending=false;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -148,7 +149,7 @@ class Bridge {
   }
   queuedFor(target) {return (this.outboundQueue||[]).filter(x=>x.target===target).length;}
   releaseOutbound(target) {
-    if(!this.running || this.cliPaused || this.command || this.phase==='send')return false;
+    if(!this.running || this.shutdownPending || this.cliPaused || this.command || this.phase==='send')return false;
     const items=this.outboundQueue||[], index=items.findIndex(x=>x.target===target);
     if(index<0)return false;
     const dest=this.tabs[target],item=items[index];
@@ -177,7 +178,7 @@ class Bridge {
     this.outboundCredits[target]=(this.outboundCredits[target]||0)+1;
   }
   pumpOutbound() {
-    if(!this.running || this.command || this.phase==='send' || this.cliPaused)return;
+    if(!this.running || this.shutdownPending || this.command || this.phase==='send' || this.cliPaused)return;
     for(const target of this.pair||[]) {
       if((this.outboundCredits||{})[target]>0 && this.queuedFor(target)>0 &&
          this.releaseOutbound(target)) {
@@ -198,8 +199,15 @@ class Bridge {
     this.waitingCli ||= [];
     const fingerprint=JSON.stringify([id,tab.document,tab.reply]);
     if (this.waitingCli.some(item=>item.fingerprint===fingerprint)) return;
-    this.waitingCli.push({id,document:tab.document,url:tab.url,
-      text:tab.reply,replyKey:tab.replyKey,fingerprint});
+    const queued={id,document:tab.document,url:tab.url,
+      text:tab.reply,replyKey:tab.replyKey,fingerprint};
+    const isShutdown=/^\\[bridge shutdown\\](?:\\s|$)/i.test(tab.reply.trim());
+    if(isShutdown) {
+      this.waitingCli.unshift(queued);
+      this.shutdownPending=true;
+      this.outboundCredits={};
+      this.note('Priority shutdown requested; queued conversation deliveries suspended.');
+    } else this.waitingCli.push(queued);
     this.cliSeen[id]=tab.replyKey;
     this.note('Queued CLI request from tab '+id+' behind active delivery ('+this.waitingCli.length+' waiting).');
   }
@@ -214,6 +222,7 @@ class Bridge {
     // Dispatch from actual recorded issuer and its current transcript.
     this.cliSeen ||= {};
     delete this.cliSeen[item.id];
+    if (/^\\[bridge shutdown\\](?:\\s|$)/i.test(item.text.trim())) this.shutdownPending=false;
     if (item.id === this.source) {
       if (tab.replyKey === this.baseline) this.baseline=null;
       this.tick();
@@ -514,6 +523,10 @@ class Bridge {
             this.note('Discarded '+before+' undelivered queue items for '+this.source+'.');
           }
           if(parsed.command==='next-message' || (parsed.command==='listen' && this.queuedFor(this.source)>0)) this.scheduleOutbound(this.source);
+          if (parsed.command === 'shutdown') {
+            this.shutdownPending=true;
+            this.outboundCredits={};
+          }
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
           const text = parsed.command === 'next-message' ? '[AI Bridge] Next-message request recorded. Waiting: '+this.queuedFor(this.source) :
