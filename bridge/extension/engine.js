@@ -231,7 +231,7 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (['status','help','pending','review'].includes(parsed.command)) {
+        if (['status','help','pending','review','schedule'].includes(parsed.command)) {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
@@ -248,7 +248,14 @@ class Bridge {
             (this.events.slice(-reviewCount).map(e => e.time + ' ' + e.text).join('\\n') || 'No activity recorded.') +
             '\\n[End review]\\nThis is bridge activity, not a transcript of chat messages.' :
             '[AI Bridge review error] Use last=1 through last=50.';
-          const text = parsed.command === 'review' ? reviewReport :
+          const scheduleReport = '[AI Bridge schedule]\\n' +
+            'Scheduled AI wake-ups: not active in this build.\\n' +
+            'No AI Bridge wake-ups have been armed.\\n' +
+            'The existing periodic extension heartbeat is not a user-scheduled wake-up.\\n' +
+            'Use the dashboard for current bridge controls; wake scheduling requires integration.\\n' +
+            '[End schedule]';
+          const text = parsed.command === 'schedule' ? scheduleReport :
+            parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
             parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
             '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
