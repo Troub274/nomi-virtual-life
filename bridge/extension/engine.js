@@ -72,7 +72,43 @@ class Bridge {
     this.cliShutdown=false;
     this.cliPaused=false;
     this.running = true; this.startedWait = this.clock();
-    this.log('Running: waiting for a completed reply.'); this.tick();
+    this.log('Running: waiting for a completed reply.');
+    if (this.mode !== 'api-room' && this.mode !== 'heartbeat') {
+      this.queuePairNotice('start',
+        '[AI Bridge started]\\nState: running. First selected tab has primary CLI control; either participant may pause or shut down.\\n' +
+        'Ordinary GPT-human replies remain private; use [bridge send to="Nomi"] to deliver explicitly.\\n' +
+        'CLI help:\\n' + (globalThis.AIBridgeCLI?.HELP || '[bridge help] [bridge status] [bridge pause] [bridge shutdown]') +
+        '\\n[End AI Bridge startup]');
+    }
+    this.tick();
+  }
+  queuePairNotice(kind, text, requester = null) {
+    if (!this.pair || this.pair.length !== 2) return false;
+    const targets = requester && this.pair.includes(requester)
+      ? [requester, this.pair.find(id => id !== requester)] : [...this.pair];
+    this.pairNotice = {kind, text, targets, restoreSource:this.source,
+      restoreBaseline:this.baseline};
+    return this.queueNextPairNotice();
+  }
+  queueNextPairNotice() {
+    const n = this.pairNotice;
+    if (!n || !n.targets.length) return false;
+    const target = n.targets[0], tab = this.tabs[target];
+    if (!tab || !tab.ready || tab.busy || tab.draft || this.clock()-tab.seen > 70 ||
+        !['chatgpt','nomi'].includes(tab.site)) {
+      this.log('Unable to deliver ' + n.kind + ' notice to ' + target +
+        '; no message was sent to this tab.');
+      this.pairNotice=null;
+      return false;
+    }
+    this.command = {id:crypto.randomUUID(),source:target,target,
+      text:n.text,url:tab.url,document:tab.document,sourceReply:tab.reply,
+      sourceKey:tab.replyKey,sourceUrl:tab.url,sourceDocument:tab.document,
+      baseline:tab.replyKey,claimed:false,created:this.clock(),
+      internalResult:true,pairNotice:true};
+    this.phase='send';
+    this.note('Queued ' + n.kind + ' notification for tab ' + target);
+    return true;
   }
   reset() {
     if (this.running) throw Error('Stop before resetting.');
@@ -345,13 +381,21 @@ class Bridge {
             '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
             '\\nConversation turns: ' + this.turns + '\\nCLI transactions: ' + (this.cliTransactions||0) + '\\nPending send: ' + (this.command?'yes':'no') +
             '\\n[End status]\\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
-          this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
-            text,url:source.url,document:source.document,sourceReply:source.reply,
-            sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
-            baseline:source.replyKey,claimed:false,created:now,internalResult:true,
-            shutdownAfterAck:parsed.command === 'shutdown'};
-          this.phase='send';
-          this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
+          if (['pause','resume'].includes(parsed.command)) {
+            const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
+            this.queuePairNotice(parsed.command,
+              '[AI Bridge ' + parsed.command + ']\\nState: ' + stateWord +
+              '. Requested by ' + source.site + '. Both participants notified.\\n[End notice]',
+              this.source);
+          } else {
+            this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
+              text,url:source.url,document:source.document,sourceReply:source.reply,
+              sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
+              baseline:source.replyKey,claimed:false,created:now,internalResult:true,
+              shutdownAfterAck:parsed.command === 'shutdown'};
+            this.phase='send';
+            this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
+          }
         }
       } else if (!this.reason.startsWith('AI Bridge CLI rejected:')) {
         this.log('AI Bridge CLI-looking message blocked; not forwarded.');
@@ -453,6 +497,26 @@ class Bridge {
         this.cliTransactions = (this.cliTransactions || 0) + 1;
         this.internalResultTab = cmd.target;
         this.internalResultBaseline = cmd.baseline;
+      }
+      if (cmd.pairNotice) {
+        const notice=this.pairNotice;
+        if (notice) {
+          notice.targets.shift();
+          this.note('Confirmed ' + notice.kind + ' notice submitted to ' + tab);
+          if (notice.targets.length) {
+            this.command=null;
+            if (this.queueNextPairNotice()) return {};
+          } else {
+            this.pairNotice=null;
+            this.source=notice.restoreSource;
+            this.baseline=this.tabs[this.source]?.replyKey || notice.restoreBaseline;
+            this.phase='reply';
+            this.startedWait=this.clock();
+            this.command=null;
+            this.log('Both ' + notice.kind + ' notifications submitted.');
+            return {};
+          }
+        }
       }
       if (cmd.shutdownAfterAck && !cmd.shutdownSecond) {
         const peer = this.pair?.find(id => id !== cmd.target);
