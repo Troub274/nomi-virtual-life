@@ -11,6 +11,25 @@ Visit the [macOS alpha release](https://github.com/Troub274/nomi-virtual-life/re
 
 Extract the ZIP and move **NomiUploader.app** to Applications (or another folder), then open it.
 
+## HTTPS certificates and Finder launch
+
+The macOS GUI now bundles a maintained certificate authority (CA) file using
+`certifi`. The **app and its uploader subprocess** automatically use that
+bundle for HTTPS connections to the Nomi API when running as a packaged macOS
+app. Launch normally by double-clicking **NomiUploader.app** in Finder: you
+should **not** need to export `SSL_CERT_FILE`, run `Install Certificates.command`,
+or open Terminal to establish HTTPS connectivity.
+
+This addresses a Python TLS certificate-store issue, **separate from Apple's
+app-signing / Gatekeeper warning**. HTTPS server certificates and hostnames
+remain fully verified; no `verify=False` or unverified SSL context is used.
+
+If a managed network uses an organization-specific HTTPS-inspection CA, that
+private CA may not exist in the bundled public CA store. Contact the network
+administrator about a trusted CA configuration rather than disabling TLS
+verification. Report the full error type and message (without your API key)
+if connection still fails after installing the latest build.
+
 ## Unsigned / unnotarized application
 
 This early alpha is **not signed with an Apple Developer ID** and has **not been notarized**. macOS Gatekeeper may warn or block it. Only run a copy downloaded from this repository and only if you trust its source.
