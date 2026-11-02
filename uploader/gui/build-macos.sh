@@ -12,6 +12,13 @@ python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader \
   --add-data 'uploader/gui/index.html:uploader/gui' \
   uploader/gui/app.py
 test -d dist/NomiUploader.app
+mkdir -p dist/cli
+cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt uploader/README.md uploader/RECOVERY.md dist/cli/
+cp uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/CLI-IN-GUI-DOWNLOAD.md
 cd dist
-ditto -c -k --keepParent NomiUploader.app "NomiUploader-macOS-${arch}.zip"
+mkdir -p macos-package
+cp -R NomiUploader.app macos-package/
+cp -R cli macos-package/
+cp CLI-IN-GUI-DOWNLOAD.md macos-package/
+ditto -c -k --keepParent macos-package "NomiUploader-macOS-${arch}.zip"
 shasum -a 256 "NomiUploader-macOS-${arch}.zip"
