@@ -656,7 +656,7 @@ def checkpoint_summary(path):
                     next_key=(p,i); break
             if next_key: break
     return {
-        "state":state,"checkpoint":str(cp),"nomi":init.get("nomi_name"),
+        "state":state,"checkpoint":str(cp),"nomi":init.get("nomi_name"),"nomi_uuid":init.get("nomi_uuid"),
         "room_uuid":migration_room(old),"run_id":init.get("run_id"),
         "confirmed":len(confirmed),"expected":expected,
         "last_confirmed":max(confirmed) if confirmed else None,
