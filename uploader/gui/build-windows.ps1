@@ -3,7 +3,10 @@ Push-Location (Resolve-Path "$PSScriptRoot/../..")
 try {
   python -m pip install --upgrade pyinstaller pywebview cryptography
   if ($LASTEXITCODE -ne 0) { throw 'Dependencies failed' }
-  python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader `
+  $iconArgs = @()
+  if (Test-Path 'uploader/assets/icon.ico') { $iconArgs = @('--icon','uploader/assets/icon.ico') }
+  else { Write-Warning 'uploader/assets/icon.ico missing: Windows will use a default executable icon.' }
+  python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader @iconArgs ` 
      --paths uploader `
      --hidden-import legacy_v085 `
      --collect-submodules webview `
