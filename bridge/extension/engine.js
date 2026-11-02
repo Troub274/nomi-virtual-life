@@ -224,7 +224,7 @@ class Bridge {
         this.phase==='send' || this.phase==='uncertain' || this.pairNotice) return;
     const tab=this.tabs[id], now=this.clock();
     if (!tab || tab.busy || tab.complete===false ||
-        now-tab.changed < this.stableSeconds || !tab.reply?.trim().toLowerCase().startsWith('[bridge ')) return;
+        now-tab.changed < this.stableSeconds || !isBridgeCommandText(tab.reply)) return;
     this.cliSeen ||= {};
     if (this.cliSeen[id]===tab.replyKey) return;
     // Remember this reply before attempting dispatch; never re-execute after a repaint.
