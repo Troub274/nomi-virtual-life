@@ -115,7 +115,7 @@ class Bridge {
     if (this.running) throw Error('Stop before resetting.');
     this.cliPaused=false;
     this.cliShutdown=false;
-    this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.shutdownPending=false;
+    this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -123,8 +123,13 @@ class Bridge {
     this.outboundQueue ||= [];
     const src=this.tabs[source], dst=this.tabs[target];
     const fingerprint=JSON.stringify([source,src.document,src.reply]);
-    if (this.outboundQueue.some(x=>x.fingerprint===fingerprint) || this.command?.fingerprint===fingerprint)
-      return 0;
+    // Idempotency is established at enqueue time, not at delivery time.
+    // Otherwise, once the first queued part is acknowledged and removed,
+    // repeated heartbeat/CLI dispatch can enqueue and send the same reply again.
+    this.acceptedOutbound ||= {};
+    if (this.acceptedOutbound[fingerprint] ||
+        this.outboundQueue.some(x=>x.fingerprint===fingerprint) ||
+        this.command?.queueItem?.fingerprint===fingerprint) return 0;
     const max=dst.site==='nomi'?580:11000;
     const parts=[];
     let remaining=body;
@@ -139,6 +144,7 @@ class Bridge {
     }
     if (parts.length>100) throw Error('Message exceeds 100 queued parts');
     const batch=crypto.randomUUID();
+    this.acceptedOutbound[fingerprint]={batch,at:this.clock(),parts:parts.length};
     for(let i=0;i<parts.length;i++)this.outboundQueue.push({
       id:crypto.randomUUID(),batch,part:i+1,parts:parts.length,source,target,
       body:parts[i],fingerprint,sourceDocument:src.document,sourceUrl:src.url,
