@@ -254,7 +254,7 @@ async function configureCredentials(){
  const state=await call("auth_status");
  if(state.encrypted){
    while(true){
-     const password=prompt("Nomi Uploader: Enter your API key encryption password.\nCancel to reset the API key.");
+     const password=prompt("Nomi Uploader: Enter your API key encryption password.\\nCancel to reset the API key.");
      if(password===null){
        if(!confirm("Reset the encrypted API key? Your projects and checkpoints will be preserved."))return false;
        break;
@@ -265,7 +265,7 @@ async function configureCredentials(){
  } else if(state.configured) {await call("auth_unlock",null);return true;}
  const key=prompt("Nomi API key (first-time setup or reset):");
  if(!key)return false;
- const encrypt=confirm("Encrypt your Nomi API key with a password?\nOK: password required at every launch.\nCancel: save in plaintext.");
+ const encrypt=confirm("Encrypt your Nomi API key with a password?\\nOK: password required at every launch.\\nCancel: save in plaintext.");
  let password=null;
  if(encrypt){
    password=prompt("Create encryption password:");
