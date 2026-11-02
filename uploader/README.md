@@ -232,7 +232,7 @@ For a new upload, the uploader finds existing rooms for the chosen Nomi (using t
 In `--utility`, enter a room number or `ALL`. The room manager shows the exact eligible rooms, excludes rooms protected by checkpoints in the selected directory, and asks **once**: `Delete these N room(s)? [y/N]`. `y`, `Y`, or `yes` (any capitalization) confirms; anything else cancels. No `DELETE N` or per-room UUID entry is required. Room deletion is permanent, so examine the filtered list and use the appropriate checkpoint directory.
  Completion confirms API transmission, **not** long-term memory consolidation.
 
-**Caution:** This remains an experimental v1.1 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
+**Caution:** This remains an experimental v1.3 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
 
 ## Type-aware processing and response capture
 
