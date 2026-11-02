@@ -1,4 +1,10 @@
-"""Optional pywebview front end to the existing Nomi uploader CLI."""
+"""Nomi Uploader v1.3 desktop controller.
+
+The pywebview JavaScript interface delegates upload planning and recovery to
+nomi-uploader.py. GUI settings and run selection are persisted separately
+from the append-only checkpoint journal; do not edit checkpoint events here.
+The API credential is shared with the CLI via legacy_v085 credential helpers.
+"""
 import json
 import re
 import os
@@ -63,8 +69,8 @@ class API:
         return True
 
     def list_nomis(self, key):
+        """Fetch Nomis through the shared API client without logging the key."""
         sys.path.insert(0, str(UPLOADER.parent))
-        """Fetch real Nomis using the uploader's own API client; never log the key."""
         import legacy_v085
         from legacy_v085 import get_nomis
         old = os.environ.get("NOMI_API_KEY")
