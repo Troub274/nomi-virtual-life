@@ -1291,6 +1291,24 @@ def main(argv=None):
         legacy.save_api_key(key,password)
         print("API key saved to",legacy.credential_file())
         return
+    if args.process_every<0: parser.error("process-every must be >= 0")
+    if args.header_every<0: parser.error("header-every must be >= 0")
+    if args.passes<1: parser.error("passes must be >= 1")
+    if args.chunk_chars is not None and args.chunk_bytes is not None:
+        parser.error("use --chunk-chars or legacy --chunk-bytes, not both")
+    if args.chunk_chars is not None and not (150<=args.chunk_chars<=MAX_API_CHARS):
+        parser.error("--chunk-chars must be between 150 and %d"%MAX_API_CHARS)
+    if args.chunk_bytes is not None and args.chunk_bytes<150:
+        parser.error("--chunk-bytes must be >= 150")
+    if args.reply_max_wait<0: parser.error("--reply-max-wait must be >= 0")
+    try:
+        parse_entry_range(args.entries)
+    except ValueError as exc:
+        parser.error(str(exc))
+    if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume:
+        parser.error("recovery flags require --resume")
+    if args.utility and (args.new_room_on_resume or args.abandon_reply):
+        parser.error("migration cannot be combined with --utility")
     if not args.dry_run and not legacy.resolved_api_key():
         import getpass
         state=legacy.credential_status()
@@ -1311,24 +1329,6 @@ def main(argv=None):
             legacy.save_api_key(key,pw)
         else:
             raise RuntimeError("No API key configured. Run --config interactively.")
-    if args.process_every<0: parser.error("process-every must be >= 0")
-    if args.header_every<0: parser.error("header-every must be >= 0")
-    if args.passes<1: parser.error("passes must be >= 1")
-    if args.chunk_chars is not None and args.chunk_bytes is not None:
-        parser.error("use --chunk-chars or legacy --chunk-bytes, not both")
-    if args.chunk_chars is not None and not (150<=args.chunk_chars<=MAX_API_CHARS):
-        parser.error("--chunk-chars must be between 150 and %d"%MAX_API_CHARS)
-    if args.chunk_bytes is not None and args.chunk_bytes<150:
-        parser.error("--chunk-bytes must be >= 150")
-    if args.reply_max_wait<0: parser.error("--reply-max-wait must be >= 0")
-    try:
-        parse_entry_range(args.entries)
-    except ValueError as exc:
-        parser.error(str(exc))
-    if (args.recover_noreply or args.recover_uncertain_reply or args.retry_uncertain_send) and not args.resume:
-        parser.error("recovery flags require --resume")
-    if args.utility and (args.new_room_on_resume or args.abandon_reply):
-        parser.error("migration cannot be combined with --utility")
     if args.utility: utilities()
     else: upload(args)
 
