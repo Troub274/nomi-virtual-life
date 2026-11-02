@@ -1,15 +1,8 @@
 name: Release Nomi Uploader Python CLI
+# Legacy workflow. New releases use release-nomi-uploader-unified.yml.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'uploader/nomi-uploader.py'
-      - 'uploader/legacy_v085.py'
-      - 'uploader/requirements.txt'
-      - 'uploader/CLI-RELEASE.md'
-      - 'uploader/README.md'
-      - 'uploader/RECOVERY.md'
-      - '.github/workflows/release-nomi-uploader-cli.yml'
+
 concurrency:
   group: nomi-uploader-cli-alpha
   cancel-in-progress: true
