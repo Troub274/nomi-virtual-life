@@ -60,9 +60,11 @@ class Bridge {
     });
     if (JSON.stringify(this.pair) !== JSON.stringify(pair) || this.phase === 'idle') {
       this.pair = pair;
+      this.cliControllerTab = String(pair[0]);
       this.source = pair[data.first === 'second' || (!data.tabs && data.first === 'nomi') ? 1 : 0];
       this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0; this.cliTransactions = 0;
     }
+    this.cliControllerTab = String(pair[0]);
     const settle = Number(data.settle ?? 2);
     this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
@@ -253,6 +255,15 @@ class Bridge {
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
     if (source.reply.trim().toLowerCase().startsWith('[bridge ')) {
+      // The first tab selected in the dashboard is the only CLI authority.
+      // Never forward a command emitted by the second tab as conversation text.
+      if (String(this.source) !== String(this.pair?.[0])) {
+        this.baseline = source.replyKey;
+        this.phase = 'reply';
+        this.startedWait = now;
+        this.log('CLI denied: only the first selected tab may control the bridge.');
+        return;
+      }
       let parsed;
       try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
       catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
@@ -474,7 +485,7 @@ class Bridge {
   }
   state() {
     this.tick();
-    return {running: this.running, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
+    return {running: this.running, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, cliControllerTab: this.cliControllerTab || this.pair?.[0] || null, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
