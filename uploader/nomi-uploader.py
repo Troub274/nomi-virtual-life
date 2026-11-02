@@ -104,6 +104,7 @@ def read_text(path):
     return path.read_text(encoding="utf-8-sig")
 
 def parse_sections(text, filename):
+    """Parse typed uploader sections and retain their source metadata."""
     sections=[]; current=None; in_header=False
     for line in text.splitlines():
         match=HEADING.fullmatch(line.strip())
@@ -144,6 +145,7 @@ def parse_sections(text, filename):
     return sections
 
 def split_units(section, order, session_year):
+    """Divide parsed sections into journal or conversation units for planning."""
     kind=section["type"]
     lines=section["lines"]
     if kind in ("knowledge","instructions"):
@@ -510,6 +512,7 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
 
 
 def create_upload_room(nomi):
+    """Create a destination room without blindly retrying uncertain POSTs."""
     name="UPLOADER::%s::%s"%(nomi["name"],dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     s,p=legacy.api_request("/rooms","POST",{"name":name,"note":"Nomi Uploader v%s — persistent processing room"%VERSION,"backchannelingEnabled":True,"nomiUuids":[nomi["uuid"]]})
     if not legacy.ok(s): raise RuntimeError("Room creation outcome uncertain; inspect room list before retry: "+legacy.err_text("create room",s,p))
@@ -574,6 +577,7 @@ def select_or_create_room(nomi, checkpoint_dir="."):
         print("Enter a number from 1 through %d." % new_option)
 
 def migration_room(events):
+    """Select the replacement room for an explicitly authorized migration."""
     room=events[0]["room_uuid"]
     for e in events:
         if e.get("event")=="room_migrated":
@@ -583,6 +587,7 @@ def migration_room(events):
 
 
 def migrate_resume(cp, old, nomi, room):
+    """Migrate a pending-reply resume while preserving journal evidence."""
     intents=[e for e in old if e.get("event")=="room_migration_intent"]
     if intents:
         intent=intents[-1]
@@ -615,6 +620,7 @@ def migrate_resume(cp, old, nomi, room):
 
 
 def checkpoint_summary(path):
+    """Classify the active checkpoint generation for safe recovery decisions."""
     cp=Path(path)
     old=active_records(cp)
     if not old:
@@ -673,6 +679,7 @@ def checkpoint_summary(path):
     }
 
 def print_checkpoint_status(path):
+    """Display read-only checkpoint status without contacting Nomi."""
     info=checkpoint_summary(path)
     if info["state"]=="NO_CHECKPOINT":
         print("No checkpoint found.")
@@ -701,6 +708,7 @@ def print_checkpoint_status(path):
 
 
 def upload(args):
+    """Validate run inputs and coordinate the locked upload operation."""
     # Advisory locks are released by the OS on process termination. Never unlink
     # this file: doing so could allow two processes to lock different inodes.
     lockpath=Path(str(args.checkpoint)+".lock")
@@ -721,6 +729,7 @@ def upload(args):
 
 
 def _upload_locked(args):
+    """Execute the durable send/reply pipeline under the checkpoint lock."""
     # Programmatic callers and older tests supply only the original v1.0
     # namespace. Keep later optional CLI additions backwards compatible.
     for name, default in (("nomi_uuid", None), ("export_options", None),
@@ -1088,6 +1097,7 @@ def _upload_locked(args):
     print("Complete. Room retained:",room)
 
 def active_room_ids(checkpoint_dir="."):
+    """Find rooms protected by unfinished checkpoint journals."""
     protected=set()
     for path in Path(checkpoint_dir).glob("*.jsonl"):
         try:
@@ -1143,6 +1153,7 @@ def active_room_ids(checkpoint_dir="."):
     return protected
 
 def room_management(nomi_filter=None, abandoned=False, checkpoint_dir="."):
+    """Handle room listing and operator-approved room changes."""
     rooms=legacy.list_rooms()
     if nomi_filter:
         nomis=legacy.get_nomis()
@@ -1160,6 +1171,7 @@ def room_management(nomi_filter=None, abandoned=False, checkpoint_dir="."):
     return rooms,protected
 
 def utilities():
+    """Run explicit maintenance operations without starting an upload."""
     print("Room manager: list, inspect, delete one, or bulk-delete selected rooms.")
     filt = input("Filter by Nomi name (Enter for all): ").strip()
     abandoned = input("Show only abandoned/inactive/failed rooms? (y/N): ").strip().lower() == "y"
@@ -1206,6 +1218,7 @@ def utilities():
         print("Deleted", rid)
 
 def interactive_menu():
+    """Present the CLI's interactive entry point."""
     while True:
         print("\nNomi Uploader %s\n 1 Upload files\n 2 Resume checkpoint\n 3 Dry-run\n 4 Manage rooms\n 5 Quit"%VERSION)
         action=input("Select: ").strip()
@@ -1230,6 +1243,7 @@ def interactive_menu():
         main(argv)
 
 def main(argv=None):
+    """Parse CLI commands, validate incompatible flags and resolve credentials."""
     argv=list(sys.argv[1:] if argv is None else argv)
     parser=argparse.ArgumentParser(description="Nomi Uploader v1.3")
     parser.add_argument("files",nargs="*")
