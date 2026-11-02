@@ -206,6 +206,26 @@ class Bridge {
       return;
     }
     if (now - source.changed < this.stableSeconds) {this.reason = 'Detected ' + speaker + ' reply; waiting for it to finish changing.'; return;}
+    // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
+    // This safety gate prevents control text leaking into Nomi or another AI.
+    // It consumes a new reply once by advancing the source checkpoint.
+    if (/^\\[bridge(?:\\s|\\])/.test(source.reply.trim().toLowerCase())) {
+      let parsed;
+      try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
+      catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
+      this.baseline = source.replyKey;
+      this.phase = 'reply';
+      this.startedWait = now;
+      if (parsed) {
+        const summary = parsed.command === 'status' ?
+          'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
+          'Command=' + parsed.command;
+        this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '. Live execution not enabled yet.');
+      } else if (!this.reason.startsWith('AI Bridge CLI rejected:')) {
+        this.log('AI Bridge CLI-looking message blocked; not forwarded.');
+      }
+      return;
+    }
     const target = this.pair.find(id => id !== this.source);
     const dest = this.tabs[target];
     const receiver = ['nomi', 'api-room'].includes(dest.site) ? 'Nomi' : 'ChatGPT';
