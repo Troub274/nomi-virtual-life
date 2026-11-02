@@ -357,6 +357,44 @@ class API:
         self.proc=None
         return True
 
+    def recovery_status(self):
+        """Classify the selected checkpoint using the CLI's authoritative rules."""
+        directory=self._active_dir()
+        if not self._has_checkpoint(directory):
+            return {"state":"NO_CHECKPOINT","uncertain_sends":[],"ambiguous_replies":[]}
+        import importlib.util
+        sys.path.insert(0,str(UPLOADER.parent))
+        spec=importlib.util.spec_from_file_location("nomi_uploader_recovery",str(UPLOADER))
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.checkpoint_summary(directory/"upload.jsonl")
+
+    def recover_resume(self, send_tokens=None, reply_tokens=None):
+        """Explicitly authorized recovery; preserve the checkpoint as the source of truth."""
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Upload already running.")
+        status=self.recovery_status()
+        sends={":".join(map(str,p)) for p in status.get("uncertain_sends",[])}
+        replies={":".join(map(str,p)) for p in status.get("ambiguous_replies",[])}
+        send_tokens=list(send_tokens or [])
+        reply_tokens=list(reply_tokens or [])
+        if set(send_tokens)-sends or set(reply_tokens)-replies:
+            raise ValueError("Checkpoint changed. Refresh recovery status before authorizing.")
+        if status["state"]=="COMPLETE":
+            raise ValueError("This upload has already completed.")
+        if status["state"]=="NO_CHECKPOINT":
+            raise ValueError("No checkpoint exists for this run.")
+        directory=self._active_dir()
+        args=["--resume","--checkpoint",str(directory/"upload.jsonl"),
+              "--completion",str(directory/"completed.json"),
+              "--replies",str(directory/"replies.txt")]
+        for token in send_tokens:
+            args.extend(["--retry-uncertain-send",token])
+        for token in reply_tokens:
+            args.extend(["--recover-uncertain-reply",token])
+        Path(str(directory/"upload.jsonl")+".pause").unlink(missing_ok=True)
+        return self._run(args)
+
     def resume(self):
         directory=self._active_dir()
         if not self._has_checkpoint(directory):
