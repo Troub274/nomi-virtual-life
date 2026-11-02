@@ -70,3 +70,7 @@ If Microsoft Edge warns about a downloaded ZIP or executable, verify the URL, fi
 ## Development
 
 The GUI lives at `uploader/gui/` and delegates uploads to `uploader/nomi-uploader.py`. The existing CLI remains authoritative. Windows builds use GitHub Actions and PyInstaller.
+
+## Command-line API mode (included)
+
+The GUI download also contains a **standalone Python API command-line uploader** in the `cli/` folder. You can use it without launching the GUI. Read **`CLI-IN-GUI-DOWNLOAD.md` in the extracted download** for exact platform-specific commands, API-key setup and checkpoint recovery. The same uploader engine is used by both interfaces.
