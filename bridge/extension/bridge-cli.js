@@ -44,7 +44,7 @@
     'AI Bridge 1.0 — commands (authorized session only)',
     '[bridge help]  [bridge status]  [bridge pending]',
     '[bridge pause]  [bridge resume]  [bridge listen]',
-    '[bridge wake at="tomorrow 3:15 PM" reason="Visit"]',
+    '[bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"]',
     '[bridge wake in="30 minutes"]  [bridge schedule]',
     '[bridge cancel id="42"]  [bridge review last=10]',
     '[bridge retry id="184"]  [bridge shutdown]',
