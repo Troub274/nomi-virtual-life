@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nomi Uploader 1.1 — source-aware, resumable room uploader."""
+"""Nomi Uploader 1.3 — shared CLI/GUI engine with recovery-generation journals."""
 import argparse
 import datetime as dt
 import hashlib
@@ -276,7 +276,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
     """Create the deterministic message plan.
 
     chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
-    compatibility calls. New v1.1 runs use chunk_mode='chars'.
+    compatibility calls. Current new runs use chunk_mode='chars'.
     """
     messages=[]
     export_options=export_options or {}
@@ -976,7 +976,7 @@ def _upload_locked(args):
 
     uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery-abandoned)
     if uncertain:
-        raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room before manual checkpoint repair; no automatic retry."%sorted(uncertain))
+        raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room; use GUI recovery authorization or --manual-restart after reviewing duplication risk."%sorted(uncertain))
     if migrating or migration_pending: room=migrate_resume(cp,records(cp),nomi,room)
     if any(e.get("event")=="room_migrated" for e in records(cp)): legacy.wait_for_room(room)
     for p,i in sorted(recovery):
