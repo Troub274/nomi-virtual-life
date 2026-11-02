@@ -159,7 +159,13 @@ class Bridge {
     const items=this.outboundQueue||[], index=items.findIndex(x=>x.target===target);
     if(index<0)return false;
     const dest=this.tabs[target],item=items[index];
-    if(!dest || !dest.ready || dest.busy || dest.complete===false || dest.draft || this.clock()-dest.seen>70)return false;
+    if(!dest || !dest.ready || dest.busy || dest.complete===false || dest.draft || this.clock()-dest.seen>70) {
+      const blocker=!dest?'destination unavailable':this.clock()-dest.seen>70?'destination heartbeat stale':
+        dest.busy?'recipient generating':dest.complete===false?'recipient reply not marked complete':
+        dest.draft?'recipient editor contains a draft':!dest.ready?'destination editor not ready':'waiting';
+      this.reason='Queued outbound message waiting: '+blocker+'. Queue preserved; nothing typed.';
+      return false;
+    }
     const pending=this.queuedFor(target), sequence=(this.deliveredCounts||{})[target]||0;
     const label=item.parts>1
       ? '[Bridge part '+item.part+' of '+item.parts+'; '+(pending-1)+' queued after this]\n'
