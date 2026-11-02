@@ -57,6 +57,24 @@ def is_episode_header(line):
     return any(pattern.fullmatch(line.strip()) for pattern in HEADER_PATTERNS)
 
 
+def api_ssl_context():
+    """Provide a trusted CA store inside frozen macOS builds, without shell exports.
+
+    GUI applications launched from Finder do not inherit SSL_CERT_FILE set in
+    interactive shells. Prefer Python's configured system trust on normal
+    installations; on a frozen macOS .app use the packaged certifi trust bundle.
+    Never disable certificate/hostname verification.
+    """
+    import ssl
+    if sys.platform=="darwin" and getattr(sys,"frozen",False):
+        try:
+            import certifi
+            return ssl.create_default_context(cafile=certifi.where())
+        except ImportError as exc:
+            raise RuntimeError("macOS build is missing its bundled TLS CA certificates") from exc
+    return ssl.create_default_context()
+
+
 def api_request(path, method='GET', body=None):
     key=os.environ.get('NOMI_API_KEY')
     if not key:
@@ -68,7 +86,7 @@ def api_request(path, method='GET', body=None):
         data=json.dumps(body).encode('utf-8')
     req=urllib.request.Request(BASE_URL+path, method=method, headers=headers, data=data)
     try:
-        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT, context=api_ssl_context()) as resp:
             raw=resp.read().decode('utf-8')
             return resp.status, (json.loads(raw) if raw else {})
     except urllib.error.HTTPError as exc:
