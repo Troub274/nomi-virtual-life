@@ -353,11 +353,14 @@ class Bridge {
     if (now - dest.seen > 70) {this.reason = 'Waiting for ' + receiver + ' tab to reconnect.'; return;}
     if (!dest.ready) {this.reason = receiver + ' cannot receive yet: ' + (dest.diagnostic || 'check its editor and Send button'); return;}
     if (dest.busy) {this.reason = 'Waiting for ' + receiver + ' to finish generating before sending.'; return;}
+    let prefilledDraft = false;
     if (dest.draft) {
-      // A human-owned editor draft is never overwritten or submitted.
+      // Only an unchanged draft exactly matching the authorized outbound payload may auto-submit.
       // Probe with bounded exponential backoff; resume the queued source reply
       // automatically once the editor becomes empty.
-      const key = JSON.stringify([target, dest.document, source.replyKey]);
+      const expected = dest.site === 'nomi' ? limitNomiMessage(source.reply) : source.reply;
+      const matches = dest.draftText === expected.trim();
+      const key = JSON.stringify([target, dest.document, source.replyKey, dest.draftText]);
       if (!this.draftBackoff || this.draftBackoff.key !== key)
         this.draftBackoff = {key, attempts:0, next:now, delay:1};
       const backoff = this.draftBackoff;
@@ -366,10 +369,15 @@ class Bridge {
         backoff.delay = Math.min(16, Math.pow(2, Math.min(backoff.attempts-1,4)));
         backoff.next = now + backoff.delay;
       }
+      if (matches && backoff.attempts >= 4) {
+        prefilledDraft = true;
+        this.note('Unchanged matching bridge draft verified across 4 checks; submitting existing text.');
+      } else {
       this.reason = 'Destination contains a draft; preserving it. Retry check ' +
         backoff.attempts + ' in ' + Math.max(0,Math.ceil(backoff.next-now)) +
-        's; delivery resumes when the editor is clear.';
+        's; delivery resumes when editor clears or matches the queued payload for 4 checks.';
       return;
+      }
     }
     this.draftBackoff = null;
     // Defense in depth: if the dashboard is accidentally in Direct mode,
@@ -384,7 +392,7 @@ class Bridge {
     const truncated = dest.site === 'nomi' && text.length < source.reply.length;
     if (truncated) this.log(speaker + ' reply shortened to 750 characters for Nomi.');
     this.command = {id: crypto.randomUUID(), target, text, truncated, includesReminder, url: dest.url, document: dest.document,
-      claimed: false, created: now, baseline: dest.replyKey,
+      claimed: false, created: now, baseline: dest.replyKey, prefilledDraft,
       source: this.source, sourceReply: source.reply, sourceKey: source.replyKey, sourceDocument: source.document, sourceUrl: source.url, previousPhase: this.phase};
     this.phase = 'send'; this.log(`Forwarding ${source.site} → ${dest.site}: read ${source.reply.length} characters; sending ${text.length}.`);
   }
