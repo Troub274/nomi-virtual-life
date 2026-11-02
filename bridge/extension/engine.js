@@ -506,6 +506,9 @@ class Bridge {
           if (notice.targets.length) {
             this.command=null;
             if (this.queueNextPairNotice()) return {};
+            // Do not fall through to ordinary relay acknowledgment if a peer
+            // could not receive the notice.
+            this.command=null;this.phase='reply';return {};
           } else {
             this.pairNotice=null;
             this.source=notice.restoreSource;
