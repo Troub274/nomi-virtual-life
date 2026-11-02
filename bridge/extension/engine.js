@@ -65,6 +65,7 @@ class Bridge {
       this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0; this.cliTransactions = 0;
     }
     this.cliControllerTab = String(pair[0]);
+    this.cliSeen = Object.fromEntries(pair.map(id=>[id,this.tabs[id]?.replyKey]));
     const settle = Number(data.settle ?? 2);
     this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
@@ -117,6 +118,31 @@ class Bridge {
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
+  dispatchPeerCli(id) {
+    // CLI inspection is independent of conversational turn ownership.
+    if (!this.running || !this.pair?.includes(id) || id===this.source ||
+        this.phase==='send' || this.phase==='uncertain' || this.pairNotice) return;
+    const tab=this.tabs[id], now=this.clock();
+    if (!tab || tab.busy || tab.complete===false ||
+        now-tab.changed < this.stableSeconds || !tab.reply?.trim().toLowerCase().startsWith('[bridge ')) return;
+    this.cliSeen ||= {};
+    if (this.cliSeen[id]===tab.replyKey) return;
+    // Remember this reply before attempting dispatch; never re-execute after a repaint.
+    this.cliSeen[id]=tab.replyKey;
+    const restoreSource=this.source, restoreBaseline=this.baseline,
+      restorePhase=this.phase, restoreWait=this.startedWait;
+    this.source=id; this.baseline=null; this.phase='reply'; this.startedWait=now;
+    this.tick();
+    if (this.command?.source===id) {
+      this.command.cliRestore={source:restoreSource,baseline:restoreBaseline,phase:restorePhase,startedWait:restoreWait};
+      if (this.pairNotice) {
+        this.pairNotice.restoreSource=restoreSource;
+        this.pairNotice.restoreBaseline=restoreBaseline;
+      }
+    }
+    this.source=restoreSource; this.baseline=restoreBaseline;
+    if (this.phase!=='send') {this.phase=restorePhase;this.startedWait=restoreWait;}
+  }
   heartbeat(id, snapshot) {
     let old = this.tabs[id];
     const changed = !old || old.replyKey !== snapshot.replyKey || old.reply !== snapshot.reply || old.busy !== snapshot.busy || old.complete !== snapshot.complete || old.roomKey !== snapshot.roomKey || old.autoChat !== snapshot.autoChat || old.userTurn !== snapshot.userTurn;
@@ -157,6 +183,7 @@ class Bridge {
       }
     } else if (this.running && this.pair?.includes(id) && snapshot.error) this.stop(snapshot.error);
     this.tick();
+    this.dispatchPeerCli(id);
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
   }
@@ -530,7 +557,9 @@ class Bridge {
         this.phase='send';this.log('First shutdown notice confirmed; notifying peer before stopping.');
         return {};
       }
-      this.source = cmd.target; this.baseline = cmd.baseline; this.phase = 'reply';
+      this.source = cmd.cliRestore?.source || cmd.target;
+      this.baseline = cmd.cliRestore?.baseline || cmd.baseline;
+      this.phase = cmd.cliRestore?.phase || 'reply';
       if (!cmd.internalResult) this.turns++;
       this.startedWait = this.clock();
       if (cmd.shutdownAfterAck) {
