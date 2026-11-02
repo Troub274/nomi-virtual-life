@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Push-Location (Resolve-Path "$PSScriptRoot/../..")
 try {
-  python -m pip install --upgrade pyinstaller pywebview
+  python -m pip install --upgrade pyinstaller pywebview cryptography
   if ($LASTEXITCODE -ne 0) { throw 'Dependencies failed' }
   python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader `
      --paths uploader `
