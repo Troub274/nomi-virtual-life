@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 arch="${1:?Specify arm64 or x86_64}"
-python -m pip install --upgrade pyinstaller pywebview certifi
+python -m pip install --upgrade pyinstaller pywebview certifi cryptography
 python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader \
   --paths uploader \
   --hidden-import legacy_v085 \
