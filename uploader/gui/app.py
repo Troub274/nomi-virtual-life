@@ -42,6 +42,7 @@ class API:
             CONFIG.write_text(json.dumps(self.project,ensure_ascii=False,indent=2),encoding="utf-8")
 
     def save(self, project):
+        """Persist GUI project settings without overwriting active run identity."""
         if self.proc and self.proc.poll() is None: raise RuntimeError("Cannot modify a running upload.")
         # The active checkpoint belongs to the backend, not the browser's stale copy.
         active=self.project.get("active_run")
@@ -53,15 +54,18 @@ class API:
         return True
 
     def auth_status(self):
+        """Read shared credential configuration status."""
         import legacy_v085
         return legacy_v085.credential_status()
 
     def auth_unlock(self, password=None):
+        """Unlock the configured API key for this GUI process."""
         import legacy_v085
         legacy_v085.unlock_api_key(password)
         return True
 
     def auth_save(self, key, encrypt=False, password=None):
+        """Store a new API key and remove any legacy GUI key copy."""
         import legacy_v085
         legacy_v085.save_api_key(key,password if encrypt else None)
         self.project.pop("key",None)
@@ -138,6 +142,7 @@ class API:
             else: os.environ["NOMI_API_KEY"]=old
 
     def choose(self):
+        """Open a file chooser to add source material to the queue."""
         import webview
         paths = webview.windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
                          file_types=("Uploader files (*.txt;*.docx;*.json;*.zip)", "All files (*.*)"))
@@ -182,6 +187,7 @@ class API:
         return {"editable": True, "header": header, "preview": content[:120000], "truncated": len(content)>120000, "existing": existing}
 
     def _build_txt(self, source, item):
+        """Prepare a working TXT copy without modifying the selected original."""
         info = self.inspect_file(str(source))
         if "fields" not in item:
             return source.read_text(encoding="utf-8-sig")
@@ -219,6 +225,7 @@ class API:
         return "\n".join(header) + "\n\n" + body
 
     def _paths(self, run_dir):
+        """Resolve checkpoint, completion and reply paths for a run directory."""
         out = []
         for i, item in enumerate(self.project.get("queue", [])):
             source = Path(item["path"])
@@ -243,9 +250,11 @@ class API:
         return out
 
     def _cli(self, args):
+        """Construct the Python uploader subprocess invocation."""
         return ([sys.executable, "--uploader-cli"] if FROZEN else [sys.executable, str(UPLOADER)]) + args
 
     def _run(self, args):
+        """Start the uploader subprocess while retaining its status output."""
         if self.proc and self.proc.poll() is None: raise RuntimeError("An upload is already running.")
         self.lines = []
         env = os.environ.copy()
@@ -265,6 +274,7 @@ class API:
         return True
 
     def _active_dir(self):
+        """Find the selected upload run's on-disk directory."""
         token=self.project.get("active_run")
         if not token:
             return DATA  # Preserve access to pre-upgrade checkpoints.
@@ -273,10 +283,12 @@ class API:
         return DATA / "runs" / token
 
     def _has_checkpoint(self, directory):
+        """Check whether a run directory has checkpoint evidence."""
         cp=directory / "upload.jsonl"
         return cp.is_file() and cp.stat().st_size>0
 
     def begin(self, dry=False, restart=None):
+        """Start a new upload or dry run with the current GUI project options."""
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Upload already running")
         token=uuid.uuid4().hex
@@ -358,6 +370,7 @@ class API:
         return self.begin(False,f"{p}:{i}")
 
     def pause(self):
+        """Stop the current uploader subprocess without discarding its checkpoint."""
         if not self.proc or self.proc.poll() is not None:
             raise RuntimeError("No running upload to pause.")
         marker=Path(str(self._active_dir()/"upload.jsonl")+".pause")
@@ -365,6 +378,7 @@ class API:
         return "Pause requested; completing the current API operation."
 
     def clear_history(self):
+        """Clear eligible saved history after checking for an active upload."""
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Cannot clear history while an upload is running.")
         # Hide completed run history; never delete checkpoints or source data.
@@ -399,6 +413,7 @@ class API:
         return sorted((r for r in found if r["id"] not in hidden),key=lambda r:r["modified"],reverse=True)
 
     def select_run(self, run_id):
+        """Select a saved run for status or recovery without changing its journal."""
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Cannot switch runs during upload.")
         directory=DATA if run_id=="legacy" else DATA/"runs"/str(run_id)
@@ -456,6 +471,7 @@ class API:
         return self._run(args)
 
     def resume(self):
+        """Resume the current selected run using backend recovery checks."""
         directory=self._active_dir()
         if not self._has_checkpoint(directory):
             raise ValueError("No checkpoint exists for the selected run.")
@@ -465,6 +481,7 @@ class API:
                           "--replies",str(directory/"replies.txt")])
 
     def status(self):
+        """Return the GUI's current process state and progress snapshot."""
         directory=self._active_dir()
         cp = directory / "upload.jsonl"
         confirmed = 0
