@@ -101,5 +101,49 @@ class ExportOptionsTests(unittest.TestCase):
             self.assertNotIn("Global",content[0])
             self.assertNotIn("Different",content[0])
 
+
+    def test_manual_restart_boundary_preserves_history_and_recalculates_state(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            cp=Path(tmp)/"upload.jsonl"
+            start={"event":"start","nomi_name":"Mary","nomi_uuid":"nomi","room_uuid":"room",
+                   "passes":1,"messages_per_pass":4,"manifest":"old"}
+            uploader.record(cp,start)
+            for i in range(1,5):
+                uploader.record(cp,{"event":"attempt","pass":1,"index":i})
+                uploader.record(cp,{"event":"confirmed","pass":1,"index":i,"kind":"content"})
+            revision=dict(start,messages_per_pass=6,manifest="changed")
+            uploader.record(cp,{"event":"manual_restart","generation":2,"pass":1,"index":3,
+                                "start":revision,"prefix_prompts":[]})
+            active=uploader.active_records(cp)
+            self.assertEqual(len(uploader.records(cp)),10)
+            self.assertEqual(active[0]["messages_per_pass"],6)
+            self.assertEqual({(e["pass"],e["index"]) for e in active if e["event"]=="confirmed"},
+                             {(1,1),(1,2)})
+            info=uploader.checkpoint_summary(cp)
+            self.assertEqual(info["expected"],6)
+            self.assertEqual(info["confirmed"],2)
+            self.assertEqual(info["next"],(1,3))
+            uploader.record(cp,{"event":"attempt","pass":1,"index":3})
+            uploader.record(cp,{"event":"confirmed","pass":1,"index":3,"kind":"content"})
+            self.assertEqual(uploader.checkpoint_summary(cp)["confirmed"],3)
+
+    def test_second_manual_restart_supersedes_previous_generation(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            cp=Path(tmp)/"checkpoint.jsonl"
+            start={"event":"start","nomi_name":"Mary","nomi_uuid":"nomi","room_uuid":"room",
+                   "passes":1,"messages_per_pass":5,"manifest":"old"}
+            uploader.record(cp,start)
+            first=dict(start,messages_per_pass=6,manifest="first")
+            second=dict(start,messages_per_pass=8,manifest="second")
+            uploader.record(cp,{"event":"manual_restart","generation":2,"pass":1,"index":4,
+                                "start":first,"prefix_prompts":[]})
+            uploader.record(cp,{"event":"confirmed","pass":1,"index":4,"kind":"content"})
+            uploader.record(cp,{"event":"manual_restart","generation":3,"pass":1,"index":2,
+                                "start":second,"prefix_prompts":[]})
+            summary=uploader.checkpoint_summary(cp)
+            self.assertEqual((summary["confirmed"],summary["expected"],summary["next"]),(1,8,(1,2)))
+
 if __name__=="__main__":
     unittest.main()
