@@ -190,5 +190,14 @@ class ExportOptionsTests(unittest.TestCase):
             legacy_v085.api_ssl_context()
         factory.assert_called_once_with(cafile="/private/trusted.pem")
 
+
+    def test_invalid_flags_rejected_without_api_key(self):
+        from unittest.mock import patch
+        import legacy_v085
+        with patch.object(uploader.legacy,"resolved_api_key",side_effect=AssertionError("Credentials should not be read for invalid arguments")):
+            with self.assertRaises(SystemExit):
+                uploader.main(["--utility","--resume","--new-room-on-resume",
+                               "--abandon-reply","1:499"])
+
 if __name__=="__main__":
     unittest.main()
