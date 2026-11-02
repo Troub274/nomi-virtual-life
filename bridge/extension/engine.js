@@ -218,6 +218,7 @@ class Bridge {
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
+      this.lastCliFingerprint = null;
       this.log('AI Bridge internal command response consumed; not forwarded.');
       return;
     }
