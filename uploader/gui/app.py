@@ -27,24 +27,49 @@ class API:
         if CONFIG.exists():
             try: self.project.update(json.loads(CONFIG.read_text(encoding="utf-8")))
             except (OSError, ValueError): pass
+        sys.path.insert(0,str(UPLOADER.parent))
+        import legacy_v085
+        old_key=self.project.pop("key",None)
+        if old_key and not legacy_v085.credential_status()["configured"]:
+            legacy_v085.save_api_key(old_key)
+        if old_key:
+            CONFIG.write_text(json.dumps(self.project,ensure_ascii=False,indent=2),encoding="utf-8")
 
     def save(self, project):
         if self.proc and self.proc.poll() is None: raise RuntimeError("Cannot modify a running upload.")
         # The active checkpoint belongs to the backend, not the browser's stale copy.
         active=self.project.get("active_run")
         self.project = dict(project)
+        self.project.pop("key",None)
         if active is not None:
             self.project["active_run"]=active
         CONFIG.write_text(json.dumps(self.project, ensure_ascii=False, indent=2), encoding="utf-8")
         return True
 
+    def auth_status(self):
+        import legacy_v085
+        return legacy_v085.credential_status()
+
+    def auth_unlock(self, password=None):
+        import legacy_v085
+        legacy_v085.unlock_api_key(password)
+        return True
+
+    def auth_save(self, key, encrypt=False, password=None):
+        import legacy_v085
+        legacy_v085.save_api_key(key,password if encrypt else None)
+        self.project.pop("key",None)
+        CONFIG.write_text(json.dumps(self.project,ensure_ascii=False,indent=2),encoding="utf-8")
+        return True
+
     def list_nomis(self, key):
         sys.path.insert(0, str(UPLOADER.parent))
         """Fetch real Nomis using the uploader's own API client; never log the key."""
+        import legacy_v085
         from legacy_v085 import get_nomis
         old = os.environ.get("NOMI_API_KEY")
         try:
-            os.environ["NOMI_API_KEY"] = str(key).strip()
+            os.environ["NOMI_API_KEY"] = str(key or legacy_v085.resolved_api_key() or "").strip()
             if not os.environ["NOMI_API_KEY"]:
                 raise ValueError("Enter an API key first.")
             nomis = get_nomis()
@@ -58,6 +83,7 @@ class API:
         """Nomi room management; no automatic retries for writes."""
         import uuid
         sys.path.insert(0, str(UPLOADER.parent))
+        import legacy_v085
         from legacy_v085 import api_request, list_rooms, get_nomis, room_contains_nomi, ok, err_text
         if self.proc and self.proc.poll() is None and action != "list":
             raise RuntimeError("Room modifications are disabled during an upload.")
@@ -217,7 +243,8 @@ class API:
         if self.proc and self.proc.poll() is None: raise RuntimeError("An upload is already running.")
         self.lines = []
         env = os.environ.copy()
-        env["NOMI_API_KEY"] = self.project.get("key", "").strip() or env.get("NOMI_API_KEY", "")
+        import legacy_v085
+        env["NOMI_API_KEY"] = legacy_v085.resolved_api_key() or env.get("NOMI_API_KEY", "")
         if not env["NOMI_API_KEY"] and "--dry-run" not in args and "--status" not in args:
             raise ValueError("Enter your Nomi API key in Settings.")
         env["NOMI_GUI_TARGET_NOMI"] = self.project.get("nomi","")
