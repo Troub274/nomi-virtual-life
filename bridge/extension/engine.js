@@ -385,6 +385,20 @@ class Bridge {
       else this.simpleControllerSeen=tab.replyKey;
       return;
     }
+    // React can replace a GPT message node and change its DOM count / ID.
+    // Treat unchanged controller commands as one message despite repaint.
+    const exactCommand=JSON.stringify([tab.document,tab.url,tab.reply.trim()]);
+    this.simpleCommandHistory ||= {};
+    const observedAt=this.clock();
+    for(const [key,at] of Object.entries(this.simpleCommandHistory))
+      if(observedAt-at>300)delete this.simpleCommandHistory[key];
+    if(!this.simplePeerAwait && this.simpleCommandHistory[exactCommand]!==undefined) {
+      this.simpleControllerSeen=tab.replyKey;
+      this.simpleAccepted[id]=identity;
+      this.note('Duplicate Tab 1 command suppressed after DOM re-render; no send created.');
+      this.reason='Duplicate controller command ignored; waiting for a new message.';
+      return;
+    }
     // Read only one complete reply from the active participant, with no command
     // interpretation whatsoever on the conversational peer.
     let message=tab.reply,shutdown=false;
@@ -428,6 +442,7 @@ class Bridge {
       this.simpleTruncationWarning=null;
     }
     this.simpleAccepted[id]=identity;
+    if(!this.simplePeerAwait)this.simpleCommandHistory[exactCommand]=this.clock();
     this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
@@ -435,6 +450,8 @@ class Bridge {
       claimed:false,simpleSend:true,simpleShutdown:shutdown,
       truncatedToNomi,originalByteLength};
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
+    this.note('Prepared send transaction '+this.command.id+
+      ', '+id+' to '+this.command.target+', '+new TextEncoder().encode(message).length+' bytes.');
   }
   tick() {
     if (this.simpleMode && (this.mode||'direct')==='direct') return this.simpleTick();
@@ -812,6 +829,7 @@ class Bridge {
       return {};
     }
     if(cmd.simpleSend) {
+      this.note('Send transaction '+cmd.id+(data.error?' failed: '+data.error:' confirmed by destination editor.'));
       if(data.error) {
         this.phase='uncertain';
         this.stop('Send uncertain: '+data.error+'. Inspect recipient before restarting.');
