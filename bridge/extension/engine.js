@@ -231,8 +231,18 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (['status','help'].includes(parsed.command)) {
-          const text = parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
+        if (['status','help','pending'].includes(parsed.command)) {
+          const pending = this.command;
+          const peerId = this.pair?.find(id => id !== this.source);
+          const peer = peerId ? this.tabs[peerId] : null;
+          const pendingReport = '[AI Bridge pending]\\n' +
+            'Delivery state: ' + (pending ? (pending.claimed ? 'claimed; confirmation outstanding' : 'queued; not submitted') :
+              (this.phase === 'uncertain' ? 'uncertain; inspect both chats before retry' : 'no pending send')) +
+            (pending ? '\\nTransaction: ' + pending.id + '\\nDestination: ' + (this.tabs[pending.target]?.site || 'unknown') : '') +
+            '\\nWaiting for: ' + (peer?.site || 'none') +
+            '\\nMode: ' + (this.mode || 'direct') + '\\n[End pending]';
+          const text = parsed.command === 'pending' ? pendingReport :
+            parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
             '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
             '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
             '\\nTurns: ' + this.turns + '\\nPending send: ' + (this.command?'yes':'no') +
