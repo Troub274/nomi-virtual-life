@@ -1,6 +1,6 @@
-# Nomi Uploader v1.2
+# Nomi Uploader v1.3
 
-**Current:** Nomi Uploader 1.2. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.3 — improved recovery / resume. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Set `NOMI_API_KEY` before live uploads.
 
@@ -26,6 +26,24 @@ python examples/run_package.py tammy --restart
 ```
 
 `--restart` is explicit. An unfinished checkpoint is still protected and will not be silently discarded.
+
+## Version 1.3: Better Recovery / Resume
+
+The GUI now presents **Normal Resume** and **Manual Restart**, and recommends a recovery path using the selected run's checkpoint status. Normal Resume keeps the existing deterministic manifest and never silently retries ambiguous sends.
+
+**Manual Restart** is an explicit operator action for edited files, new prompts, or damaged/inconsistent checkpoint state. Pause the upload, edit source files or GUI settings, select the original run, and choose **Manual Restart**. Enter the pass and the **message number in the newly recalculated plan**. The uploader appends a hard boundary to the **same checkpoint journal**, retaining earlier events as history and treating the revised plan as the authoritative active generation. A restart at message 23 can change an old 100-message plan into a new 110-message plan. Replays can duplicate content already delivered; the GUI requires confirmation.
+
+CLI example using an existing checkpoint and revised source file:
+
+```sh
+python nomi-uploader.py --resume --manual-restart 1:23 \
+  --checkpoint upload.jsonl --completion completed.json \
+  --replies replies.txt --process-every 0 revised-book.txt
+```
+
+Normal resumption after the override still uses the most recent generation's recorded manifest. Do not run two processes against the same checkpoint.
+
+**GUI downloads include the API command-line uploader** in their `cli/` directory, together with `CLI-IN-GUI-DOWNLOAD.md`. Linux and macOS also provide `--uploader-cli` through the native app executable. On Windows, use the included Python files for visible CLI output.
 
 ## Version 1.2: Headers and replies
 
