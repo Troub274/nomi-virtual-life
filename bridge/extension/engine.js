@@ -209,7 +209,7 @@ class Bridge {
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
-    if (/^\\[bridge(?:\\s|\\])/.test(source.reply.trim().toLowerCase())) {
+    if (source.reply.trim().toLowerCase().startsWith('[bridge ')) {
       let parsed;
       try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
       catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
