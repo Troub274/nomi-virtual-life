@@ -9,3 +9,7 @@ This is an experimental unsigned build, not a universal AppImage, Flatpak, or De
 Your API key and checkpoints are saved under `~/.local/share/NomiUploader/` unless `LOCALAPPDATA` is set. Do not manually edit or delete checkpoints. The API key is currently stored in plain text in local settings, so do not use this alpha on shared or untrusted machines.
 
 The program is community software and is not official Nomi.ai software. See the [project README](https://github.com/Troub274/nomi-virtual-life) and [uploader guide](https://github.com/Troub274/nomi-virtual-life/blob/main/uploader/README.md).
+
+## Command-line API mode (included)
+
+The GUI download also contains a **standalone Python API command-line uploader** in the `cli/` folder. You can use it without launching the GUI. Read **`CLI-IN-GUI-DOWNLOAD.md` in the extracted download** for exact platform-specific commands, API-key setup and checkpoint recovery. The same uploader engine is used by both interfaces.
