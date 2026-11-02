@@ -400,8 +400,10 @@ class Bridge {
     const cmd = this.command;
     if (!cmd || cmd.id !== id || !this.running || this.phase !== 'send') return false;
     const valid = snapshot && !snapshot.error && !snapshot.busy && snapshot.complete !== false &&
-      snapshot.reply === cmd.sourceReply && snapshot.replyKey === cmd.sourceKey &&
+      snapshot.reply === cmd.sourceReply &&
       snapshot.document === cmd.sourceDocument && snapshot.url === cmd.sourceUrl;
+    // replyKey includes DOM message counts and can change during harmless re-renders.
+    // The exact reply text plus conversation URL and document identity are the safety boundary.
     if (valid) return true;
     if (cmd.claimed) {
       this.phase = 'uncertain';
