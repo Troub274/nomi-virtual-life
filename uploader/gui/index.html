@@ -136,6 +136,17 @@ function buildLayout(){
  document.getElementById("files-columns").append(queue,editor);
  document.getElementById("view-destination").append(settings);
  document.getElementById("view-upload").append(run,log);
+ // Default replay and reflection settings belong with the upload controls.
+ const defaults=document.createElement("section");
+ defaults.innerHTML='<h2>Upload Defaults</h2><p class="small">Defaults apply unless an individual file overrides them. Changes update the current upload configuration immediately.</p><div id="upload-default-fields" class="stack"></div>';
+ run.insertBefore(defaults,run.querySelector(".row"));
+ const fields=defaults.querySelector("#upload-default-fields");
+ for(const id of ["process","wait","headerEvery","headerText","replyPrompt"]){
+  const input=document.getElementById(id);
+  const label=input?.closest("label");
+  if(label)fields.append(label);
+ }
+
  document.getElementById("view-history").append(replies);
  // Keep settings available in the destination step, with appearance as its own panel.
  const appearance=document.createElement("section");
