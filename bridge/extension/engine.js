@@ -239,7 +239,7 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (['status','help','pending','review','schedule','pause','resume'].includes(parsed.command)) {
+        if (true) {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
@@ -264,12 +264,14 @@ class Bridge {
             '[End schedule]';
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume') {this.cliPaused = false; this.startedWait = now;}
-          const text = parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
+          const text = parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
+            parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
             parsed.command === 'resume' ? '[AI Bridge] Resumed. Relay forwarding enabled.' :
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
             parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
+            parsed.command !== 'status' ? '[AI Bridge] NOT_IMPLEMENTED: ' + parsed.command + '. No action was taken.' :
             '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
             '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
             '\\nTurns: ' + this.turns + '\\nPending send: ' + (this.command?'yes':'no') +
@@ -280,19 +282,7 @@ class Bridge {
             baseline:source.replyKey,claimed:false,created:now,internalResult:true};
           this.phase='send';
           this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
-        } else if (parsed.command === 'listen') {
-          const peer = this.pair?.find(id => id !== this.source);
-          if (peer && this.tabs[peer]) {
-            // LISTEN is passive: it never submits a synthetic chat message.
-            // Advance to the peer's current message key so old replies cannot replay.
-            this.source = peer;
-            this.baseline = this.tabs[peer].replyKey;
-            this.phase = 'reply';
-            this.startedWait = now;
-            this.log('AI Bridge listening for a NEW ' + this.tabs[peer].site +
-              ' reply. LISTEN does not initiate a message or request a Nomi response.');
-          } else this.log('AI Bridge listen could not find a connected peer.');
-        } else this.note('CLI ' + parsed.command + ' recognized; live execution not enabled.');
+        }
       } else if (!this.reason.startsWith('AI Bridge CLI rejected:')) {
         this.log('AI Bridge CLI-looking message blocked; not forwarded.');
       }
