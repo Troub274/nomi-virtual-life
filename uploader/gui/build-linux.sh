@@ -16,6 +16,9 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUpload
 mkdir -p dist/linux-package
 cp dist/NomiUploader dist/linux-package/NomiUploader
 cp uploader/gui/README-LINUX.md dist/linux-package/README-LINUX.md
+cp uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/linux-package/CLI-IN-GUI-DOWNLOAD.md
+mkdir -p dist/linux-package/cli
+cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt uploader/README.md uploader/RECOVERY.md dist/linux-package/cli/
 chmod +x dist/linux-package/NomiUploader
 tar -C dist/linux-package -czf dist/NomiUploader-Linux-x86_64.tar.gz .
 sha256sum dist/NomiUploader-Linux-x86_64.tar.gz
