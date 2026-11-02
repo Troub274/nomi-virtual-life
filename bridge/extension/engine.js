@@ -390,12 +390,19 @@ class Bridge {
       this.reason='Waiting for '+dest.site+' to be idle with an empty editor. Nothing has been typed.';
       return;
     }
+    const originalByteLength=new TextEncoder().encode(message).length;
     if(dest.site==='nomi')message=nomiByteWindow(message);
+    const truncatedToNomi=dest.site==='nomi' && originalByteLength>new TextEncoder().encode(message).length;
+    if(this.simplePeerAwait && this.simpleTruncationWarning) {
+      message+='\n\n'+this.simpleTruncationWarning;
+      this.simpleTruncationWarning=null;
+    }
     this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
       sourceDocument:tab.document,baseline:dest.replyKey,created:this.clock(),
-      claimed:false,simpleSend:true,simpleShutdown:shutdown};
+      claimed:false,simpleSend:true,simpleShutdown:shutdown,
+      truncatedToNomi,originalByteLength};
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
   }
   tick() {
@@ -768,6 +775,7 @@ class Bridge {
         this.stop('Send uncertain: '+data.error+'. Inspect recipient before restarting.');
       } else {
         if(cmd.source===this.pair[0]) {
+          if(cmd.truncatedToNomi) this.simpleTruncationWarning='[Bridge warning: Your previous message was '+cmd.originalByteLength+' UTF-8 bytes. Only the first 750 bytes were delivered to Nomi; the remainder was truncated. Keep future messages to Nomi within 750 UTF-8 bytes.]';
           this.simpleControllerSeen=cmd.sourceKey;
           this.simplePeerSeen=this.tabs[this.pair[1]]?.replyKey;
           this.simplePeerAwait=!cmd.simpleShutdown;
