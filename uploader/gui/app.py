@@ -89,7 +89,7 @@ class API:
             raise RuntimeError("Room modifications are disabled during an upload.")
         old = os.environ.get("NOMI_API_KEY")
         try:
-            os.environ["NOMI_API_KEY"] = str(key).strip()
+            os.environ["NOMI_API_KEY"] = str(key or legacy_v085.resolved_api_key() or "").strip()
             if not os.environ["NOMI_API_KEY"]: raise ValueError("Enter an API key.")
             if not nomi_uuid: raise ValueError("Select a Nomi first.")
             uuid.UUID(str(nomi_uuid))
