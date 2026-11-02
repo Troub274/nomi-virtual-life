@@ -28,6 +28,8 @@
       if(message.length>12000)throw Error('Message exceeds limit');
       return {command:'send',args,message,requiresAuthorization:true};
     }
+    if(/^\[next message\]$/i.test(s)) return {command:'next-message',args:{},rest:'',requiresAuthorization:true};
+    if(/^\[clear queue\]$/i.test(s)) return {command:'clear-queue',args:{},rest:'',requiresAuthorization:true,highImpact:true};
     const match=s.match(/^\[bridge\s+([a-z]+)(?:\s+([^\]\r\n]*))?\]$/i);
     if(!match)return null;
     let command=match[1].toLowerCase();
@@ -61,8 +63,8 @@
     "[bridge help]",
     "[bridge status]",
     "[bridge pending]",
-    "[bridge next message] — receive the next queued message",
-    "[bridge clear queue] — discard your waiting, unsent messages",
+    "[bridge next message] or [next message] — retrieve one queued message",
+    "[bridge clear queue] or [clear queue] — discard your unsent messages",
     "[bridge pause]",
     "[bridge resume]",
     "[bridge listen]",
