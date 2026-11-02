@@ -57,9 +57,11 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 </div>
 <div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
 </div></section>
-<section><h2>Settings</h2><div class="stack">
+<section><h2>Destination</h2><div class="stack">
+<label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label>
+<button onclick="changeApiKey()">Change / Reset API Key</button>
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
-<label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label><button onclick="changeApiKey()">Change / Reset API Key</button><div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
+<div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
 <label>Nomi.ai user name (required when a file contains [username])<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
 <div class="row"><button onclick="loadRooms()">Refresh rooms</button><button onclick="newRoom()">New room</button><button onclick="editRoom()">Edit room</button><button onclick="deleteRoom()">Delete room</button></div>
@@ -130,7 +132,7 @@ async function checkForUpdates(){
 function buildLayout(){
  const sectionByHeading={};
  document.querySelectorAll("#workspace > section").forEach(x=>{sectionByHeading[x.querySelector("h2")?.textContent?.trim()]=x});
- const queue=sectionByHeading["Upload queue"],editor=sectionByHeading["File header and prompts"],settings=sectionByHeading["Settings"],run=sectionByHeading["Run controls"],log=sectionByHeading["Live output"],replies=sectionByHeading["Saved replies"];
+ const queue=sectionByHeading["Upload queue"],editor=sectionByHeading["File header and prompts"],settings=sectionByHeading["Destination"],run=sectionByHeading["Run controls"],log=sectionByHeading["Live output"],replies=sectionByHeading["Saved replies"];
  document.getElementById("files-columns").append(queue,editor);
  document.getElementById("view-destination").append(settings);
  document.getElementById("view-upload").append(run,log);
@@ -138,6 +140,9 @@ function buildLayout(){
  // Keep settings available in the destination step, with appearance as its own panel.
  const appearance=document.createElement("section");
  appearance.innerHTML='<h2>Appearance</h2><label>Color theme <select id="theme-choice" onchange="applyTheme(this.value)"><option value="dark">Nomi Dark</option><option value="light">Nomi Light</option><option value="system">Follow system</option></select></label>';
+ const credentials=document.createElement("section");
+ credentials.innerHTML='<h2>API Credentials</h2><p class="small">The API key is shared by the GUI and CLI. Change or reset it here, or from the Destination page. The key is never shown in this panel.</p><button onclick="changeApiKey()">Change / Reset API Key</button>';
+ document.getElementById("view-settings").prepend(credentials);
  document.getElementById("view-settings").append(appearance);
  const updates=document.createElement("section");
  updates.innerHTML='<h2>Software Updates</h2><p class="small">Updates are downloaded by you and installed manually; uploads are never interrupted.</p><p id="updateStatus" class="status-line">Not checked yet</p><p id="updateNotes" class="small"></p><div class="row"><button onclick="checkForUpdates()">Check now</button><a id="updateLink" href="#" target="_blank" rel="noopener noreferrer" hidden>View release and download</a></div>';
