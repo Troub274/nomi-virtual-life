@@ -75,7 +75,7 @@ class Bridge {
     this.log('Running: waiting for a completed reply.');
     if (this.mode !== 'api-room' && this.mode !== 'heartbeat') {
       this.queuePairNotice('start',
-        '[AI Bridge started]\\nState: running. First selected tab has primary CLI control; either participant may pause or shut down.\\n' +
+        '[AI Bridge started]\\nState: running. Either selected participant may issue CLI commands.\\n' +
         'Ordinary GPT-human replies remain private; use [bridge send to="Nomi"] to deliver explicitly.\\n' +
         'CLI help:\\n' + (globalThis.AIBridgeCLI?.HELP || '[bridge help] [bridge status] [bridge pause] [bridge shutdown]') +
         '\\n[End AI Bridge startup]');
@@ -291,19 +291,11 @@ class Bridge {
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
     if (source.reply.trim().toLowerCase().startsWith('[bridge ')) {
-      // The first tab has primary CLI authority, but either selected participant
-      // may pause or shut down the shared session. Never forward denied commands.
+      // Either human-selected participant can issue any supported CLI command.
+      // The bridge still validates syntax, session state and delivery context.
       let parsed;
       try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
       catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
-      if (String(this.source) !== String(this.pair?.[0]) &&
-          !['pause','shutdown'].includes(parsed?.command)) {
-        this.baseline = source.replyKey;
-        this.phase = 'reply';
-        this.startedWait = now;
-        this.log('CLI denied: only first tab controls this command; both tabs may pause or shut down.');
-        return;
-      }
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
