@@ -39,7 +39,11 @@ jobs:
       - name: Prepare user download ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/NomiUploader.exe -DestinationPath dist/NomiUploader-Windows.zip -Force
+          New-Item -ItemType Directory -Force -Path dist/windows-package/cli | Out-Null
+          Copy-Item dist/NomiUploader.exe dist/windows-package/
+          Copy-Item uploader/nomi-uploader.py,uploader/legacy_v085.py,uploader/requirements.txt,uploader/README.md,uploader/RECOVERY.md dist/windows-package/cli/
+          Copy-Item uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/windows-package/
+          Compress-Archive -Path dist/windows-package/* -DestinationPath dist/NomiUploader-Windows.zip -Force
           Get-FileHash dist/NomiUploader.exe -Algorithm SHA256 | Format-List
       - name: Publish Windows alpha pre-release
         shell: pwsh
