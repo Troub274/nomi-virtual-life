@@ -39,6 +39,15 @@ Extract the ZIP, then from Terminal in the directory containing `NomiUploader.ap
 
 The ZIP also includes the standalone `cli/` directory; `python3 cli/nomi-uploader.py` works with Python 3.10+ and the optional requirements installed.
 
+## macOS TLS certificates
+
+The standalone Python CLI uses the same verified `certifi` CA bundle as the
+packaged macOS app. Run `python3 -m pip install -r cli/requirements.txt`
+once in your Python environment. **No `SSL_CERT_FILE` export is needed**
+for normal public HTTPS connections, whether using `python3 cli/nomi-uploader.py`
+or the embedded `--uploader-cli` executable. An explicitly configured
+`SSL_CERT_FILE` still works for custom trust stores.
+
 ## API key and recovery
 
 For **live** uploads, set the `NOMI_API_KEY` environment variable in the terminal (PowerShell: `$env:NOMI_API_KEY="..."`; POSIX shells: `export NOMI_API_KEY="..."`). Avoid putting the key in command history or scripts shared with others.
