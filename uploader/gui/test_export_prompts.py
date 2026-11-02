@@ -145,5 +145,21 @@ class ExportOptionsTests(unittest.TestCase):
             summary=uploader.checkpoint_summary(cp)
             self.assertEqual((summary["confirmed"],summary["expected"],summary["next"]),(1,8,(1,2)))
 
+
+    def test_frozen_macos_tls_uses_certifi_ca_without_shell_exports(self):
+        import ssl
+        import sys
+        from unittest.mock import patch
+        import legacy_v085
+        import certifi
+        with patch.object(legacy_v085.sys,"platform","darwin"), \
+             patch.object(legacy_v085.sys,"frozen",True,create=True), \
+             patch.dict(legacy_v085.os.environ,{},clear=True):
+            context=legacy_v085.api_ssl_context()
+            self.assertIsInstance(context,ssl.SSLContext)
+            self.assertEqual(context.verify_mode,ssl.CERT_REQUIRED)
+            self.assertTrue(context.check_hostname)
+            self.assertGreater(len(context.get_ca_certs()),50)
+
 if __name__=="__main__":
     unittest.main()
