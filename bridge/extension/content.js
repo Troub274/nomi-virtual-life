@@ -168,6 +168,12 @@
     if (!claim.allowed) { handled.delete(command.id); return; }
     try {
       if (site === 'nomi' && command.text.length > 800) throw Error('Nomi messages are limited to 800 characters');
+      // The destination can start generating after the worker's heartbeat.
+      // Do not write into a busy or prefilled editor. A non-claimed command
+      // can be retried from the outbound queue once the destination is idle.
+      const beforeEdit=snapshot();
+      if (beforeEdit.busy || beforeEdit.complete===false)
+        throw Error('Destination began generating before insertion; draft not modified');
       const input = one(config.input);
       if (!input || (read(input) && !command.prefilledDraft)) throw Error('Editor changed before send');
       if (command.prefilledDraft && read(input) !== command.text.trim()) throw Error('Prefilled draft changed');
