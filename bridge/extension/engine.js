@@ -228,7 +228,11 @@ class Bridge {
     const item=this.waitingCli.shift(), tab=this.tabs[item.id];
     if (!tab || tab.document!==item.document || tab.url!==item.url ||
         tab.reply!==item.text) {
-      this.note('Queued CLI source changed before dispatch; not replaying stale text.');
+      this.deferredCli ||= [];
+      this.deferredCli.push(item);
+      this.reason='A buffered command was superseded in the conversation before dispatch. '+
+        'It is preserved for inspection, not silently replayed.';
+      this.note('Preserved superseded CLI command for manual recovery rather than dropping it.');
       return;
     }
     // Dispatch from actual recorded issuer and its current transcript.
@@ -766,11 +770,21 @@ class Bridge {
   }
   state() {
     this.tick();
+    if(this.running && this.phase!=='send') {
+      const pending=(this.waitingCli||[]).length;
+      const deferred=(this.deferredCli||[]).length;
+      const outbound=(this.outboundQueue||[]).length;
+      if(pending || deferred || outbound) {
+        const detail='Bridge queues: '+pending+' inbound commands waiting, '+
+          deferred+' superseded commands preserved, '+outbound+' outbound parts waiting.';
+        this.reason=detail+(deferred?' Recovery required for superseded commands.':'');
+      }
+    }
     return {running: this.running, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, cliControllerTab: this.cliControllerTab || this.pair?.[0] || null, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
-      outboundQueueCounts:Object.fromEntries((this.pair||[]).map(id=>[id,this.queuedFor(id)])),events: this.events, lastDelivery: this.lastDelivery, tabs: Object.values(this.tabs).filter(t => this.clock() - t.seen < 300)
+      outboundQueueCounts:Object.fromEntries((this.pair||[]).map(id=>[id,this.queuedFor(id)])),incomingQueueCount:(this.waitingCli||[]).length,deferredCommandCount:(this.deferredCli||[]).length,events: this.events, lastDelivery: this.lastDelivery, tabs: Object.values(this.tabs).filter(t => this.clock() - t.seen < 300)
         .map(t => ({...t, connected: this.clock() - t.seen < 90}))};
   }
   serialize() {const {clock, ...data} = this; return data;}
