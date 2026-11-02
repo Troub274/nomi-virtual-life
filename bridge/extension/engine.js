@@ -478,12 +478,10 @@ class Bridge {
           if (!error) {
             const parts=this.queueOutbound(this.source,target,parsed.message);
             if(parts)this.scheduleOutbound(target);
-            this.command={id:crypto.randomUUID(),source:this.source,target:this.source,
-              text:'[AI Bridge queued] '+parts+' part(s) queued for peer. First part will be sent when ready.',
-              url:source.url,document:source.document,sourceReply:source.reply,
-              sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
-              baseline:source.replyKey,created:now,claimed:false,internalResult:true};
-            this.phase='send';
+            // Successful enqueue is silent. An AI should not have to reply
+            // to a transport receipt to keep the conversation moving.
+            this.note('Queued '+parts+' outbound part(s) silently.');
+            this.pumpOutbound();
           } else {
             this.command={id:crypto.randomUUID(),source:this.source,target:this.source,
               text:'[AI Bridge send] REJECTED: '+error,
@@ -544,10 +542,18 @@ class Bridge {
             '\nMode: ' + (this.mode||'direct') + '\nPhase: ' + this.phase +
             '\nConversation turns: ' + this.turns + '\nCLI transactions: ' + (this.cliTransactions||0) + '\nPending send: ' + (this.command?'yes':'no') +
             '\n[End status]\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
+          if (['listen','next-message','clear-queue'].includes(parsed.command) &&
+              (parsed.command==='clear-queue' || this.queuedFor(this.source)===0)) {
+            this.note('Queue control '+parsed.command+' accepted silently.');
+            return;
+          }
           if ((parsed.command==='next-message' || parsed.command==='listen') && this.queuedFor(this.source)>0 &&
               this.releaseOutbound(this.source)) {
             this.outboundCredits[this.source]=Math.max(0,(this.outboundCredits[this.source]||0)-1);
             this.note('Next queued message released directly; no redundant CLI receipt.');
+          } else if (['listen','next-message','clear-queue'].includes(parsed.command)) {
+            // Retrieval/clear never produce chat receipts.
+            this.note('Queue control processed without a reply.');
           } else if (['pause','resume'].includes(parsed.command)) {
             const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
             this.queuePairNotice(parsed.command,
