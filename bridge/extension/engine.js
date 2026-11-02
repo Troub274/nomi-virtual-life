@@ -399,6 +399,9 @@ class Bridge {
   validateSource(id, snapshot) {
     const cmd = this.command;
     if (!cmd || cmd.id !== id || !this.running || this.phase !== 'send') return false;
+    // First notification has already been confirmed. Do not recheck the now-changing
+    // origin conversation while sending the second shutdown notice.
+    if (cmd.shutdownSecond && this.shutdownFirstAck) return true;
     const valid = snapshot && !snapshot.error && !snapshot.busy && snapshot.complete !== false &&
       snapshot.reply === cmd.sourceReply &&
       snapshot.document === cmd.sourceDocument && snapshot.url === cmd.sourceUrl;
