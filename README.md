@@ -6,7 +6,7 @@ Nomi Uploader handles imports; [Chat Bridge](bridge/README.md) connects live Cha
 
 ## Windows GUI alpha — no Python required
 
-**[Download NomiUploader-Windows.zip from GitHub Releases](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha)**
+**[Download NomiUploader-Windows.zip from GitHub Releases](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3)**
 
 Extract it, then double-click `NomiUploader.exe`. For setup, unsigned-app warnings,
 SmartScreen's **More info → Run anyway**, and Smart App Control, see the
@@ -15,22 +15,22 @@ This is experimental software, not code-signed. Do not disable Defender antiviru
 
 ## Linux GUI alpha — x86-64
 
-**[Download the Linux alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha)** (`NomiUploader-Linux-x86_64.tar.gz`).
+**[Download the Linux alpha release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3)** (`NomiUploader-Linux-x86_64.tar.gz`).
 
 Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a supported Linux graphical desktop.
-Unlike the Windows EXE, Linux requires system WebKitGTK/GTK libraries. See the
+Linux requires a supported graphical desktop and graphics libraries; the GUI includes Qt WebEngine. See the
 **[Linux install notes](uploader/gui/README-LINUX.md)** for requirements and limitations.
 
 ## macOS GUI alpha — Apple Silicon and Intel
 
-**[macOS alpha downloads](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha)**
+**[macOS alpha downloads](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3)**
 
 Download the ZIP for your Mac architecture, extract `NomiUploader.app`, and launch it.
 This alpha is unsigned and unnotarized; see the [macOS installation and Gatekeeper guide](uploader/gui/README-MACOS.md).
 
 ## Python command-line uploader — cross-platform
 
-**[Download the Python CLI release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-cli-alpha)**.
+**[Download the Python CLI release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3)**.
 The ZIP contains the authoritative `nomi-uploader.py`, its `legacy_v085.py` dependency,
 and installation / checkpoint recovery instructions. Python 3.10+ required; no GUI.
 
