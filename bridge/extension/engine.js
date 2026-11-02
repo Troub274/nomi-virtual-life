@@ -231,7 +231,7 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (['status','help','pending'].includes(parsed.command)) {
+        if (['status','help','pending','review'].includes(parsed.command)) {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
@@ -241,7 +241,15 @@ class Bridge {
             (pending ? '\\nTransaction: ' + pending.id + '\\nDestination: ' + (this.tabs[pending.target]?.site || 'unknown') : '') +
             '\\nWaiting for: ' + (peer?.site || 'none') +
             '\\nMode: ' + (this.mode || 'direct') + '\\n[End pending]';
-          const text = parsed.command === 'pending' ? pendingReport :
+          const rawCount = parsed.args.last ?? parsed.rest ?? '10';
+          const reviewCount = Number(rawCount);
+          const reviewReport = Number.isInteger(reviewCount) && reviewCount >= 1 && reviewCount <= 50 ?
+            '[AI Bridge review — last ' + reviewCount + ' activity events]\\n' +
+            (this.events.slice(-reviewCount).map(e => e.time + ' ' + e.text).join('\\n') || 'No activity recorded.') +
+            '\\n[End review]\\nThis is bridge activity, not a transcript of chat messages.' :
+            '[AI Bridge review error] Use last=1 through last=50.';
+          const text = parsed.command === 'review' ? reviewReport :
+            parsed.command === 'pending' ? pendingReport :
             parsed.command === 'help' ? globalThis.AIBridgeCLI.HELP :
             '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
             '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
