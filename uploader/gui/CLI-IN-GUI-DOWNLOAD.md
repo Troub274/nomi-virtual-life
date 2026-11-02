@@ -48,6 +48,31 @@ for normal public HTTPS connections, whether using `python3 cli/nomi-uploader.py
 or the embedded `--uploader-cli` executable. An explicitly configured
 `SSL_CERT_FILE` still works for custom trust stores.
 
+## Shared API-key configuration (v1.3)
+
+The GUI and Python CLI use the same initialization file in the uploader's
+application-data directory, next to the checkpoint hierarchy:
+`nomi-uploader.ini`. There is no required API-key environment export.
+
+To configure or replace the key using the Python CLI, run:
+
+```sh
+python3 cli/nomi-uploader.py --config
+```
+
+Enter the API key when prompted, then choose either **plaintext** or
+**password encryption**. For the encrypted option, the uploader uses a random
+salt, password-derived key (scrypt), and authenticated AES-GCM encryption.
+The password is not saved; every new GUI launch or interactive CLI command
+requiring API access asks for it. If forgotten, use the GUI's Reset API Key
+control or run `--config` again and provide the API key anew. Journals and
+projects are unaffected.
+
+For direct Linux/macOS executable CLI usage, replace the command above with
+`./NomiUploader --uploader-cli --config` or
+`./NomiUploader.app/Contents/MacOS/NomiUploader --uploader-cli --config`.
+The old `NOMI_API_KEY` environment setting remains optional for automation.
+
 ## API key and recovery
 
 For **live** uploads, set the `NOMI_API_KEY` environment variable in the terminal (PowerShell: `$env:NOMI_API_KEY="..."`; POSIX shells: `export NOMI_API_KEY="..."`). Avoid putting the key in command history or scripts shared with others.
