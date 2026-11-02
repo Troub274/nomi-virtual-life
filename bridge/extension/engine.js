@@ -67,6 +67,7 @@ class Bridge {
     this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
     this.tabRetry=null;
+    this.cliShutdown=false;
     this.cliPaused=false;
     this.running = true; this.startedWait = this.clock();
     this.log('Running: waiting for a completed reply.'); this.tick();
@@ -74,6 +75,7 @@ class Bridge {
   reset() {
     if (this.running) throw Error('Stop before resetting.');
     this.cliPaused=false;
+    this.cliShutdown=false;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -263,10 +265,11 @@ class Bridge {
             'Use the dashboard for current bridge controls; wake scheduling requires integration.\\n' +
             '[End schedule]';
           if (parsed.command === 'pause') this.cliPaused = true;
-          if (parsed.command === 'resume') {this.cliPaused = false; this.startedWait = now;}
-          const text = parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
+          if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
+          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown] Authorization revoked after this acknowledgment. A human must press Play to establish a new session.' :
+            parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
             parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
-            parsed.command === 'resume' ? '[AI Bridge] Resumed. Relay forwarding enabled.' :
+            parsed.command === 'resume' ? (this.cliShutdown ? '[AI Bridge] DENIED: session is shut down; human must press Play.' : '[AI Bridge] Resumed. Relay forwarding enabled.') :
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
@@ -279,7 +282,8 @@ class Bridge {
           this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
             text,url:source.url,document:source.document,sourceReply:source.reply,
             sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
-            baseline:source.replyKey,claimed:false,created:now,internalResult:true};
+            baseline:source.replyKey,claimed:false,created:now,internalResult:true,
+            shutdownAfterAck:parsed.command === 'shutdown'};
           this.phase='send';
           this.log('AI Bridge internal ' + parsed.command + ' response queued for the issuing tab.');
         }
@@ -355,13 +359,19 @@ class Bridge {
       this.source = cmd.target; this.baseline = cmd.baseline; this.phase = 'reply';
       if (!cmd.internalResult) this.turns++;
       this.startedWait = this.clock();
-      this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
+      if (cmd.shutdownAfterAck) {
+        this.cliShutdown = true;
+        this.cliPaused = true;
+        this.running = false;
+        this.phase = 'shutdown';
+        this.log('AI Bridge shutdown acknowledged. Session stopped; only dashboard Play can reauthorize.');
+      } else this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
     this.command = null; return {};
   }
   state() {
     this.tick();
-    return {running: this.running, paused: !!this.cliPaused, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
+    return {running: this.running, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
