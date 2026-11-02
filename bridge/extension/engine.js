@@ -76,10 +76,8 @@ class Bridge {
     this.log('Running: waiting for a completed reply.');
     if (this.mode !== 'api-room' && this.mode !== 'heartbeat') {
       this.queuePairNotice('start',
-        '[AI Bridge started]\\nState: running. Either selected participant may issue CLI commands.\\n' +
-        'Ordinary GPT-human replies remain private; use [bridge send to="Nomi"] to deliver explicitly.\\n' +
-        'CLI help:\\n' + (globalThis.AIBridgeCLI?.HELP || '[bridge help] [bridge status] [bridge pause] [bridge shutdown]') +
-        '\\n[End AI Bridge startup]');
+        '[Bridge started; running]\\n' +
+        (globalThis.AIBridgeCLI?.HELP || '[bridge help]') );
     }
     this.tick();
   }
