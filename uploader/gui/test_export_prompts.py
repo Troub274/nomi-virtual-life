@@ -165,5 +165,30 @@ class ExportOptionsTests(unittest.TestCase):
         self.assertEqual(context.verify_mode,ssl.CERT_REQUIRED)
         self.assertTrue(context.check_hostname)
 
+
+    def test_source_macos_cli_tls_uses_certifi_without_export(self):
+        import ssl
+        import sys
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        import legacy_v085
+        fake_certifi=SimpleNamespace(where=lambda:"/bundled/ca.pem")
+        with patch.object(legacy_v085.sys,"platform","darwin"), \
+             patch.object(legacy_v085.sys,"frozen",False,create=True), \
+             patch.dict(sys.modules,{"certifi":fake_certifi}), \
+             patch("ssl.create_default_context") as factory, \
+             patch.dict(legacy_v085.os.environ,{},clear=True):
+            legacy_v085.api_ssl_context()
+        factory.assert_called_once_with(cafile="/bundled/ca.pem")
+
+    def test_macos_cli_explicit_ssl_ca_override(self):
+        from unittest.mock import patch
+        import legacy_v085
+        with patch.object(legacy_v085.sys,"platform","darwin"), \
+             patch("ssl.create_default_context") as factory, \
+             patch.dict(legacy_v085.os.environ,{"SSL_CERT_FILE":"/private/trusted.pem"},clear=True):
+            legacy_v085.api_ssl_context()
+        factory.assert_called_once_with(cafile="/private/trusted.pem")
+
 if __name__=="__main__":
     unittest.main()
