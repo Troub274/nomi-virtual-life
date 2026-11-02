@@ -72,6 +72,26 @@ Process Every counts **logical units** (e.g., journal entries or knowledge parag
 The uploader does not resend or alter a checkpoint's original plan during resume.
 A custom Reply Prompt supports `{first}` and `{last}` unit labels.
 
+## GUI checkpoint recovery (November 2026)
+
+**Resume** now reads the selected run's checkpoint through the CLI's authoritative
+`checkpoint_summary` classifier before starting. Known safe, rejected
+NoReply/not-ready replies can resume automatically; confirmed messages are
+never sent again. For an HTTP 502/timeout with an uncertain reply outcome,
+the GUI shows the exact pass/message index and requires explicit consent to
+request a new reply (a duplicate reply remains possible). For an ambiguous
+content POST it requires separate explicit consent before resending, because
+the original message may already exist in the room. If the operator declines,
+the checkpoint is unchanged. Select the correct upload history entry before
+resuming. No manual editing of `upload.jsonl` is needed for recorded uncertain
+reply results.
+
+A legacy checkpoint containing only `reply_attempt` but no recorded
+response is not proof of a Nomi rejection. That case remains conservative:
+inspect the room and use the documented operator-authorized CLI recovery
+rather than silently retrying. Never delete or rewrite the checkpoint to
+resolve an ambiguous network result.
+
 ## Raw uploader
 
 ```bash
