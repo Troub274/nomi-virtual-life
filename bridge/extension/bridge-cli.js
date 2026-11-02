@@ -41,16 +41,30 @@
     return {command,args,rest,requiresAuthorization:true,highImpact:DANGEROUS.has(command)};
   }
   const HELP=[
-    'AI Bridge 1.0 — commands (authorized session only)',
-    '[bridge help]  [bridge status]  [bridge pending]',
-    '[bridge pause]  [bridge resume]  [bridge listen]',
+    'AI Bridge CLI — authorized sessions only',
+    'IMPORTANT: Each command must be the entire AI reply, on its own line.',
+    'Never intersperse commands with prose, commentary, or other commands.',
+    'Send one command per response. Do not put two commands on the same line.',
+    '[bridge help]',
+    '[bridge status]',
+    '[bridge pending]',
+    '[bridge pause]',
+    '[bridge resume]',
+    '[bridge listen]',
+    '[bridge wake in="30 minutes"]',
     '[bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"]',
-    '[bridge wake in="30 minutes"]  [bridge schedule]',
-    '[bridge cancel id="42"]  [bridge review last=10]',
-    '[bridge retry id="184"]  [bridge shutdown]',
-    '[bridge send to="Mary"]\\nMessage\\n[/bridge]',
-    'PAUSE retains tabs, CLI and wake-ups. SHUTDOWN requires human reauthorization.'
-  ].join('\n');
+    '[bridge schedule]',
+    '[bridge cancel id="42"]',
+    '[bridge review last=10]',
+    '[bridge retry id="184"]',
+    '[bridge shutdown]',
+    'Send is the only multiline form:',
+    '[bridge send to="Nomi"]',
+    'Message text goes here',
+    '[/bridge]',
+    'Wake, cancel, and retry may not yet be implemented by the active engine.',
+    'Shutdown requires human reauthorization to restart.'
+  ].join('\\n');
   const api={parse,HELP};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   else root.AIBridgeCLI=api;
