@@ -1,4 +1,4 @@
-# Nomi Uploader 1.3 — Better Recovery, Resume & Configuration
+# Nomi Uploader 1.3i — Interface Release
 
 One version and one download page for Windows, macOS, Linux, and Python CLI.
 
@@ -12,7 +12,17 @@ One version and one download page for Windows, macOS, Linux, and Python CLI.
 
 Each GUI package includes `CLI-IN-GUI-DOWNLOAD.md` and the Python uploader. The standalone CLI ZIP remains an asset **within the same release**, not a separate version or release.
 
-## Version 1.3 highlights
+## Version 1.3i interface highlights
+
+- Nomi-inspired dark/light/system appearance selection.
+- Destination, Files, Upload, History and Settings navigation.
+- Destination API-key management before Nomi and room selection.
+- Global upload defaults under Settings; per-file options under Files.
+- Selectable History, replies, status and diagnostic output with copy controls.
+- Advanced checkpoint-scoped recovery actions and manual update checking (download only).
+- The underlying upload engine and checkpoint format remain v1.3.
+
+## Version 1.3 engine highlights
 
 - Normal Resume, with safe retry classification.
 - Manual Restart, an explicit append-only checkpoint boundary, with recalculated plan and revised message counts.
