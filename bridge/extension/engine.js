@@ -320,7 +320,7 @@ class Bridge {
             '[End schedule]';
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
-          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown] Authorization revoked after this acknowledgment. A human must press Play to establish a new session.' :
+          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown acknowledgment]\\nAccepted. This is the final bridge message for this session.\\nAfter this acknowledgment is submitted, the bridge will stop and revoke AI control. Only a human can restart it.\\n[End shutdown acknowledgment]' :
             parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
             parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
             parsed.command === 'resume' ? (this.cliShutdown ? '[AI Bridge] DENIED: session is shut down; human must press Play.' : '[AI Bridge] Resumed. Relay forwarding enabled.') :
@@ -447,7 +447,7 @@ class Bridge {
         this.cliPaused = true;
         this.running = false;
         this.phase = 'shutdown';
-        this.log('AI Bridge shutdown acknowledged. Session stopped; only dashboard Play can reauthorize.');
+        this.log('AI Bridge shutdown acknowledgment submitted. Session stopped; only dashboard Play can reauthorize.');
       } else this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
     this.command = null; return {};
