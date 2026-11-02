@@ -60,9 +60,9 @@ progress{width:100%;height:22px}textarea{min-height:140px;font-family:ui-monospa
 <label>Reply Prompt<textarea id="replyPrompt" placeholder="Custom reflection prompt" oninput="editSettings()" style="min-height:75px"></textarea></label>
 <p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
 </div></section>
-<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Resume</button><button onclick="pauseUpload()">Pause / Stop</button></div>
+<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Normal Resume</button><button onclick="manualRestart()">Manual Restart…</button><button onclick="pauseUpload()">Pause / Stop</button></div>
 <div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button><button onclick="clearHistory()">Clear history</button></div>
-<p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
+<p class="small" id="recoveryRecommendation">Recovery recommendation: no checkpoint selected</p><p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
 <p class="small">Start NEW upload creates a separate checkpoint, even when changing Nomis. Resume continues the currently selected run. Previous run files are retained locally. Preview never sends messages.</p>
 </section>
 <section class="full"><h2>Live output</h2><pre id="log">Waiting for desktop host…</pre></section>
@@ -194,6 +194,19 @@ async function clearHistory(){
  try{const count=await call("clear_history");await refreshRuns();el("state").textContent="Cleared "+count+" completed history entries (files retained)."}
  catch(e){alert(String(e))}
 }
+async function manualRestart(){
+ if(!confirm("ADVANCED RECOVERY: This will append a HARD BOUNDARY to the current journal and recalculate all messages using your current files and prompts. Earlier history is preserved; replayed messages may create duplicates. Continue?"))return;
+ const p=prompt("Restart pass number:", "1");if(p===null)return;
+ const i=prompt("Restart message number in the REVISED plan:", "1");if(i===null)return;
+ if(!/^[1-9]\\d*$/.test(p)||!/^[1-9]\\d*$/.test(i)){alert("Enter positive whole numbers.");return}
+ try{
+   editSettings();
+   await save();
+   if(!confirm("FINAL CONFIRMATION: Restart at pass "+p+", revised message "+i+" using CURRENT files and settings? Previous journal entries are not deleted."))return;
+   await call("manual_restart",Number(p),Number(i));
+   el("state").textContent="Manual restart requested at "+p+":"+i;
+ }catch(e){el("state").textContent="Manual restart failed: "+String(e);alert(String(e))}
+}
 async function resume(){
  try{
    const status=await call("recovery_status");
@@ -215,7 +228,10 @@ async function resume(){
    el("state").textContent="Resuming checkpoint ("+status.state+")…";
  }catch(e){el("state").textContent="Resume failed: "+String(e);alert(String(e))}
 }
-async function poll(){if(!ready)return;try{let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
+async function poll(){if(!ready)return;try{
+let recovery=await call("recovery_status");
+el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
+let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
 el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
 el("log").textContent=(s.log||[]).join("\n")||"No messages yet";
