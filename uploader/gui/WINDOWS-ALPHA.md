@@ -18,7 +18,7 @@ A GitHub Actions build artifact is not the recommended user download; the Releas
 3. Select an existing room or create a new one. Review the room name and description.
 4. Add TXT, DOCX, JSON or Nomi export ZIP files to the queue.
 5. Select each file and inspect its processing settings. TXT headers and ZIP/JSON introduction/reflection prompts can be configured in the editor.
-6. Click **Preview / dry run** before doing a live upload, then **Start upload**.
+6. Click **Preview / dry run** before doing a live upload, then **Start NEW upload**. Use **Normal Resume** for a checkpoint rather than starting over.
 
 **Automatic reflection:** Set **Process Every** to **0**, both globally and in any individual file where it is overridden. Remove explicit prompt lines or set export-specific prompts accordingly if you want a content-only import.
 
