@@ -465,7 +465,7 @@ def active_records(path):
                               "kind":"prompt" if (p,i) in prompts else "content"})
             if (p,i) in prompts:
                 synthetic.append({"event":"reply_committed","pass":p,"index":i,
-                                  "synthetic":True})
+                                  "synthetic":True,"reply":{},"prompt":""})
     return [start]+synthetic+history[at+1:]
 
 def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
@@ -1063,8 +1063,8 @@ def _upload_locked(args):
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
                 print("%s replied after pass %d message %d: %s"%
                       (nomi["name"],p,i,str(body)))
-    final_events=records(cp)
-    reply_rows=[r for r in final_events if r.get("event")=="reply_committed"]
+    final_events=active_records(cp)
+    reply_rows=[r for r in final_events if r.get("event")=="reply_committed" and not r.get("synthetic")]
     transcript=Path(args.replies)
     transcript.parent.mkdir(parents=True,exist_ok=True)
     # Derived transcript: durable source of truth remains the append-only checkpoint.
