@@ -1,5 +1,17 @@
 importScripts('engine.js', 'group.js', 'heartbeat.js', 'api-room.js', 'api-checkpoint.js', 'world-observer.js', 'api-driver.js');
 let bridge;
+const dashboardUrl = chrome.runtime.getURL('dashboard.html');
+// One click opens the primary interface. Reuse an existing dashboard tab.
+chrome.action.onClicked.addListener(async () => {
+  const tabs = await chrome.tabs.query({url: dashboardUrl});
+  const existing = tabs.find(t => t.url === dashboardUrl);
+  if (existing) {
+    await chrome.windows.update(existing.windowId, {focused: true});
+    await chrome.tabs.update(existing.id, {active: true});
+  } else {
+    await chrome.tabs.create({url: dashboardUrl});
+  }
+});
 let queue = Promise.resolve();
 const apiDriver = new NomiApiDriver(() => bridge, transaction);
 const chatPatterns = ['https://chatgpt.com/*','https://chat.openai.com/*','https://nomi.ai/*','https://*.nomi.ai/*'];
