@@ -163,12 +163,12 @@
     if (command.url !== location.href || command.document !== documentId) throw Error('Chat changed before send');
     if (!check.ready || check.busy || (check.draft && !command.prefilledDraft)) throw Error('Chat not ready or contains a draft');
     if (command.prefilledDraft && check.draftText !== command.text.trim()) throw Error('Prefilled draft changed');
-    handled.add(command.id);
     // Avoid claiming any transaction while the destination is still generating.
     // The worker can retry unclaimed sends when the UI becomes available.
     if (check.busy || check.complete===false) return;
     const claim = await api('/api/claim', {id: command.id});
-    if (!claim.allowed) { handled.delete(command.id); return; }
+    if (!claim.allowed) return;
+    handled.add(command.id);
     try {
       if (site === 'nomi' && command.text.length > 800) throw Error('Nomi messages are limited to 800 characters');
       // The destination can start generating after the worker's heartbeat.
