@@ -85,6 +85,8 @@ class Bridge {
       this.simplePeerSeen=this.tabs[pair[1]]?.replyKey;
       this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
       this.simpleAccepted={};
+      this.simpleWaitForControllerTurn=null;
+      this.simpleLastControllerCommand=null;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
@@ -363,6 +365,14 @@ class Bridge {
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
   }
+  simpleAssistantCount(tab) {
+    // Message count is supplied by the content adapter. The replyKey prefix
+    // is a fallback for older snapshots and controlled engine tests.
+    const matches=Number(tab?.matches);
+    if(tab?.matches!==undefined && Number.isSafeInteger(matches) && matches>=0)return matches;
+    const fromKey=/^(\\d+)\\|/.exec(String(tab?.replyKey||''));
+    return fromKey?Number(fromKey[1]):null;
+  }
   simpleReplyIdentity(tab) {
     // replyKey is count|DOM message id|text. Ignore the trailing text,
     // which can change on harmless re-render; keep count/id and full reply.
@@ -401,6 +411,25 @@ class Bridge {
        this.clock()-tab.seen>70 || this.clock()-dest.seen>70)return;
     const old=this.simplePeerAwait?this.simplePeerSeen:this.simpleControllerSeen;
     if(tab.replyKey===old)return;
+    // The Tab 2 reply just submitted to Tab 1 is a USER turn, not a new
+    // completed assistant turn. The old Tab 1 [bridge send] remains the
+    // most recent assistant response until GPT produces its NEXT answer.
+    // A replyKey repaint (or changing message element count) cannot cross
+    // this causal barrier; it must be a genuinely new assistant response.
+    if(!this.simplePeerAwait && this.simpleWaitForControllerTurn) {
+      const expected=this.simpleWaitForControllerTurn;
+      const currentCount=this.simpleAssistantCount(tab);
+      const isOldCommand=tab.reply.trim()===expected.previousText;
+      const countNotAdvanced=expected.assistantCount!==null &&
+        currentCount!==null && currentCount<=expected.assistantCount;
+      if(isOldCommand || countNotAdvanced) {
+        this.simpleControllerSeen=tab.replyKey;
+        this.reason='Waiting for a NEW Tab 1 assistant reply after receiving Tab 2. '+
+          'Old controller command is not eligible for replay.';
+        return;
+      }
+      this.simpleWaitForControllerTurn=null;
+    }
     const identity=this.simpleReplyIdentity(tab);
     this.simpleAccepted ||= {};
     if(this.simpleAccepted[id]===identity) {
@@ -465,13 +494,17 @@ class Bridge {
       this.simpleTruncationWarning=null;
     }
     this.simpleAccepted[id]=identity;
-    if(!this.simplePeerAwait)this.simpleCommandHistory[exactCommand]=this.clock();
+    if(!this.simplePeerAwait) {
+      this.simpleCommandHistory[exactCommand]=this.clock();
+      this.simpleLastControllerCommand=tab.reply.trim();
+    }
     this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
       sourceDocument:tab.document,baseline:dest.replyKey,created:this.clock(),
       claimed:false,simpleSend:true,simpleShutdown:shutdown,
-      truncatedToNomi,originalByteLength};
+      truncatedToNomi,originalByteLength,
+      controllerAssistantCountBefore:this.simplePeerAwait?this.simpleAssistantCount(dest):null};
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
     this.note('Prepared send transaction '+this.command.id+
       ', '+id+' to '+this.command.target+', '+new TextEncoder().encode(message).length+' bytes.');
@@ -865,7 +898,13 @@ class Bridge {
         } else {
           this.simplePeerSeen=cmd.sourceKey;
           this.simpleControllerSeen=this.tabs[this.pair[0]]?.replyKey;
+          this.simpleWaitForControllerTurn={
+            assistantCount:cmd.controllerAssistantCountBefore??null,
+            previousText:this.simpleLastControllerCommand||''
+          };
           this.simplePeerAwait=false;
+          this.note('Tab 2 reply delivered. Waiting for a new Tab 1 assistant turn after count '+
+            String(this.simpleWaitForControllerTurn.assistantCount)+'.');
         }
         this.command=null;this.phase='reply';
         if(cmd.simpleShutdown){this.running=false;this.phase='shutdown';}
