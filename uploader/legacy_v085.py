@@ -57,6 +57,75 @@ def is_episode_header(line):
     return any(pattern.fullmatch(line.strip()) for pattern in HEADER_PATTERNS)
 
 
+# Shared credential store for CLI and GUI. Local settings live beside checkpoints.
+def credential_directory():
+    from pathlib import Path
+    return Path(os.environ.get("LOCALAPPDATA") or (Path.home()/".local"/"share"))/"NomiUploader"
+
+def credential_file():
+    return credential_directory()/"nomi-uploader.ini"
+
+_SESSION_KEY=None
+
+def credential_status():
+    import configparser
+    cp=configparser.ConfigParser()
+    cp.read(credential_file(),encoding="utf-8")
+    value=cp.get("nomi","api_key",fallback="")
+    return {"configured":bool(value),"encrypted":value.startswith("ENC:v1:")}
+
+def save_api_key(key,password=None):
+    import configparser,base64,secrets
+    key=str(key or "").strip()
+    if not key: raise ValueError("Enter a Nomi API key.")
+    value=key
+    if password is not None:
+        if not password: raise ValueError("Encryption password cannot be empty.")
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        salt=secrets.token_bytes(16); nonce=secrets.token_bytes(12)
+        import hashlib
+        k=hashlib.scrypt(password.encode("utf-8"),salt=salt,n=2**14,r=8,p=1,dklen=32)
+        ciphertext=AESGCM(k).encrypt(nonce,key.encode("utf-8"),None)
+        value="ENC:v1:"+base64.urlsafe_b64encode(salt+nonce+ciphertext).decode("ascii")
+    cp=configparser.ConfigParser(); cp["nomi"]={"api_key":value}
+    dest=credential_file();dest.parent.mkdir(parents=True,exist_ok=True)
+    temp=dest.with_suffix(".tmp")
+    with open(temp,"w",encoding="utf-8") as fh:
+        cp.write(fh);fh.flush();os.fsync(fh.fileno())
+    if os.name!="nt": os.chmod(temp,0o600)
+    os.replace(temp,dest)
+    global _SESSION_KEY
+    _SESSION_KEY=key
+
+def unlock_api_key(password=None):
+    import configparser,base64,hashlib
+    cp=configparser.ConfigParser();cp.read(credential_file(),encoding="utf-8")
+    value=cp.get("nomi","api_key",fallback="")
+    if not value: raise ValueError("No saved API key. Configure the key first.")
+    if value.startswith("ENC:v1:"):
+        if password is None: raise ValueError("Encrypted API key requires a password.")
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        try:
+            raw=base64.urlsafe_b64decode(value[7:]);salt,nonce,blob=raw[:16],raw[16:28],raw[28:]
+            key=hashlib.scrypt(password.encode("utf-8"),salt=salt,n=2**14,r=8,p=1,dklen=32)
+            value=AESGCM(key).decrypt(nonce,blob,None).decode("utf-8")
+        except (ValueError,TypeError,OverflowError) as exc:
+            raise ValueError("Wrong password or damaged encrypted API key.") from exc
+        except Exception as exc:
+            raise ValueError("Wrong password or damaged encrypted API key.") from exc
+    global _SESSION_KEY
+    _SESSION_KEY=value
+    return value
+
+def resolved_api_key():
+    global _SESSION_KEY
+    if _SESSION_KEY: return _SESSION_KEY
+    # Existing automation retains an explicit environment override.
+    if os.environ.get("NOMI_API_KEY"): return os.environ["NOMI_API_KEY"]
+    state=credential_status()
+    if state["configured"] and not state["encrypted"]: return unlock_api_key()
+    return None
+
 def api_ssl_context():
     """Verified TLS for both packaged macOS apps and standalone Python CLI.
 
@@ -81,7 +150,7 @@ def api_ssl_context():
 
 
 def api_request(path, method='GET', body=None):
-    key=os.environ.get('NOMI_API_KEY')
+    key=resolved_api_key()
     if not key:
         return None, {'error':{'type':'ConfigurationError','message':'NOMI_API_KEY is not set.'}}
     headers={'Authorization':key,'Accept':'application/json'}
