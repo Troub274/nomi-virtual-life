@@ -3,7 +3,7 @@
  * Never parse forwarded text, historical transcripts or human inputs.
  */
 (function(root) {
-  const SINGLE = new Set(['help','status','pause','resume','listen','shutdown','pending','review','retry','wake','schedule','cancel']);
+  const SINGLE = new Set(['help','status','pause','resume','listen','shutdown','pending','review','retry','wake','schedule','cancel','next','clear']);
   const DANGEROUS = new Set(['shutdown','resume','pause','retry','cancel']);
   function argsOf(raw) {
     const out = {};
@@ -30,9 +30,12 @@
     }
     const match=s.match(/^\[bridge\s+([a-z]+)(?:\s+([^\]\r\n]*))?\]$/i);
     if(!match)return null;
-    const command=match[1].toLowerCase();
+    let command=match[1].toLowerCase();
     if(!SINGLE.has(command))throw Error('Unknown bridge command: '+command);
     const {args,rest}=argsOf(match[2]||'');
+    if(command==='next' && rest==='message') command='next-message';
+    if(command==='clear' && rest==='queue') command='clear-queue';
+    if((command==='next'||command==='clear') && !['message','queue'].includes(rest))throw Error('Use [bridge next message] or [bridge clear queue]');
     if(command==='wake'){
       if(rest && !/^(?:in|at)\s+.+$/i.test(rest))throw Error('Use wake at="time" or wake in="duration"');
       if(!args.at&&!args.in&&!rest)throw Error('Wake time required');
@@ -58,6 +61,8 @@
     "[bridge help]",
     "[bridge status]",
     "[bridge pending]",
+    "[bridge next message] — receive the next queued message",
+    "[bridge clear queue] — discard your waiting, unsent messages",
     "[bridge pause]",
     "[bridge resume]",
     "[bridge listen]",
