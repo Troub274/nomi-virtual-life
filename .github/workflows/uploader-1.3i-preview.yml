@@ -6,7 +6,7 @@ on:
       - feature/uploader-1.3i-interface
     paths:
       - 'uploader/**'
-      - '.github/workflows/release-nomi-uploader-unified.yml'
+      - '.github/workflows/uploader-1.3i-preview.yml'
 concurrency:
   group: nomi-uploader-1.3i-preview
   cancel-in-progress: true
