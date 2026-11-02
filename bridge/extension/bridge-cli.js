@@ -25,6 +25,15 @@
       if(block[2].length>12000) throw Error('Message exceeds limit');
       return {command:'send',args,message:block[2],requiresAuthorization:true};
     }
+    // Accept natural single-line messages: [bridge send to="Sera"] hello.
+    // Keep the structured multiline form as the preferred syntax.
+    const inline=s.match(/^\[bridge send(?:\s+([^\]\r\n]*))?\]\s+([^\r\n]+)$/i);
+    if(inline) {
+      const {args,rest}=argsOf(inline[1]||'');
+      if(rest)throw Error('Unrecognized send arguments: '+rest);
+      if(!inline[2].trim())throw Error('Message is empty');
+      return {command:'send',args,message:inline[2].trim(),requiresAuthorization:true};
+    }
     const match=s.match(/^\[bridge\s+([a-z]+)(?:\s+([^\]\r\n]*))?\]$/i);
     if(!match)return null;
     const command=match[1].toLowerCase();
