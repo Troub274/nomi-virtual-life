@@ -42,7 +42,7 @@ Do **not** disable Gatekeeper system-wide, disable malware protection, or apply 
 
 ## Data and limitations
 
-The application saves settings, checkpoints, prepared copies and replies in `~/.local/share/NomiUploader/` by default (unless `LOCALAPPDATA` is set). The API key is currently saved as plaintext in the settings file; avoid shared or untrusted computers. Preserve checkpoints when updating. The app is community software, not official Nomi.ai software.
+The application saves settings, checkpoints, prepared copies and replies in `~/.local/share/NomiUploader/` by default (unless `LOCALAPPDATA` is set). API-key storage can be plaintext or password-encrypted, selected during setup. Password-encrypted keys require unlocking for each new launch; avoid shared or untrusted computers. Preserve checkpoints when updating. The app is community software, not official Nomi.ai software.
 
 This is an **experimental** build; Apple Silicon and Intel packages are independently built. Releases depend on successful GitHub Actions builds, and compatibility still needs testing on actual macOS installations.
 
