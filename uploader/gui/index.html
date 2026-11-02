@@ -177,7 +177,7 @@ function buildLayout(){
  action.innerHTML='<h2>Recommended Action</h2><div class="message" id="recommendedActionText">Select an upload checkpoint to see the recommended next action.</div><button onclick="showView(\'history\')">Review History</button>';
  run.prepend(action);
  const advanced=document.createElement("section");
- advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><p class="small">Normal Resume already offers confirmation for ambiguous operations; use these controls when you want to choose the specific recovery type.</p>';
+ advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><div class="row"><button onclick="advancedCliRecovery('noreply')">Recover explicit NoReply…</button><button onclick="advancedCliRecovery('migrate')">Migrate pending reply to new room…</button></div><p class="small">These expert options require an exact PASS:INDEX from the checkpoint. The CLI validates eligibility and rejects unsupported recovery. Normal Resume remains the preferred default.</p>';
  run.insertBefore(advanced,run.querySelector(".row"));
 
  // Keep output selectable, and provide per-output copy actions even on restrictive webviews.
@@ -352,6 +352,20 @@ async function manualRestart(){
    await call("manual_restart",Number(p),Number(i));
    el("state").textContent="Manual restart requested at "+p+":"+i;
  }catch(e){el("state").textContent="Manual restart failed: "+String(e);alert(String(e))}
+}
+async function advancedCliRecovery(kind){
+ const descriptions={
+  noreply:"Retry a legacy reply with an explicit NoReply result. Only use the PASS:INDEX recorded in the checkpoint.",
+  migrate:"Move an eligible pending reply to a new room and abandon that reply in the old room. Room migration is an advanced operation."
+ };
+ const position=prompt(descriptions[kind]+"\\n\\nEnter PASS:INDEX (e.g. 1:499):");
+ if(position===null)return;
+ if(!/^[1-9]\\d*:[1-9]\\d*$/.test(position.trim())){alert("Use PASS:INDEX with positive integers.");return}
+ if(!confirm("ADVANCED RECOVERY: "+descriptions[kind]+"\\n\\nPosition: "+position.trim()+"\\n\\nThe CLI will validate eligibility. Continue?"))return;
+ try{
+  await call("advanced_resume",kind,position.trim());
+  el("state").textContent="Advanced recovery requested: "+kind+" at "+position.trim();
+ }catch(e){el("state").textContent="Recovery rejected: "+String(e);alert(String(e))}
 }
 async function scopedRecovery(kind){
  try{
