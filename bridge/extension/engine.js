@@ -221,7 +221,15 @@ class Bridge {
       return;
     }
     if (this.phase === 'send') {
-      if (now - this.command.created > 90) {this.phase = 'uncertain'; this.stop('Send was not confirmed. Check both chats, then Reset. Nothing will be resent automatically.');}
+      // Once claimed, the content script owns the single draft and may be
+      // waiting for the editor's Send control. Never expire that transaction
+      // simply because React has not made the button clickable yet.
+      if (this.command?.claimed) {
+        this.reason = 'Send claimed; waiting for destination UI to accept the existing bridge draft. No duplicate will be submitted.';
+      } else if (now - this.command.created > 90) {
+        this.phase = 'uncertain';
+        this.stop('Send was not claimed within 90 seconds. Check both chats, then Reset.');
+      }
       return;
     }
     // Waiting for live activity may intentionally be indefinite; silence is
