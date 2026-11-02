@@ -243,20 +243,32 @@ class API:
         cp=directory / "upload.jsonl"
         return cp.is_file() and cp.stat().st_size>0
 
-    def begin(self, dry=False):
+    def begin(self, dry=False, restart=None):
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Upload already running")
         token=uuid.uuid4().hex
-        directory=DATA / ("previews" if dry else "runs") / token
-        directory.mkdir(parents=True,exist_ok=False)
-        paths = self._paths(directory)
+        directory=self._active_dir() if restart else DATA / ("previews" if dry else "runs") / token
+        if restart:
+            if dry: raise ValueError("Manual restart cannot be a dry run.")
+            if not self._has_checkpoint(directory): raise ValueError("Select a checkpoint first.")
+            info=self.recovery_status()
+            if info["state"]=="NO_CHECKPOINT": raise ValueError("Missing checkpoint.")
+            if self.project.get("nomi_uuid") and self.project["nomi_uuid"]!=info.get("nomi_uuid"):
+                raise ValueError("Selected Nomi differs from checkpoint. Choose the correct Nomi.")
+            workdir=directory/"revisions"/token
+            workdir.mkdir(parents=True,exist_ok=False)
+        else:
+            directory.mkdir(parents=True,exist_ok=False)
+            workdir=directory
+        paths=self._paths(workdir)
         # Persist an exact input manifest for inspection and incident recovery.
         manifest={"source_files":[x.get("path") for x in self.project.get("queue",[])],
                   "processed_files":paths,"nomi_uuid":self.project.get("nomi_uuid"),
                   "room_uuid":self.project.get("room_uuid")}
-        (directory/"gui-input-manifest.json").write_text(
+        (workdir/"gui-input-manifest.json").write_text(
             json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
-        args = ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"])
+        args = (["--resume","--manual-restart",restart] if restart
+                else ([] if not dry else ["--dry-run", "--nomi", self.project.get("nomi") or "Nomi"]))
         needs_name=any(("[username]" in Path(p).read_text(encoding="utf-8-sig") or "__USER_NAME__" in Path(p).read_text(encoding="utf-8-sig"))
                        for p in paths if Path(p).suffix.lower()==".txt")
         user_name=str(self.project.get("user_name") or "").strip()
@@ -266,7 +278,7 @@ class API:
             if any(c in user_name for c in "\r\n[]"):
                 raise ValueError("Invalid Nomi.ai user name.")
             args += ["--user", user_name]
-        if not dry:
+        if not dry and not restart:
             room = str(self.project.get("room_uuid") or "").strip()
             if not room: raise ValueError("Select or create an upload room first.")
             if not self.project.get("nomi_uuid"): raise ValueError("Load Nomis and choose a Nomi from the list before uploading.")
@@ -279,7 +291,7 @@ class API:
                                  "header_every":x["export_fields"].get("headerEvery",""),
                                  "header_text":x["export_fields"].get("headerText",None)}
                       for x in self.project["queue"] if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
-            opts=directory/"export-options.json"
+            opts=workdir/"export-options.json"
             opts.write_text(json.dumps(settings,ensure_ascii=False,indent=2),encoding="utf-8")
             args += ["--export-options",str(opts)]
         args += ["--header-every",str(int(self.project.get("header_every",0))),
@@ -291,6 +303,9 @@ class API:
                  "--completion", str(directory / "completed.json"),
                  "--replies", str(directory / "replies.txt")]
         args += paths
+        if restart:
+            Path(str(directory/"upload.jsonl")+".pause").unlink(missing_ok=True)
+            return self._run(args)
         if not dry:
             prior=self.project.get("active_run")
             self.project["active_run"]=token
@@ -302,6 +317,12 @@ class API:
                 self.save(self.project)
                 raise
         return self._run(args)
+
+    def manual_restart(self, pass_number, message_number):
+        """Explicit operator override in the SAME append-only journal."""
+        p=int(pass_number); i=int(message_number)
+        if p<1 or i<1: raise ValueError("Pass and message number must be positive.")
+        return self.begin(False,f"{p}:{i}")
 
     def pause(self):
         if not self.proc or self.proc.poll() is not None:
@@ -367,7 +388,13 @@ class API:
         spec=importlib.util.spec_from_file_location("nomi_uploader_recovery",str(UPLOADER))
         module=importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module.checkpoint_summary(directory/"upload.jsonl")
+        result=module.checkpoint_summary(directory/"upload.jsonl")
+        result["recommendation"]=(
+            "Normal Resume" if result["state"]=="SAFE_TO_RESUME"
+            else "Review uncertain operation, then Resume" if result["state"] in ("AMBIGUOUS_SEND","AMBIGUOUS_REPLY")
+            else "No resume needed" if result["state"]=="COMPLETE"
+            else "Manual Restart if you intentionally changed the plan")
+        return result
 
     def recover_resume(self, send_tokens=None, reply_tokens=None):
         """Explicitly authorized recovery; preserve the checkpoint as the source of truth."""
@@ -412,7 +439,13 @@ class API:
         replies = []
         recent = []
         if cp.exists():
-            for raw in cp.read_text(encoding="utf-8").splitlines():
+            import importlib.util
+            spec=importlib.util.spec_from_file_location("nomi_uploader_gui_status",str(UPLOADER))
+            module=importlib.util.module_from_spec(spec)
+            sys.path.insert(0,str(UPLOADER.parent))
+            spec.loader.exec_module(module)
+            for row in module.active_records(cp):
+                raw=json.dumps(row)
                 try: row = json.loads(raw)
                 except ValueError: continue
                 if row.get("event") == "start":
