@@ -17,22 +17,16 @@
   function parse(text) {
     if(typeof text!=='string'||text.length>16000) return null;
     const s=text.trim();
-    const block=s.match(/^\[bridge send(?:\s+([^\]\r\n]*))?\]\s*\n([\s\S]*?)\n\[\/bridge\]$/i);
-    if(block) {
-      const {args,rest}=argsOf(block[1]||'');
-      if(rest) throw Error('Unrecognized send arguments: '+rest);
-      if(!block[2].trim()) throw Error('Message is empty');
-      if(block[2].length>12000) throw Error('Message exceeds limit');
-      return {command:'send',args,message:block[2],requiresAuthorization:true};
-    }
-    // Accept natural single-line messages: [bridge send to="Sera"] hello.
-    // Keep the structured multiline form as the preferred syntax.
-    const inline=s.match(/^\[bridge send(?:\s+([^\]\r\n]*))?\]\s+([^\r\n]+)$/i);
-    if(inline) {
-      const {args,rest}=argsOf(inline[1]||'');
+    // Entire reply is the send command. Accept inline or multiline payloads;
+    // legacy closing tag is optional for compatibility.
+    const send=s.match(/^\[bridge send(?:\s+([^\]\r\n]*))?\][ \t]*(?:\r?\n)?([\s\S]+)$/i);
+    if(send) {
+      const {args,rest}=argsOf(send[1]||'');
       if(rest)throw Error('Unrecognized send arguments: '+rest);
-      if(!inline[2].trim())throw Error('Message is empty');
-      return {command:'send',args,message:inline[2].trim(),requiresAuthorization:true};
+      const message=send[2].replace(/\r?\n\[\/bridge\]\s*$/i,'').trim();
+      if(!message)throw Error('Message is empty');
+      if(message.length>12000)throw Error('Message exceeds limit');
+      return {command:'send',args,message,requiresAuthorization:true};
     }
     const match=s.match(/^\[bridge\s+([a-z]+)(?:\s+([^\]\r\n]*))?\]$/i);
     if(!match)return null;
@@ -54,12 +48,11 @@
     "SEND MESSAGE TO OTHER SELECTED TAB:",
     "[bridge send to=\"ChatGPT\"]",
     "Your message to ChatGPT",
-    "[/bridge]",
     "Or, when the other tab is Nomi:",
     "[bridge send to=\"Nomi\"]",
     "Your message to Nomi",
     "[/bridge]",
-    "The send block must be the ENTIRE reply. Text outside it is not sent.",
+    "No closing tag needed: the entire reply after [bridge send] is the message.",
     "Ordinary conversation is NOT an explicit send.",
     "OTHER COMMANDS (each alone on one line):",
     "[bridge help]",
