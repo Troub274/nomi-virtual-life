@@ -113,8 +113,75 @@ class Bridge {
     if (this.running) throw Error('Stop before resetting.');
     this.cliPaused=false;
     this.cliShutdown=false;
+    this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
+  }
+  queueOutbound(source, target, body) {
+    this.outboundQueue ||= [];
+    const src=this.tabs[source], dst=this.tabs[target];
+    const fingerprint=JSON.stringify([source,src.document,src.reply]);
+    if (this.outboundQueue.some(x=>x.fingerprint===fingerprint) || this.command?.fingerprint===fingerprint)
+      return 0;
+    const max=dst.site==='nomi'?580:11000;
+    const parts=[];
+    let remaining=body;
+    while(remaining.length) {
+      let take=Math.min(max,remaining.length);
+      if(take<remaining.length) {
+        const boundary=remaining.lastIndexOf('\n',take);
+        if(boundary>take/2)take=boundary+1;
+        if(/[\uD800-\uDBFF]/.test(remaining[take-1]) && /[\uDC00-\uDFFF]/.test(remaining[take]))take--;
+      }
+      parts.push(remaining.slice(0,take));remaining=remaining.slice(take);
+    }
+    if (parts.length>100) throw Error('Message exceeds 100 queued parts');
+    const batch=crypto.randomUUID();
+    for(let i=0;i<parts.length;i++)this.outboundQueue.push({
+      id:crypto.randomUUID(),batch,part:i+1,parts:parts.length,source,target,
+      body:parts[i],fingerprint,sourceDocument:src.document,sourceUrl:src.url,
+      sourceReply:src.reply,sourceKey:src.replyKey,created:this.clock()
+    });
+    this.note('Queued '+parts.length+' part(s) for '+target+'.');
+    return parts.length;
+  }
+  queuedFor(target) {return (this.outboundQueue||[]).filter(x=>x.target===target).length;}
+  releaseOutbound(target) {
+    if(!this.running || this.cliPaused || this.command || this.phase==='send')return false;
+    const items=this.outboundQueue||[], index=items.findIndex(x=>x.target===target);
+    if(index<0)return false;
+    const dest=this.tabs[target],item=items[index];
+    if(!dest || !dest.ready || dest.busy || dest.draft || this.clock()-dest.seen>70)return false;
+    const pending=this.queuedFor(target), sequence=(this.deliveredCounts||{})[target]||0;
+    const label='[Bridge message '+(sequence+1)+' of '+(sequence+pending)+
+      (item.parts>1?'; part '+item.part+' of '+item.parts:'')+']\n';
+    const footer=pending>1?'\n[Reply [next message] for next; [clear queue] to discard remaining.]':'';
+    const text=label+item.body+footer;
+    if(dest.site==='nomi' && text.length>750) {
+      this.note('Queue formatting exceeds Nomi limit; refusing truncation.');return false;
+    }
+    items.splice(index,1);
+    this.command={id:item.id,source:item.source,target,text,url:dest.url,document:dest.document,
+      sourceReply:item.sourceReply,sourceKey:item.sourceKey,
+      sourceDocument:item.sourceDocument,sourceUrl:item.sourceUrl,
+      baseline:dest.replyKey,created:this.clock(),claimed:false,explicitSend:true,
+      queuedOutbound:true,queueItem:item};
+    this.phase='send';this.log('Delivering queued message '+(sequence+1)+' to '+target+'.');
+    return true;
+  }
+  scheduleOutbound(target) {
+    this.outboundCredits ||= {};
+    this.outboundCredits[target]=(this.outboundCredits[target]||0)+1;
+  }
+  pumpOutbound() {
+    if(!this.running || this.command || this.phase==='send' || this.cliPaused)return;
+    for(const target of this.pair||[]) {
+      if((this.outboundCredits||{})[target]>0 && this.queuedFor(target)>0 &&
+         this.releaseOutbound(target)) {
+        this.outboundCredits[target]--;
+        return;
+      }
+    }
   }
   capturePendingCli(id) {
     if (!this.running || !this.pair?.includes(id) || !this.command ||
@@ -214,6 +281,7 @@ class Bridge {
       }
     } else if (this.running && this.pair?.includes(id) && snapshot.error) this.stop(snapshot.error);
     this.tick();
+    this.pumpOutbound();
     this.capturePendingCli(id);
     this.dispatchPeerCli(id);
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
@@ -221,6 +289,8 @@ class Bridge {
   }
   tick() {
     if (!this.running) return;
+    this.pumpOutbound();
+    if(this.phase==='send')return;
     const now = this.clock();
     if(this.tabRetry){
       const age=Math.max(0,now-this.tabRetry.startedAt);
@@ -382,27 +452,26 @@ class Bridge {
           else if (recipient && !([dest.site, 'Nomi', 'ChatGPT', ...(dest.site === 'chatgpt' ? ['Sera', 'Seraphina'] : []), dest.name].filter(Boolean)
               .some(n => n.toLowerCase() === recipient.toLowerCase())))
             error = 'Recipient does not match selected destination: ' + dest.site + '.';
-          else if (!dest.ready || dest.busy || dest.draft || now - dest.seen > 70)
-            error = 'Destination not ready; no message submitted.';
           if (!error) {
-            const payload = dest.site === 'nomi' ? limitNomiMessage(parsed.message) : parsed.message;
-            this.command = {id:crypto.randomUUID(),source:this.source,target,
-              text:payload,url:dest.url,document:dest.document,sourceReply:source.reply,
+            const parts=this.queueOutbound(this.source,target,parsed.message);
+            if(parts)this.scheduleOutbound(target);
+            this.command={id:crypto.randomUUID(),source:this.source,target:this.source,
+              text:'[AI Bridge queued] '+parts+' part(s) queued for peer. First part will be sent when ready.',
+              url:source.url,document:source.document,sourceReply:source.reply,
               sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
-              baseline:dest.replyKey,claimed:false,created:now,explicitSend:true,
-              truncated:payload.length < parsed.message.length};
+              baseline:source.replyKey,created:now,claimed:false,internalResult:true};
             this.phase='send';
-            this.log('Explicit send queued to ' + dest.site + '; delivery acknowledgment pending.');
           } else {
-            this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
-              text:'[AI Bridge send] REJECTED: '+error,url:source.url,document:source.document,
-              sourceReply:source.reply,sourceKey:source.replyKey,sourceUrl:source.url,
-              sourceDocument:source.document,baseline:source.replyKey,
-              claimed:false,created:now,internalResult:true};
-            this.phase='send';this.log('Explicit send rejected: '+error);
+            this.command={id:crypto.randomUUID(),source:this.source,target:this.source,
+              text:'[AI Bridge send] REJECTED: '+error,
+              url:source.url,document:source.document,sourceReply:source.reply,
+              sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
+              baseline:source.replyKey,created:now,claimed:false,internalResult:true};
+            this.phase='send';
           }
         } else if (true) {
           const pending = this.command;
+          const recipientQueue = this.queuedFor(this.source);
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
           const pendingReport = '[AI Bridge pending]\n' +
@@ -410,7 +479,7 @@ class Bridge {
               (this.phase === 'uncertain' ? 'uncertain; inspect both chats before retry' : 'no pending send')) +
             (pending ? '\nTransaction: ' + pending.id + '\nDestination: ' + (this.tabs[pending.target]?.site || 'unknown') : '') +
             '\nWaiting for: ' + (peer?.site || 'none') +
-            '\nMode: ' + (this.mode || 'direct') + '\n[End pending]';
+            '\nQueued for you: '+recipientQueue+'\nMode: ' + (this.mode || 'direct') + '\n[End pending]';
           const rawCount = parsed.args.last ?? parsed.rest ?? '10';
           const reviewCount = Number(rawCount);
           const reviewReport = Number.isInteger(reviewCount) && reviewCount >= 1 && reviewCount <= 50 ?
@@ -424,9 +493,18 @@ class Bridge {
             'The existing periodic extension heartbeat is not a user-scheduled wake-up.\n' +
             'Use the dashboard for current bridge controls; wake scheduling requires integration.\n' +
             '[End schedule]';
+          if(parsed.command==='clear-queue') {
+            const before=this.queuedFor(this.source);
+            this.outboundQueue=(this.outboundQueue||[]).filter(m=>m.target!==this.source);
+            if(this.outboundCredits)this.outboundCredits[this.source]=0;
+            this.note('Discarded '+before+' undelivered queue items for '+this.source+'.');
+          }
+          if(parsed.command==='next-message') this.scheduleOutbound(this.source);
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
-          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown acknowledgment]\nAccepted. This is the final bridge message for this session.\nAfter this acknowledgment is submitted, the bridge will stop and revoke AI control. Only a human can restart it.\n[End shutdown acknowledgment]' :
+          const text = parsed.command === 'next-message' ? '[AI Bridge] Next-message request recorded. Waiting: '+this.queuedFor(this.source) :
+            parsed.command === 'clear-queue' ? '[AI Bridge] Your undelivered message queue cleared.' :
+            parsed.command === 'shutdown' ? '[AI Bridge shutdown acknowledgment]\nAccepted. This is the final bridge message for this session.\nAfter this acknowledgment is submitted, the bridge will stop and revoke AI control. Only a human can restart it.\n[End shutdown acknowledgment]' :
             parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
             parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
             parsed.command === 'resume' ? (this.cliShutdown ? '[AI Bridge] DENIED: session is shut down; human must press Play.' : '[AI Bridge] Resumed. Relay forwarding enabled.') :
@@ -551,6 +629,10 @@ class Bridge {
       if (cmd.truncated && this.tabs[cmd.source]?.site === 'chatgpt') this.remindChatGPT = true;
       if (cmd.includesReminder) this.remindChatGPT = false;
       if (cmd.explicitSend) this.note('Explicit send confirmed to ' + this.tabs[tab].site + '.');
+      if (cmd.queuedOutbound) {
+        this.deliveredCounts ||= {};
+        this.deliveredCounts[tab]=(this.deliveredCounts[tab]||0)+1;
+      }
       if (cmd.internalResult) {
         this.cliTransactions = (this.cliTransactions || 0) + 1;
         this.internalResultTab = cmd.target;
@@ -611,6 +693,7 @@ class Bridge {
     }
     this.command = null;
     this.drainPendingCli();
+    this.pumpOutbound();
     return {};
   }
   state() {
@@ -619,7 +702,7 @@ class Bridge {
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
-      events: this.events, lastDelivery: this.lastDelivery, tabs: Object.values(this.tabs).filter(t => this.clock() - t.seen < 300)
+      outboundQueueCounts:Object.fromEntries((this.pair||[]).map(id=>[id,this.queuedFor(id)])),events: this.events, lastDelivery: this.lastDelivery, tabs: Object.values(this.tabs).filter(t => this.clock() - t.seen < 300)
         .map(t => ({...t, connected: this.clock() - t.seen < 90}))};
   }
   serialize() {const {clock, ...data} = this; return data;}
