@@ -8,6 +8,18 @@ function limitNomiMessage(text) {
   if (/[\uD800-\uDBFF]/.test(text[end - 1]) && /[\uDC00-\uDFFF]/.test(text[end])) end--;
   return text.slice(0, end);
 }
+
+function nomiByteWindow(text) {
+  const encoder=new TextEncoder();
+  if(encoder.encode(text).length<=750)return text;
+  let result='',bytes=0;
+  for(const ch of text) {
+    const size=encoder.encode(ch).length;
+    if(bytes+size>750)break;
+    result+=ch;bytes+=size;
+  }
+  return result;
+}
 class Bridge {
   constructor(clock = () => Date.now() / 1000, saved = {}) {
     Object.assign(this, {tabs: {}, running: false, pair: null, source: null, phase: 'idle', command: null,
@@ -66,6 +78,18 @@ class Bridge {
       this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0; this.cliTransactions = 0;
     }
     this.cliControllerTab = String(pair[0]);
+    if ((this.mode||'direct')==='direct') {
+      this.pair=pair;this.source=pair[0];this.simpleMode=true;
+      this.simplePeerAwait=false;
+      this.simpleControllerSeen=this.tabs[pair[0]]?.replyKey;
+      this.simplePeerSeen=this.tabs[pair[1]]?.replyKey;
+      this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
+      this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
+      this.running=true;this.cliPaused=false;this.cliShutdown=false;
+      this.phase='reply';this.startedWait=this.clock();
+      this.reason='Tab 1 controls the bridge. Waiting for a new Tab 1 command.';
+      return;
+    }
     this.cliSeen = Object.fromEntries(pair.map(id=>[id,this.tabs[id]?.replyKey]));
     const settle = Number(data.settle ?? 2);
     this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
@@ -308,12 +332,71 @@ class Bridge {
         this.stop('Selected chat reloaded or navigated during a potentially active send. Inspect before Reset.');
       }
     } else if (this.running && this.pair?.includes(id) && snapshot.error) this.stop(snapshot.error);
+    if (this.simpleMode && (this.mode||'direct')==='direct') {
+      this.simpleTick();
+      if(this.running && this.phase==='send' && this.command?.target===id && !this.command.claimed)
+        return {command:{...this.command}};
+      return {};
+    }
     this.tick();
     this.pumpOutbound();
     this.capturePendingCli(id);
     this.dispatchPeerCli(id);
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
+  }
+  simpleTick() {
+    if(!this.running || this.phase==='send' || this.cliPaused || !this.pair)return;
+    const controllerId=this.pair[0],peerId=this.pair[1];
+    const id=this.simplePeerAwait?peerId:controllerId;
+    const tab=this.tabs[id],dest=this.tabs[id===controllerId?peerId:controllerId];
+    if(!tab || !dest || tab.busy || tab.complete===false ||
+       !tab.reply || this.clock()-tab.changed<this.stableSeconds ||
+       this.clock()-tab.seen>70 || this.clock()-dest.seen>70)return;
+    const old=this.simplePeerAwait?this.simplePeerSeen:this.simpleControllerSeen;
+    if(tab.replyKey===old)return;
+    // Read only one complete reply from the active participant, with no command
+    // interpretation whatsoever on the conversational peer.
+    let message=tab.reply,shutdown=false;
+    if(!this.simplePeerAwait) {
+      const parsed=globalThis.AIBridgeCLI?.parse(tab.reply);
+      if(!parsed) {
+        this.simpleControllerSeen=tab.replyKey;
+        this.reason='Tab 1 reply is private. Waiting for [bridge send].';
+        return;
+      }
+      if(parsed.command==='send') {
+        const recipient=(parsed.args.to||'').toLowerCase();
+        if(recipient && ![dest.site.toLowerCase(),(dest.name||'').toLowerCase(),'nomi','chatgpt','sera','seraphina'].includes(recipient)) {
+          this.simpleControllerSeen=tab.replyKey;
+          this.reason='Recipient does not match selected peer.';
+          return;
+        }
+        message=parsed.message;
+      } else if(parsed.command==='shutdown') {
+        message='[AI Bridge shutdown] Tab 1 ended this session. No further messages will be forwarded.';
+        shutdown=true;
+      } else if(parsed.command==='pause') {
+        this.simpleControllerSeen=tab.replyKey;this.cliPaused=true;
+        this.reason='Bridge paused by Tab 1.';return;
+      } else if(parsed.command==='resume') {
+        this.simpleControllerSeen=tab.replyKey;this.cliPaused=false;return;
+      } else {
+        this.simpleControllerSeen=tab.replyKey;
+        this.reason='Tab 1 control received: '+parsed.command+'.';return;
+      }
+    }
+    if(!dest.ready || dest.busy || dest.complete===false || dest.draft) {
+      this.reason='Waiting for '+dest.site+' to be idle with an empty editor. Nothing has been typed.';
+      return;
+    }
+    if(dest.site==='nomi')message=nomiByteWindow(message);
+    this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
+      text:message,url:dest.url,document:dest.document,
+      sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
+      sourceDocument:tab.document,baseline:dest.replyKey,created:this.clock(),
+      claimed:false,simpleSend:true,simpleShutdown:shutdown};
+    this.phase='send';this.reason='Sending one message; waiting for confirmation.';
   }
   tick() {
     if (!this.running) return;
@@ -678,6 +761,26 @@ class Bridge {
   acknowledge(tab, data) {
     const cmd = this.command;
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
+    if(cmd.simpleSend) {
+      if(data.error) {
+        this.phase='uncertain';
+        this.stop('Send uncertain: '+data.error+'. Inspect recipient before restarting.');
+      } else {
+        if(cmd.source===this.pair[0]) {
+          this.simpleControllerSeen=cmd.sourceKey;
+          this.simplePeerSeen=this.tabs[this.pair[1]]?.replyKey;
+          this.simplePeerAwait=!cmd.simpleShutdown;
+        } else {
+          this.simplePeerSeen=cmd.sourceKey;
+          this.simpleControllerSeen=this.tabs[this.pair[0]]?.replyKey;
+          this.simplePeerAwait=false;
+        }
+        this.command=null;this.phase='reply';
+        if(cmd.simpleShutdown){this.running=false;this.phase='shutdown';}
+        else this.reason=this.simplePeerAwait?'Waiting for a new peer response.':'Waiting for a new Tab 1 command.';
+      }
+      return {};
+    }
     if (data.error && cmd.queuedOutbound &&
         data.error === 'Destination began generating before insertion; draft not modified') {
       this.outboundQueue ||= [];
