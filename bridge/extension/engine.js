@@ -255,18 +255,19 @@ class Bridge {
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
     if (source.reply.trim().toLowerCase().startsWith('[bridge ')) {
-      // The first tab selected in the dashboard is the only CLI authority.
-      // Never forward a command emitted by the second tab as conversation text.
-      if (String(this.source) !== String(this.pair?.[0])) {
-        this.baseline = source.replyKey;
-        this.phase = 'reply';
-        this.startedWait = now;
-        this.log('CLI denied: only the first selected tab may control the bridge.');
-        return;
-      }
+      // The first tab has primary CLI authority, but either selected participant
+      // may pause or shut down the shared session. Never forward denied commands.
       let parsed;
       try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
       catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
+      if (String(this.source) !== String(this.pair?.[0]) &&
+          !['pause','shutdown'].includes(parsed?.command)) {
+        this.baseline = source.replyKey;
+        this.phase = 'reply';
+        this.startedWait = now;
+        this.log('CLI denied: only first tab controls this command; both tabs may pause or shut down.');
+        return;
+      }
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
