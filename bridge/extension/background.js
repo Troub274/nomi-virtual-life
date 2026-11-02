@@ -52,7 +52,8 @@ async function wakeSelected(data, ticket) {
     selected.push(tab);
   }
   for (const tab of selected) {
-    check(); await bounded(chrome.tabs.update(tab.id,{active:true}));
+    // Never activate selected chats; startup probes and injects by tab ID in the background.
+    check();
     let connected = false;
     while (Date.now()<deadline) {
       check();
@@ -185,10 +186,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         const result = bridge.heartbeat(tab, {...snapshot, browser: 'Edge', window: sender.tab.windowId});
         if (result.command) {
           if (!await verifySource(result.command)) return {};
-          // Keep the receiving editor out of inactive-tab timer throttling during Send.
-          // This selects a tab inside Edge; it does not bring Edge over another app.
-          try {await chrome.tabs.update(sender.tab.id, {active: true});}
-          catch (error) {bridge.stop('Cannot activate the receiving chat: ' + error.message); return {};}
+          // Do not steal tab focus. The selected content script handles delivery in place.
         }
         return result;
       }
