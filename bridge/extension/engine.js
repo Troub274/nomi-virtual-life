@@ -87,7 +87,22 @@ class Bridge {
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
-      this.reason='Tab 1 controls the bridge. Waiting for a new Tab 1 command.';
+      this.reason='Sending controller startup instructions to Tab 1.';
+      const controller=this.tabs[pair[0]];
+      this.command={id:crypto.randomUUID(),source:pair[0],target:pair[0],
+        text:'[AI Bridge started — Tab 1 controller]\\n'+
+          'You control this bridge; Tab 2 is conversational only.\\n'+
+          '[bridge send] Your message to Tab 2 (or put message on next line).\\n'+
+          '[bridge shutdown] End the session.\\n'+
+          '[bridge pause] Pause sends.\\n'+
+          'Normal replies stay private. Only one exchange runs at a time.\\n'+
+          'Messages entering Nomi are limited to 750 UTF-8 bytes; truncation is reported to you in Nomi’s next reply.',
+        url:controller.url,document:controller.document,
+        sourceReply:controller.reply,sourceKey:controller.replyKey,
+        sourceUrl:controller.url,sourceDocument:controller.document,
+        baseline:controller.replyKey,created:this.clock(),claimed:false,
+        simpleStartup:true};
+      this.phase='send';
       return;
     }
     this.cliSeen = Object.fromEntries(pair.map(id=>[id,this.tabs[id]?.replyKey]));
@@ -769,6 +784,17 @@ class Bridge {
   acknowledge(tab, data) {
     const cmd = this.command;
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
+    if(cmd.simpleStartup) {
+      if(data.error) {
+        this.phase='uncertain';
+        this.stop('Tab 1 startup message was not confirmed: '+data.error);
+      } else {
+        this.command=null;this.phase='reply';this.simplePeerAwait=false;
+        this.simpleControllerSeen=this.tabs[this.pair[0]]?.replyKey;
+        this.reason='Startup help delivered to Tab 1. Waiting for [bridge send].';
+      }
+      return {};
+    }
     if(cmd.simpleSend) {
       if(data.error) {
         this.phase='uncertain';
