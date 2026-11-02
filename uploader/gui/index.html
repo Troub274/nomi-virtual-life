@@ -162,6 +162,10 @@ function buildLayout(){
  const action=document.createElement("aside");action.className="actions";
  action.innerHTML='<h2>Recommended Action</h2><div class="message" id="recommendedActionText">Select an upload checkpoint to see the recommended next action.</div><button onclick="showView(\'history\')">Review History</button>';
  run.prepend(action);
+ const advanced=document.createElement("section");
+ advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><p class="small">Normal Resume already offers confirmation for ambiguous operations; use these controls when you want to choose the specific recovery type.</p>';
+ run.insertBefore(advanced,run.querySelector(".row"));
+
  const copy=document.createElement("button");copy.textContent="Copy Status";copy.onclick=copyStatus;
  const fb=document.createElement("span");fb.id="copyFeedback";fb.className="small";
  log.insertBefore(fb,log.querySelector("pre"));log.insertBefore(copy,fb);
@@ -320,6 +324,26 @@ async function manualRestart(){
    el("state").textContent="Manual restart requested at "+p+":"+i;
  }catch(e){el("state").textContent="Manual restart failed: "+String(e);alert(String(e))}
 }
+async function scopedRecovery(kind){
+ try{
+  const status=await call("recovery_status");
+  const sends=(status.uncertain_sends||[]).map(p=>p.join(":"));
+  const replies=(status.ambiguous_replies||[]).map(p=>p.join(":"));
+  const tokens=kind==="send"?sends:replies;
+  if(!tokens.length){alert("No eligible "+(kind==="send"?"uncertain content sends":"uncertain reply requests")+" in this checkpoint.");return}
+  const description=kind==="send"?"Resend unconfirmed content? Nomi may already have received it. Duplicates are possible.":"Request a reply again? The original response may already exist. An extra reply is possible.";
+  if(!confirm(description+"\\n\\nAffected positions: "+tokens.join(", ")+"\\n\\nThis action will resume the selected upload."))return;
+  await call("recover_resume",kind==="send"?tokens:[],kind==="reply"?tokens:[]);
+  el("state").textContent="Authorized "+(kind==="send"?"content resend":"reply retry")+" and resumed checkpoint";
+ }catch(e){el("state").textContent="Recovery failed: "+String(e);alert(String(e))}
+}
+function renderRecoveryOptions(status){
+ const sends=status.uncertain_sends||[], replies=status.ambiguous_replies||[];
+ const sendBtn=el("recoverSendButton"),replyBtn=el("recoverReplyButton"),summary=el("advancedRecoveryStatus");
+ if(!sendBtn||!replyBtn)return;
+ sendBtn.disabled=!sends.length;replyBtn.disabled=!replies.length;
+ summary.textContent=sends.length+" uncertain content send(s), "+replies.length+" uncertain reply request(s). Buttons are enabled only when the selected checkpoint records a matching operation.";
+}
 async function resume(){
  try{
    const status=await call("recovery_status");
@@ -343,6 +367,7 @@ async function resume(){
 }
 async function poll(){if(!ready)return;try{
 let recovery=await call("recovery_status");
+renderRecoveryOptions(recovery);
 el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
 el("recommendedActionText").textContent=(recovery.recommendation||"Select an upload checkpoint.")+"\n"+(recovery.next?"Next message: "+recovery.next.join(":"):"")+"\n"+(recovery.state||"");
 let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
