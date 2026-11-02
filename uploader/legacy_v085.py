@@ -59,15 +59,18 @@ def is_episode_header(line):
 
 # Shared credential store for CLI and GUI. Local settings live beside checkpoints.
 def credential_directory():
+    """Return the app-data directory shared by CLI and GUI credentials."""
     from pathlib import Path
     return Path(os.environ.get("LOCALAPPDATA") or (Path.home()/".local"/"share"))/"NomiUploader"
 
 def credential_file():
+    """Return the persistent API-key configuration file path."""
     return credential_directory()/"nomi-uploader.ini"
 
 _SESSION_KEY=None
 
 def credential_status():
+    """Report whether a saved API key exists and requires unlocking."""
     import configparser
     cp=configparser.ConfigParser()
     cp.read(credential_file(),encoding="utf-8")
@@ -75,6 +78,7 @@ def credential_status():
     return {"configured":bool(value),"encrypted":value.startswith("ENC:v1:")}
 
 def save_api_key(key,password=None):
+    """Save an API key as explicitly selected plaintext or password encryption."""
     import configparser,base64,secrets
     key=str(key or "").strip()
     if not key: raise ValueError("Enter a Nomi API key.")
@@ -98,6 +102,7 @@ def save_api_key(key,password=None):
     _SESSION_KEY=key
 
 def unlock_api_key(password=None):
+    """Decrypt and cache a password-protected key for this process only."""
     import configparser,base64,hashlib
     cp=configparser.ConfigParser();cp.read(credential_file(),encoding="utf-8")
     value=cp.get("nomi","api_key",fallback="")
@@ -118,6 +123,7 @@ def unlock_api_key(password=None):
     return value
 
 def resolved_api_key():
+    """Resolve the environment override or currently unlocked saved key."""
     global _SESSION_KEY
     if _SESSION_KEY: return _SESSION_KEY
     # Existing automation retains an explicit environment override.
@@ -150,6 +156,7 @@ def api_ssl_context():
 
 
 def api_request(path, method='GET', body=None):
+    """Perform one HTTP API request; callers govern retries and durability."""
     key=resolved_api_key()
     if not key:
         return None, {'error':{'type':'ConfigurationError','message':'NOMI_API_KEY is not set.'}}
@@ -186,6 +193,7 @@ def err_text(op,status,payload):
 
 
 def api_request_retry(path, method='GET', body=None, attempts=8, base_delay=1.0):
+    """Retry eligible reads and explicitly safe operations only."""
     delay=base_delay
     last=(None,{})
     for attempt in range(1,attempts+1):
@@ -205,6 +213,7 @@ def api_request_retry(path, method='GET', body=None, attempts=8, base_delay=1.0)
 
 
 def get_nomis():
+    """Fetch the authenticated account's Nomi records."""
     s,p=api_request_retry('/nomis')
     if not ok(s): raise RuntimeError(err_text('list_nomis',s,p))
     n=p.get('nomis',[])
@@ -231,6 +240,7 @@ def room_name_for(nomi):
 
 
 def list_rooms():
+    """Fetch rooms visible to the current API credentials."""
     s,p=api_request_retry('/rooms')
     if not ok(s): raise RuntimeError(err_text('list_rooms',s,p))
     rooms=p.get('rooms',[])
@@ -262,6 +272,7 @@ def matching_rooms(nomi, rooms=None):
 
 
 def create_room(nomi,note):
+    """Create a room; an uncertain POST must not be blindly repeated."""
     s,p=api_request_retry('/rooms','POST',{
         'name':room_name_for(nomi),
         'note':note,
@@ -302,6 +313,7 @@ def utc_now(): return datetime.now(timezone.utc).isoformat()
 
 
 def append_journal(path,record):
+    """Append durable JSONL evidence for a state transition."""
     with open(path,'a',encoding='utf-8',newline='\n') as f:
         f.write(json.dumps(record,ensure_ascii=False)+'\n')
         f.flush()
@@ -389,6 +401,7 @@ def cleanup_all(journal):
 
 
 def send_room_message(uid,text):
+    """Send a single message to an existing room."""
     s,p=api_request_retry('/rooms/%s/chat'%uid,'POST',{'messageText':text})
     if not ok(s): raise RuntimeError(err_text('send_room_message',s,p))
     return p
@@ -744,6 +757,7 @@ def sha256_chunks(chunks):
     return h.hexdigest()
 
 def atomic_json(path,value):
+    """Write JSON through a temporary file then replace the destination."""
     path=Path(path)
     tmp=path.with_name(path.name+'.tmp')
     with tmp.open('w',encoding='utf-8') as f:
@@ -754,6 +768,7 @@ def atomic_json(path,value):
     os.replace(str(tmp),str(path))
 
 def send_post_once(path,body,description):
+    """Send once and preserve uncertain outcomes for recovery."""
     # v0.84's retry wrapper is deliberately NOT used for POST operations:
     # the server may have accepted a message just before a timeout.
     s,p=api_request(path,'POST',body)
@@ -763,10 +778,12 @@ def send_post_once(path,body,description):
     return p
 
 def send_room_safe(uid,message):
+    """Send room content through the legacy safety wrapper."""
     return send_post_once('/rooms/%s/chat'%uid,
                           {'messageText':message},'send_room_message')
 
 def request_reply_safe(rid,nid):
+    """Request a room reply through the legacy safety wrapper."""
     return send_post_once('/rooms/%s/chat/request'%rid,
                           {'nomiUuid':nid},'request_room_reply')
 
@@ -796,6 +813,7 @@ def send_context_safe(rid,name,journal):
     print('Room autobiographical attribution context delivered.')
 
 def inspect_commits(events,chunks,room_id):
+    """Summarize committed checkpoint evidence without fabricating delivery."""
     lookup={c['sequence']:c for c in chunks}
     commits={}
     attempts={}
@@ -863,6 +881,7 @@ def relive_after_episode(ep,a,rid,nid,name,journal,events):
     if body: print('    %s: %s'%(name,str(body)[:250].replace('\n',' ')),flush=True)
 
 def main():
+    """Run the standalone legacy compatibility entry point."""
     ap=argparse.ArgumentParser(description='Nomi v0.85: room-based, automatic durable resume')
     ap.add_argument('files',nargs='*',help='diary TXT/DOCX files in chronological order')
     ap.add_argument('--mode',choices=['journal','conversation'],default='journal')
