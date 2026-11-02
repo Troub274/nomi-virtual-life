@@ -353,7 +353,25 @@ class Bridge {
     if (now - dest.seen > 70) {this.reason = 'Waiting for ' + receiver + ' tab to reconnect.'; return;}
     if (!dest.ready) {this.reason = receiver + ' cannot receive yet: ' + (dest.diagnostic || 'check its editor and Send button'); return;}
     if (dest.busy) {this.reason = 'Waiting for ' + receiver + ' to finish generating before sending.'; return;}
-    if (dest.draft) {this.stop('The destination has a draft. Clear it, then press Play.'); return;}
+    if (dest.draft) {
+      // A human-owned editor draft is never overwritten or submitted.
+      // Probe with bounded exponential backoff; resume the queued source reply
+      // automatically once the editor becomes empty.
+      const key = JSON.stringify([target, dest.document, source.replyKey]);
+      if (!this.draftBackoff || this.draftBackoff.key !== key)
+        this.draftBackoff = {key, attempts:0, next:now, delay:1};
+      const backoff = this.draftBackoff;
+      if (now >= backoff.next) {
+        backoff.attempts++;
+        backoff.delay = Math.min(16, Math.pow(2, Math.min(backoff.attempts-1,4)));
+        backoff.next = now + backoff.delay;
+      }
+      this.reason = 'Destination contains a draft; preserving it. Retry check ' +
+        backoff.attempts + ' in ' + Math.max(0,Math.ceil(backoff.next-now)) +
+        's; delivery resumes when the editor is clear.';
+      return;
+    }
+    this.draftBackoff = null;
     // Defense in depth: if the dashboard is accidentally in Direct mode,
     // do not leak API World Engine control tags to the Nomi private chat.
     if (dest.site === 'nomi' && this.mode !== 'group' &&
