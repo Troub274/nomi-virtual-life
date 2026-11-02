@@ -4,7 +4,7 @@
 
 ## Download / install (no terminal, no Python required)
 
-1. Visit the [Windows alpha download page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha).
+1. Visit the [Windows alpha download page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3).
 2. Under **Assets**, download **NomiUploader-Windows.zip**.
 3. Extract the ZIP into a normal folder.
 4. Open **NomiUploader.exe**. Do **not** open `index.html`.
@@ -13,7 +13,7 @@ A GitHub Actions build artifact is not the recommended user download; the Releas
 
 ## Getting started
 
-1. Enter your Nomi API key and click **Load Nomis**.
+1. Complete the first-run API-key configuration (plaintext or optional password encryption), then click **Load Nomis**.
 2. Choose your Nomi and click **Refresh rooms**.
 3. Select an existing room or create a new one. Review the room name and description.
 4. Add TXT, DOCX, JSON or Nomi export ZIP files to the queue.
