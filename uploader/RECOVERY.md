@@ -150,7 +150,7 @@ python3 uploader/nomi-uploader.py \
   Nomi_Cathy_2026-10-01_20-43-00.zip
 ```
 
-A section's own `Process Every: N` takes precedence over the CLI `--process-every` setting. Resume restores the saved planning options and validates the manifest. Do not change input content, order, section headers, or splitting settings during recovery.
+A section's own `Process Every: N` takes precedence over the CLI `--process-every` setting. **Normal Resume** restores the saved planning options and validates the manifest. Do not change input content, order, section headers, or splitting settings for an ordinary resume. To deliberately change them, use v1.3 **Manual Restart** with an explicitly recalculated plan and an append-only journal boundary; previously delivered content may be replayed.
 
 ## 4. Preflight checklist
 
