@@ -58,20 +58,25 @@ def is_episode_header(line):
 
 
 def api_ssl_context():
-    """Provide a trusted CA store inside frozen macOS builds, without shell exports.
+    """Verified TLS for both packaged macOS apps and standalone Python CLI.
 
-    GUI applications launched from Finder do not inherit SSL_CERT_FILE set in
-    interactive shells. Prefer Python's configured system trust on normal
-    installations; on a frozen macOS .app use the packaged certifi trust bundle.
-    Never disable certificate/hostname verification.
+    Prefer the certifi CA bundle on macOS regardless of launch method, so
+    Finder, packaged --uploader-cli, and python3 source CLI behave alike.
+    Preserve an explicit SSL_CERT_FILE override for custom trusted CAs.
     """
     import ssl
-    if sys.platform=="darwin" and getattr(sys,"frozen",False):
+    if sys.platform=="darwin":
+        override=os.environ.get("SSL_CERT_FILE")
+        if override:
+            return ssl.create_default_context(cafile=override)
         try:
             import certifi
-            return ssl.create_default_context(cafile=certifi.where())
         except ImportError as exc:
-            raise RuntimeError("macOS build is missing its bundled TLS CA certificates") from exc
+            raise RuntimeError(
+                "macOS TLS certificates unavailable: install CLI requirements "
+                "(python3 -m pip install -r requirements.txt), which include certifi"
+            ) from exc
+        return ssl.create_default_context(cafile=certifi.where())
     return ssl.create_default_context()
 
 
