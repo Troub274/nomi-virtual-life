@@ -164,6 +164,9 @@
     if (!check.ready || check.busy || (check.draft && !command.prefilledDraft)) throw Error('Chat not ready or contains a draft');
     if (command.prefilledDraft && check.draftText !== command.text.trim()) throw Error('Prefilled draft changed');
     handled.add(command.id);
+    // Avoid claiming any transaction while the destination is still generating.
+    // The worker can retry unclaimed sends when the UI becomes available.
+    if (check.busy || check.complete===false) return;
     const claim = await api('/api/claim', {id: command.id});
     if (!claim.allowed) { handled.delete(command.id); return; }
     try {
