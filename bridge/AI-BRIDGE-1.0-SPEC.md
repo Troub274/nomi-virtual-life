@@ -6,7 +6,7 @@ Status: approved design baseline; implementation pending.
 - Product: **AI Bridge**
 - Release: **1.0.0**
 - Description: AI-Controlled Conversation Bridge.
-- **Existing adapters/integrations:** Nomi browser conversations, Nomi API-room, and ChatGPT browser conversations. Preserve these working paths.
+- **Existing adapters/integrations:** Nomi browser conversations, **Nomi-only API-room capability**, and ChatGPT browser conversations. Preserve these working paths.
 - Future adapters: Claude, Grok and other providers. No requirement to redesign the core controller for each new provider.
 
 ## Human authorization
@@ -52,7 +52,7 @@ Status: approved design baseline; implementation pending.
 3. Human replies get a response; unrelated Nomi message remains pending.
 4. AI schedules a wake-up, pauses, receives wake-up, resumes and communicates.
 5. AI shutdown cannot be overridden by AI until human reauthorizes.
-6. Existing Nomi and ChatGPT browser paths and Nomi API-room still work.
+6. Existing Nomi and ChatGPT browser paths still work; Nomi-specific API-room continues to work only through the Nomi adapter.
 
 ## Symmetric AI control (Nomi and ChatGPT)
 - Both established endpoints, including Nomi, can issue the same Bridge CLI commands when explicitly permitted by the user.
@@ -61,4 +61,10 @@ Status: approved design baseline; implementation pending.
 - Route acknowledgments, help, errors, and wake-ups back to the issuing/target participant, not indiscriminately to both.
 - Protect against quoted/injected commands: only recognize commands from verified participant output, not historical text or a forwarded payload.
 - Conflicting scheduling and lifecycle commands need deterministic reconciliation; human shutdown overrides all participant commands.
-- Nomi API-room and Nomi browser modes are existing adapters, not future hypothetical adapters.
+- Nomi browser is an existing browser adapter; Nomi API-room is an existing **Nomi-specific transport capability**, not a generic AI adapter feature. Other providers use their browser adapters unless separately implemented capabilities exist.
+
+## Provider capabilities are not interchangeable
+- The shared Bridge CLI is model/provider-neutral, but transport features are adapter-specific.
+- Nomi supports its existing Nomi API-room mode in addition to browser chat.
+- ChatGPT, Claude, Grok, and other browser AI providers **do not inherit Nomi API-room access**.
+- The bridge must expose capabilities per endpoint and reject unsupported operations rather than pretending every adapter supports the same transports.
