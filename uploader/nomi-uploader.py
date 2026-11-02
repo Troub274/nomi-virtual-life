@@ -1231,10 +1231,11 @@ def interactive_menu():
 
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
-    parser=argparse.ArgumentParser(description="Nomi Uploader v1.2")
+    parser=argparse.ArgumentParser(description="Nomi Uploader v1.3")
     parser.add_argument("files",nargs="*")
     parser.add_argument("--version",action="version",version=VERSION)
     parser.add_argument("--utility",action="store_true")
+    parser.add_argument("--config",action="store_true",help="Set, replace, or reset the locally saved Nomi API key")
     parser.add_argument("--status",action="store_true",
                         help="Read-only checkpoint status; makes no Nomi API calls")
     parser.add_argument("--resume",action="store_true")
@@ -1276,6 +1277,40 @@ def main(argv=None):
     if args.status:
         print_checkpoint_status(args.checkpoint)
         return
+    if args.config:
+        import getpass
+        key=getpass.getpass("Nomi API key (hidden): ").strip()
+        if not key: raise ValueError("API key cannot be empty.")
+        protect=input("Encrypt key with a password? [y/N]: ").strip().lower() in ("y","yes")
+        password=None
+        if protect:
+            password=getpass.getpass("New password: ")
+            confirmation=getpass.getpass("Confirm password: ")
+            if password!=confirmation: raise ValueError("Passwords do not match.")
+            if not password: raise ValueError("Password must not be empty.")
+        legacy.save_api_key(key,password)
+        print("API key saved to",legacy.credential_file())
+        return
+    if not args.dry_run and not legacy.resolved_api_key():
+        import getpass
+        state=legacy.credential_status()
+        if state["encrypted"]:
+            if not sys.stdin.isatty():
+                raise RuntimeError("Encrypted API key is locked. Run interactively to enter password.")
+            legacy.unlock_api_key(getpass.getpass("API key password: "))
+        elif sys.stdin.isatty():
+            print("Nomi API key not configured. Enter it once (or run --config).")
+            key=getpass.getpass("Nomi API key: ").strip()
+            if not key: raise ValueError("API key required.")
+            protect=input("Encrypt with password? [y/N]: ").strip().lower() in ("y","yes")
+            pw=None
+            if protect:
+                pw=getpass.getpass("Password: ")
+                if not pw or pw!=getpass.getpass("Confirm password: "):
+                    raise ValueError("Passwords do not match or password is empty.")
+            legacy.save_api_key(key,pw)
+        else:
+            raise RuntimeError("No API key configured. Run --config interactively.")
     if args.process_every<0: parser.error("process-every must be >= 0")
     if args.header_every<0: parser.error("header-every must be >= 0")
     if args.passes<1: parser.error("passes must be >= 1")
