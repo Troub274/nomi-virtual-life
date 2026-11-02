@@ -26,3 +26,7 @@ Do **not** disable Gatekeeper system-wide, disable malware protection, or apply 
 The application saves settings, checkpoints, prepared copies and replies in `~/.local/share/NomiUploader/` by default (unless `LOCALAPPDATA` is set). The API key is currently saved as plaintext in the settings file; avoid shared or untrusted computers. Preserve checkpoints when updating. The app is community software, not official Nomi.ai software.
 
 This is an **experimental** build; Apple Silicon and Intel packages are independently built. Releases depend on successful GitHub Actions builds, and compatibility still needs testing on actual macOS installations.
+
+## Command-line API mode (included)
+
+The GUI download also contains a **standalone Python API command-line uploader** in the `cli/` folder. You can use it without launching the GUI. Read **`CLI-IN-GUI-DOWNLOAD.md` in the extracted download** for exact platform-specific commands, API-key setup and checkpoint recovery. The same uploader engine is used by both interfaces.
