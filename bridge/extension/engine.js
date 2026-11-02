@@ -232,8 +232,21 @@ class Bridge {
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
+      this.lastCliFingerprint = null;
       this.reason = 'Private GPT reply retained. Use [bridge send] to contact the peer.';
       return;
+    }
+    // Idempotency across replyKey changes while ChatGPT re-renders a command.
+    // Scope to the source tab, document and exact completed CLI text.
+    if (source.reply.trim().toLowerCase().startsWith('[bridge ')) {
+      const fingerprint = JSON.stringify([this.source, source.url, source.document, source.reply.trim()]);
+      if (this.lastCliFingerprint === fingerprint) {
+        this.baseline = source.replyKey;
+        this.phase = 'reply';
+        this.reason = 'Duplicate CLI observation ignored; no second acknowledgment sent.';
+        return;
+      }
+      this.lastCliFingerprint = fingerprint;
     }
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
