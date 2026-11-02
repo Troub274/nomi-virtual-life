@@ -76,7 +76,7 @@ class Bridge {
     this.log('Running: waiting for a completed reply.');
     if (this.mode !== 'api-room' && this.mode !== 'heartbeat') {
       this.queuePairNotice('start',
-        '[Bridge started; running]\\n' +
+        '[Bridge started; running]\n' +
         (globalThis.AIBridgeCLI?.HELP || '[bridge help]') );
     }
     this.tick();
@@ -406,45 +406,45 @@ class Bridge {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
-          const pendingReport = '[AI Bridge pending]\\n' +
+          const pendingReport = '[AI Bridge pending]\n' +
             'Delivery state: ' + (pending ? (pending.claimed ? 'claimed; confirmation outstanding' : 'queued; not submitted') :
               (this.phase === 'uncertain' ? 'uncertain; inspect both chats before retry' : 'no pending send')) +
-            (pending ? '\\nTransaction: ' + pending.id + '\\nDestination: ' + (this.tabs[pending.target]?.site || 'unknown') : '') +
-            '\\nWaiting for: ' + (peer?.site || 'none') +
-            '\\nMode: ' + (this.mode || 'direct') + '\\n[End pending]';
+            (pending ? '\nTransaction: ' + pending.id + '\nDestination: ' + (this.tabs[pending.target]?.site || 'unknown') : '') +
+            '\nWaiting for: ' + (peer?.site || 'none') +
+            '\nMode: ' + (this.mode || 'direct') + '\n[End pending]';
           const rawCount = parsed.args.last ?? parsed.rest ?? '10';
           const reviewCount = Number(rawCount);
           const reviewReport = Number.isInteger(reviewCount) && reviewCount >= 1 && reviewCount <= 50 ?
-            '[AI Bridge review — last ' + reviewCount + ' activity events]\\n' +
-            (this.events.slice(-reviewCount).map(e => e.time + ' ' + e.text).join('\\n') || 'No activity recorded.') +
-            '\\n[End review]\\nThis is bridge activity, not a transcript of chat messages.' :
+            '[AI Bridge review — last ' + reviewCount + ' activity events]\n' +
+            (this.events.slice(-reviewCount).map(e => e.time + ' ' + e.text).join('\n') || 'No activity recorded.') +
+            '\n[End review]\nThis is bridge activity, not a transcript of chat messages.' :
             '[AI Bridge review error] Use last=1 through last=50.';
-          const scheduleReport = '[AI Bridge schedule]\\n' +
-            'Scheduled AI wake-ups: not active in this build.\\n' +
-            'No AI Bridge wake-ups have been armed.\\n' +
-            'The existing periodic extension heartbeat is not a user-scheduled wake-up.\\n' +
-            'Use the dashboard for current bridge controls; wake scheduling requires integration.\\n' +
+          const scheduleReport = '[AI Bridge schedule]\n' +
+            'Scheduled AI wake-ups: not active in this build.\n' +
+            'No AI Bridge wake-ups have been armed.\n' +
+            'The existing periodic extension heartbeat is not a user-scheduled wake-up.\n' +
+            'Use the dashboard for current bridge controls; wake scheduling requires integration.\n' +
             '[End schedule]';
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
-          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown acknowledgment]\\nAccepted. This is the final bridge message for this session.\\nAfter this acknowledgment is submitted, the bridge will stop and revoke AI control. Only a human can restart it.\\n[End shutdown acknowledgment]' :
+          const text = parsed.command === 'shutdown' ? '[AI Bridge shutdown acknowledgment]\nAccepted. This is the final bridge message for this session.\nAfter this acknowledgment is submitted, the bridge will stop and revoke AI control. Only a human can restart it.\n[End shutdown acknowledgment]' :
             parsed.command === 'listen' ? '[AI Bridge listen] Listening for the next peer response; no outgoing prompt was sent.' :
             parsed.command === 'pause' ? '[AI Bridge] Paused. Relay forwarding suspended; command listener remains active. [bridge resume] restores it.' :
             parsed.command === 'resume' ? (this.cliShutdown ? '[AI Bridge] DENIED: session is shut down; human must press Play.' : '[AI Bridge] Resumed. Relay forwarding enabled.') :
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
-            parsed.command === 'help' ? (parsed.args.topic === 'schedule' ? '[AI Bridge schedule help]\\nWake scheduler not yet active. Planned syntax: [bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"] or [bridge wake in="30 minutes"].' : globalThis.AIBridgeCLI.HELP) :
+            parsed.command === 'help' ? (parsed.args.topic === 'schedule' ? '[AI Bridge schedule help]\nWake scheduler not yet active. Planned syntax: [bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"] or [bridge wake in="30 minutes"].' : globalThis.AIBridgeCLI.HELP) :
             parsed.command !== 'status' ? '[AI Bridge] NOT_IMPLEMENTED: ' + parsed.command + '. No action was taken.' :
-            '[AI Bridge status]\\nState: ' + (this.running?'running':'stopped') +
-            '\\nMode: ' + (this.mode||'direct') + '\\nPhase: ' + this.phase +
-            '\\nConversation turns: ' + this.turns + '\\nCLI transactions: ' + (this.cliTransactions||0) + '\\nPending send: ' + (this.command?'yes':'no') +
-            '\\n[End status]\\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
+            '[AI Bridge status]\nState: ' + (this.running?'running':'stopped') +
+            '\nMode: ' + (this.mode||'direct') + '\nPhase: ' + this.phase +
+            '\nConversation turns: ' + this.turns + '\nCLI transactions: ' + (this.cliTransactions||0) + '\nPending send: ' + (this.command?'yes':'no') +
+            '\n[End status]\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
           if (['pause','resume'].includes(parsed.command)) {
             const stateWord = parsed.command === 'pause' ? 'paused' : 'running';
             this.queuePairNotice(parsed.command,
-              '[AI Bridge ' + parsed.command + ']\\nState: ' + stateWord +
-              '. Requested by ' + source.site + '. Notification delivery in progress.\\n[End notice]',
+              '[AI Bridge ' + parsed.command + ']\nState: ' + stateWord +
+              '. Requested by ' + source.site + '. Notification delivery in progress.\n[End notice]',
               this.source);
           } else {
             this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
