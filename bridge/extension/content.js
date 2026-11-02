@@ -205,12 +205,22 @@
       // wait rather than failing into an unrecoverable draft/Reset deadlock.
       let button;
       let delay = 500;
+      let mismatchSince = 0;
       while (true) {
         if (location.href !== command.url || documentId !== command.document)
           throw Error('Chat changed while waiting for Send; draft preserved');
         const currentInput = one(config.input);
-        if (!currentInput || normalize(read(currentInput)) !== normalize(command.text))
-          throw Error('Draft changed while waiting for Send; not submitted');
+        if (!currentInput || normalize(read(currentInput)) !== normalize(command.text)) {
+          // React can briefly replace the editor or rewrite its value.
+          // Never overwrite an unexpected draft, and never infer submission
+          // from a disappearing draft before we actually click Send.
+          if (!mismatchSince) mismatchSince = Date.now();
+          if (Date.now()-mismatchSince > 20000)
+            throw Error('Draft no longer matches the claimed message; delivery uncertain, no automatic resend');
+          await sleep(500);
+          continue;
+        }
+        mismatchSince = 0;
         const permit = await api('/api/claim', {id: command.id, checkOnly: true});
         if (!permit.allowed) return; // Stop/revocation must not submit a draft.
         button = one(config.send);
@@ -220,9 +230,11 @@
           if (!finalPermit.allowed) return;
           const liveInput = one(config.input);
           const liveButton = one(config.send);
-          if (location.href !== command.url || !liveInput ||
-              normalize(read(liveInput)) !== normalize(command.text))
-            throw Error('Chat or draft changed before submission');
+          if (location.href !== command.url) throw Error('Chat changed before submission');
+          if (!liveInput || normalize(read(liveInput)) !== normalize(command.text)) {
+            await sleep(500);
+            continue;
+          }
           if (enabled(liveButton) && liveButton.isConnected) {
             button = liveButton;
             break;
