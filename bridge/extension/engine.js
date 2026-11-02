@@ -439,6 +439,23 @@ class Bridge {
         this.internalResultTab = cmd.target;
         this.internalResultBaseline = cmd.baseline;
       }
+      if (cmd.shutdownAfterAck && !cmd.shutdownSecond) {
+        const peer = this.pair?.find(id => id !== cmd.target);
+        const dest = peer && this.tabs[peer];
+        if (!dest || !dest.ready || dest.busy || dest.draft || this.clock()-dest.seen > 70 || !['nomi','chatgpt'].includes(dest.site)) {
+          this.phase='uncertain'; this.running=false;
+          this.log('Shutdown notification reached requester but peer was unavailable. Inspect peer and complete shutdown manually; do not resend automatically.');
+          this.command=null; return {};
+        }
+        this.shutdownFirstAck = {tab:cmd.target,at:this.clock()};
+        this.command = {id:crypto.randomUUID(),source:cmd.source,target:peer,
+          text:'[AI Bridge shutdown notice] The other participant requested shutdown. This bridge session is ending; no more messages will be forwarded. [End notice]',
+          url:dest.url,document:dest.document,sourceReply:cmd.sourceReply,sourceKey:cmd.sourceKey,
+          sourceUrl:cmd.sourceUrl,sourceDocument:cmd.sourceDocument,baseline:dest.replyKey,
+          claimed:false,created:this.clock(),internalResult:true,shutdownAfterAck:true,shutdownSecond:true};
+        this.phase='send';this.log('First shutdown notice confirmed; notifying peer before stopping.');
+        return {};
+      }
       this.source = cmd.target; this.baseline = cmd.baseline; this.phase = 'reply';
       if (!cmd.internalResult) this.turns++;
       this.startedWait = this.clock();
@@ -447,7 +464,7 @@ class Bridge {
         this.cliPaused = true;
         this.running = false;
         this.phase = 'shutdown';
-        this.log('AI Bridge shutdown acknowledgment submitted. Session stopped; only dashboard Play can reauthorize.');
+        this.log('AI Bridge shutdown notices submitted to both participants. Session stopped; only dashboard Play can reauthorize.');
       } else this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
     this.command = null; return {};
