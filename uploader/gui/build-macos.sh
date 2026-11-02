@@ -3,7 +3,13 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 arch="${1:?Specify arm64 or x86_64}"
 python -m pip install --upgrade pyinstaller pywebview certifi cryptography
-python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader \
+icon_args=()
+if [[ -f uploader/assets/icon.icns ]]; then
+  icon_args=(--icon uploader/assets/icon.icns)
+else
+  echo "WARNING: uploader/assets/icon.icns missing; default macOS application icon will be used." >&2
+fi
+python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader "${icon_args[@]}" \
   --paths uploader \
   --hidden-import legacy_v085 \
   --collect-data certifi \
