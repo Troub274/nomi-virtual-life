@@ -13,7 +13,7 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 .nav{max-width:1350px;margin:18px auto 0;padding:0 22px;display:flex;flex-wrap:wrap;gap:8px}.nav button{background:var(--surface);min-width:130px}.nav button[aria-selected="true"]{border-color:var(--accent);color:var(--text);box-shadow:inset 0 -3px 0 var(--accent)}
 .view{display:none}.view.active{display:block}.two-column{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:16px;align-items:start}.two-column>section{height:100%}.editor-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.editor-tabs button[aria-selected="true"]{border-color:var(--accent)}.edit-panel{display:none}.edit-panel.active{display:block}
 .actions{border:1px solid var(--accent);border-radius:12px;padding:16px;background:var(--raised);margin:0 0 16px}.actions h2{margin:0 0 8px}.actions .message{white-space:pre-wrap;user-select:text}.actions button{margin-top:10px}
-.status-line{white-space:pre-wrap;user-select:text;cursor:text;min-height:20px}.toolhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.badge-text{color:var(--accent);font-size:12px;font-weight:600}
+.status-line{white-space:pre-wrap;user-select:text;cursor:text;min-height:20px}.copyable-output{user-select:text;-webkit-user-select:text;cursor:text;white-space:pre-wrap;overflow-wrap:anywhere}.copy-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.copy-tools button{padding:6px 12px}.toolhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.badge-text{color:var(--accent);font-size:12px;font-weight:600}
 @media(max-width:850px){.two-column{grid-template-columns:1fr}main{padding:12px}.nav{padding:0 12px}header{padding:14px}}
 </style></head><body><header><h1>Nomi Uploader</h1><div class="small">Graphical front end to the existing Python uploader — no command line needed</div></header>
 <nav class="nav" aria-label="Uploader sections">
@@ -103,6 +103,15 @@ function applyTheme(setting){
  document.documentElement.dataset.theme=setting==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):setting;
  const picker=document.getElementById("theme-choice");if(picker)picker.value=setting;
 }
+function copyText(text,feedbackId){
+ const value=String(text??"");
+ const feedback=document.getElementById(feedbackId);
+ const fallback=()=>{const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.left="-9999px";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw new Error("Clipboard unavailable");};
+ const succeeded=()=>{if(feedback)feedback.textContent="Copied";};
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(succeeded).catch(()=>{try{fallback();succeeded()}catch(e){if(feedback)feedback.textContent="Copy failed";}});}
+ else {try{fallback();succeeded()}catch(e){if(feedback)feedback.textContent="Copy failed";}}
+}
+function copyOutput(id,feedbackId){copyText(document.getElementById(id)?.value??document.getElementById(id)?.textContent??"",feedbackId)}
 function copyStatus(){
  const ids=["recoveryRecommendation","state","stats","log"];
  const content=ids.map(id=>id+": "+(document.getElementById(id)?.textContent||"")).join("\n\n");
@@ -166,6 +175,17 @@ function buildLayout(){
  advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><p class="small">Normal Resume already offers confirmation for ambiguous operations; use these controls when you want to choose the specific recovery type.</p>';
  run.insertBefore(advanced,run.querySelector(".row"));
 
+ // Keep output selectable, and provide per-output copy actions even on restrictive webviews.
+ for(const [id,title] of [["state","Status"],["log","Log / errors"],["replies","Replies"],["recoveryRecommendation","Recovery status"],["recommendedActionText","Recommended action"]]){
+  const output=document.getElementById(id);if(!output)continue;
+  output.classList.add("copyable-output");
+  const wrap=document.createElement("div");wrap.className="copy-tools";
+  const btn=document.createElement("button");btn.type="button";btn.textContent="Copy "+title;
+  const feedback=document.createElement("span");feedback.className="small";feedback.id="copy-feedback-"+id;
+  btn.addEventListener("click",()=>copyOutput(id,feedback.id));
+  wrap.append(btn,feedback);
+  output.insertAdjacentElement("afterend",wrap);
+ }
  const copy=document.createElement("button");copy.textContent="Copy Status";copy.onclick=copyStatus;
  const fb=document.createElement("span");fb.id="copyFeedback";fb.className="small";
  log.insertBefore(fb,log.querySelector("pre"));log.insertBefore(copy,fb);
