@@ -165,7 +165,8 @@ class Bridge {
       sourceReply:item.sourceReply,sourceKey:item.sourceKey,
       sourceDocument:item.sourceDocument,sourceUrl:item.sourceUrl,
       baseline:dest.replyKey,created:this.clock(),claimed:false,explicitSend:true,
-      queuedOutbound:true,queueItem:item};
+      queuedOutbound:true,queueItem:item,
+      cliRestore:{source:this.source,baseline:this.baseline,phase:'reply'}};
     this.phase='send';this.log('Delivering queued message '+(sequence+1)+' to '+target+'.');
     return true;
   }
@@ -404,12 +405,13 @@ class Bridge {
     }
     // Explicit-send mode: ChatGPT's ordinary replies remain private to the human.
     // Only a standalone [bridge send ...] block can reach the peer.
-    if (source.site === 'chatgpt' && !source.reply.trim().toLowerCase().startsWith('[bridge ')) {
+    if ((source.site === 'chatgpt' || (this.mode === 'direct' && source.site === 'nomi')) &&
+        !source.reply.trim().toLowerCase().startsWith('[bridge ')) {
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
       this.lastCliFingerprint = null;
-      this.reason = 'Private GPT reply retained. Use [bridge send] to contact the peer.';
+      this.reason = 'Private AI reply retained. Use [bridge send] to contact the peer.';
       return;
     }
     // Idempotency across replyKey changes while ChatGPT re-renders a command.
