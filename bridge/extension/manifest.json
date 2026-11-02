@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI Bridge",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "AI-controlled conversation bridge with existing Nomi browser and API-room adapters.",
   "permissions": [
     "storage",
@@ -34,5 +34,5 @@
       "run_at": "document_idle"
     }
   ],
-  "version_name": "1.0.29 - newline repair"
+  "version_name": "1.0.30 - message queues and Nomi multipart"
 }
