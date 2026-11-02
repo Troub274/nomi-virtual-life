@@ -154,8 +154,9 @@ class Bridge {
     const dest=this.tabs[target],item=items[index];
     if(!dest || !dest.ready || dest.busy || dest.draft || this.clock()-dest.seen>70)return false;
     const pending=this.queuedFor(target), sequence=(this.deliveredCounts||{})[target]||0;
-    const label='[Bridge message '+(sequence+1)+' of '+(sequence+pending)+
-      (item.parts>1?'; part '+item.part+' of '+item.parts:'')+']\n';
+    const label=item.parts>1
+      ? '[Bridge part '+item.part+' of '+item.parts+'; '+(pending-1)+' queued after this]\n'
+      : '[Bridge message; '+(pending-1)+' queued after this]\n';
     const footer=pending>1?'\n[Reply [next message] for next; [clear queue] to discard remaining.]':'';
     const text=label+item.body+footer;
     if(dest.site==='nomi' && text.length>750) {
@@ -512,7 +513,7 @@ class Bridge {
             if(this.outboundCredits)this.outboundCredits[this.source]=0;
             this.note('Discarded '+before+' undelivered queue items for '+this.source+'.');
           }
-          if(parsed.command==='next-message') this.scheduleOutbound(this.source);
+          if(parsed.command==='next-message' || (parsed.command==='listen' && this.queuedFor(this.source)>0)) this.scheduleOutbound(this.source);
           if (parsed.command === 'pause') this.cliPaused = true;
           if (parsed.command === 'resume' && !this.cliShutdown) {this.cliPaused = false; this.startedWait = now;}
           const text = parsed.command === 'next-message' ? '[AI Bridge] Next-message request recorded. Waiting: '+this.queuedFor(this.source) :
@@ -530,7 +531,7 @@ class Bridge {
             '\nMode: ' + (this.mode||'direct') + '\nPhase: ' + this.phase +
             '\nConversation turns: ' + this.turns + '\nCLI transactions: ' + (this.cliTransactions||0) + '\nPending send: ' + (this.command?'yes':'no') +
             '\n[End status]\nThis is an internal bridge notification. Reply [bridge listen] to wait.';
-          if (parsed.command==='next-message' && this.queuedFor(this.source)>0 &&
+          if ((parsed.command==='next-message' || parsed.command==='listen') && this.queuedFor(this.source)>0 &&
               this.releaseOutbound(this.source)) {
             this.outboundCredits[this.source]=Math.max(0,(this.outboundCredits[this.source]||0)-1);
             this.note('Next queued message released directly; no redundant CLI receipt.');
