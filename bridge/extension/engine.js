@@ -226,6 +226,15 @@ class Bridge {
       this.internalResultTab = null;
       this.internalResultBaseline = null;
     }
+    // Explicit-send mode: ChatGPT's ordinary replies remain private to the human.
+    // Only a standalone [bridge send ...] block can reach the peer.
+    if (source.site === 'chatgpt' && !source.reply.trim().toLowerCase().startsWith('[bridge ')) {
+      this.baseline = source.replyKey;
+      this.phase = 'reply';
+      this.startedWait = now;
+      this.reason = 'Private GPT reply retained. Use [bridge send] to contact the peer.';
+      return;
+    }
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
@@ -241,7 +250,38 @@ class Bridge {
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
         this.log('AI Bridge CLI intercepted (' + source.site + '): ' + summary + '.');
-        if (true) {
+        if (parsed.command === 'send') {
+          const target = this.pair.find(id => id !== this.source);
+          const dest = this.tabs[target];
+          const recipient = (parsed.args.to || '').trim();
+          let error = '';
+          if (this.cliPaused) error = 'Bridge is paused; use [bridge resume] first.';
+          else if (!dest) error = 'No connected destination.';
+          else if (!recipient) error = 'Specify to="Nomi" or the selected destination name.';
+          else if (!['nomi','chatgpt'].includes(dest.site)) error = 'Selected destination does not support direct send.';
+          else if (!([dest.site, 'Nomi', 'ChatGPT', dest.name].filter(Boolean)
+              .some(n => n.toLowerCase() === recipient.toLowerCase())))
+            error = 'Recipient does not match selected destination: ' + dest.site + '.';
+          else if (!dest.ready || dest.busy || dest.draft || now - dest.seen > 70)
+            error = 'Destination not ready; no message submitted.';
+          if (!error) {
+            const payload = dest.site === 'nomi' ? limitNomiMessage(parsed.message) : parsed.message;
+            this.command = {id:crypto.randomUUID(),source:this.source,target,
+              text:payload,url:dest.url,document:dest.document,sourceReply:source.reply,
+              sourceKey:source.replyKey,sourceUrl:source.url,sourceDocument:source.document,
+              baseline:dest.replyKey,claimed:false,created:now,explicitSend:true,
+              truncated:payload.length < parsed.message.length};
+            this.phase='send';
+            this.log('Explicit send queued to ' + dest.site + '; delivery acknowledgment pending.');
+          } else {
+            this.command = {id:crypto.randomUUID(),source:this.source,target:this.source,
+              text:'[AI Bridge send] REJECTED: '+error,url:source.url,document:source.document,
+              sourceReply:source.reply,sourceKey:source.replyKey,sourceUrl:source.url,
+              sourceDocument:source.document,baseline:source.replyKey,
+              claimed:false,created:now,internalResult:true};
+            this.phase='send';this.log('Explicit send rejected: '+error);
+          }
+        } else if (true) {
           const pending = this.command;
           const peerId = this.pair?.find(id => id !== this.source);
           const peer = peerId ? this.tabs[peerId] : null;
@@ -351,6 +391,7 @@ class Bridge {
       this.log('Send confirmed: ' + cmd.text.length + ' characters to ' + this.tabs[tab].site + '.');
       if (cmd.truncated && this.tabs[cmd.source]?.site === 'chatgpt') this.remindChatGPT = true;
       if (cmd.includesReminder) this.remindChatGPT = false;
+      if (cmd.explicitSend) this.note('Explicit send confirmed to ' + this.tabs[tab].site + '.');
       if (cmd.internalResult) {
         this.cliTransactions = (this.cliTransactions || 0) + 1;
         this.internalResultTab = cmd.target;
