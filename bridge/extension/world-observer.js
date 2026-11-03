@@ -117,6 +117,31 @@ function parseWorldCommand(text) {
   let input=text.trim().replace(/^\uFEFF/,'');
   const outer=/^```(?:text|plaintext)?[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*$/i.exec(input);
   if (outer) input=outer[1].trim();
+  // The universal Bridge CLI uses the selected output channel. Legacy
+  // room commands remain available during migration.
+  const universal=/^\[bridge\s+(send|listen|wait|tail|history)(?:\s+([^\r\n]*?))?\]([^\r\n]*)(?:\r?\n([\s\S]*))?$/i.exec(input);
+  if(universal) {
+    const verb=universal[1].toLowerCase(),args=(universal[2]||'').trim();
+    const inline=(universal[3]||'').trim(),rest=(universal[4]||'').trim();
+    if(verb==='send') {
+      if(args)return {kind:'invalid',reason:'[bridge send] uses the configured output channel; omit destination arguments.'};
+      const body=[inline,rest].filter(Boolean).join('\n');
+      if(!body)return {kind:'invalid',reason:'[bridge send] requires message text.'};
+      if(/^\s*\[(?:bridge\s+|say\s+room|listening|tail|history|wait)\b[^\]\r\n]*\]\s*$/im.test(body))
+        return {kind:'invalid',reason:'Only one Bridge command is allowed per response.'};
+      return {kind:'room',text:body,explicit:true,unified:true};
+    }
+    if(inline||rest)return {kind:'invalid',reason:'[bridge '+verb+'] does not accept message text.'};
+    if(verb==='history'){
+      const match=/^page=([1-9]\d{0,2})$/i.exec(args);
+      if(args&&!match)return {kind:'invalid',reason:'Use [bridge history] or [bridge history page=2].'};
+      return {kind:'history',page:match?Number(match[1]):1,text:'',unified:true};
+    }
+    if(args)return {kind:'invalid',reason:'[bridge '+verb+'] takes no arguments.'};
+    return {kind:verb==='listen'?'listening':verb,text:'',unified:true};
+  }
+  if(/^\[bridge\s+/i.test(input))
+    return {kind:'invalid',reason:'Unrecognized or malformed unified Bridge command; nothing was sent.'};
   // GPT may speak conversationally before issuing exactly one standalone
   // bridge directive. Discard that preamble, never send it to Nomi. Reject
   // multiple directives rather than inadvertently executing a batch.
