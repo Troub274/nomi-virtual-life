@@ -5,7 +5,7 @@ const NomiApiDriver=class {constructor(){} touch(){} publicState(){return null;}
 test('discovers existing tabs, injects only missing scripts and lists sleeping tabs without refreshing',async()=>{
  let listener;const injected=[];const connected=new Set([1]);
  const tabs=[1,2,3].map(id=>({id,url:'https://chatgpt.com/c/'+id,title:'Chat '+id,windowId:1,discarded:id===3}));
- const context={NomiApiDriver,queueMicrotask,GroupBridge,setTimeout,clearTimeout,importScripts(){},chrome:{
+ const context={NomiApiDriver,queueMicrotask,GroupBridge,setTimeout,clearTimeout,importScripts(){},chrome:{action:{onClicked:{addListener(){}}},
   runtime:{onMessage:{addListener:fn=>listener=fn},getURL:()=> 'chrome-extension://bridge/'},
   storage:{session:{get:async()=>({}),set:async()=>{}}},alarms:{create(){},onAlarm:{addListener(){}}},
   scripting:{executeScript:async({target,files})=>{assert.deepEqual(Array.from(files),['content.js']);injected.push(target.tabId);connected.add(target.tabId);}},
