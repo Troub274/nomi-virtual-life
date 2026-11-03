@@ -129,14 +129,14 @@ test('unified Group CLI replies to status/help/pending and errors only in Window
  }
 });
 test('unified Group CLI [bridge send] posts to the selected room without the command tag',()=>{
- const f=setup();f.ack();
+ const f=setup();f.begin();
  f.reply('[bridge send]\nHello, room.');f.advance();
  assert.equal(f.b.command.target,'b');
  assert.equal(f.b.command.action,'say');
  assert.equal(f.b.command.text,'Hello, room.');
 });
 test('unified Group CLI pause/resume acknowledge in Window 1 and block room sends',()=>{
- const f=setup();f.ack();
+ const f=setup();f.begin();
  f.reply('[bridge pause]');f.advance();
  assert.equal(f.b.cliPaused,true);
  assert.equal(f.b.command.target,'a');assert.match(f.ack().text,/paused/i);
