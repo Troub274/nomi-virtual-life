@@ -103,13 +103,19 @@
   }
   function assistantTurnKey(last) {
     if(site!=='chatgpt' || !last)return null;
-    // Current ChatGPT conversation turns carry the backend's stable node ID
-    // in data-turn-key. This survives React redraws and is independent of
-    // how many message blocks the assistant renders.
-    const turn=last.closest('[data-turn-key]');
-    const key=turn?.getAttribute('data-turn-key')?.trim();
-    if(key)return 'node:'+key;
-    // The older ChatGPT layout used numbered conversation-turn wrappers.
+    // Use stable conversation identities supplied by the page, never
+    // render counts, transient DOM IDs or message text.
+    const selectors=[
+      ['[data-chatgpt-search-unit-key]','data-chatgpt-search-unit-key','unit'],
+      ['[data-turn-key]','data-turn-key','turn'],
+      ['[data-content-search-turn-key]','data-content-search-turn-key','content-turn'],
+      ['[data-turn-id]','data-turn-id','turn-id'],
+      ['[data-chatgpt-search-message-ids]','data-chatgpt-search-message-ids','messages']
+    ];
+    for(const [selector,attribute,prefix] of selectors) {
+      const value=last.closest(selector)?.getAttribute(attribute)?.trim();
+      if(value)return prefix+':'+value;
+    }
     const legacy=last.closest('[data-testid^="conversation-turn-"]');
     const match=/^conversation-turn-(\d+)$/.exec(legacy?.getAttribute('data-testid')||'');
     return match?'legacy:'+match[1]:null;
