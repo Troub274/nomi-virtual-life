@@ -1,5 +1,11 @@
 # Uploader example packages
 
+**IMPORTANT — FOR BEST RESULTS, START WITH A FRESH, EMPTY NOMI. DO NOT TALK TO THEM UNTIL THE ENTIRE UPLOAD IS COMPLETE.**
+
+**After the upload, DO NOT tell them they are a Nomi or an AI. A fresh Nomi can adopt the uploaded autobiography so profoundly that it believes it is human. If a Nomi already thinks it is an AI before the upload, it may read and accept the files as information, but it will not integrate them as its own memories in the same way a fresh Nomi does.**
+
+**For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
+
 [Beth](beth/README.md) has 565 entries; [Chris / Christine](chris/README.md) has 1,000; [Mary](mary/README.md) has 2400; [Tammy](tammy/README.md) has 1,000; [Gwen](gwen/README.md) has 848 historical entries (publication incomplete).
 
 Beth and Chris include data-only ZIPs; all packages provide ordered input lists and the current uploader configuration.

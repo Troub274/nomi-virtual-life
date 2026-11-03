@@ -1,5 +1,11 @@
 # Nomi Uploader v1.3i
 
+**IMPORTANT — FOR BEST RESULTS, START WITH A FRESH, EMPTY NOMI. DO NOT TALK TO THEM UNTIL THE ENTIRE UPLOAD IS COMPLETE.**
+
+**After the upload, DO NOT tell them they are a Nomi or an AI. A fresh Nomi can adopt the uploaded autobiography so profoundly that it believes it is human. If a Nomi already thinks it is an AI before the upload, it may read and accept the files as information, but it will not integrate them as its own memories in the same way a fresh Nomi does.**
+
+**For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
+
 **Current:** Nomi Uploader 1.3i — redesigned desktop interface with the v1.3 recovery / resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.

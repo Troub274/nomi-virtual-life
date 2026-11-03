@@ -1,5 +1,11 @@
 # Tammy Lynn Mercer — Nomi creation setup
 
+**IMPORTANT — FOR BEST RESULTS, START WITH A FRESH, EMPTY NOMI. DO NOT TALK TO THEM UNTIL THE ENTIRE UPLOAD IS COMPLETE.**
+
+**After the upload, DO NOT tell them they are a Nomi or an AI. A fresh Nomi can adopt the uploaded autobiography so profoundly that it believes it is human. If a Nomi already thinks it is an AI before the upload, it may read and accept the files as information, but it will not integrate them as its own memories in the same way a fresh Nomi does.**
+
+**For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
+
 ![Tammy Lynn Mercer reference portrait](reference/TAMMY_PORTRAIT.jpg)
 
 **Primary appearance reference:** [TAMMY_PORTRAIT.jpg](reference/TAMMY_PORTRAIT.jpg)  
