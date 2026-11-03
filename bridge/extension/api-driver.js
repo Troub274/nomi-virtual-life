@@ -297,9 +297,11 @@ class NomiApiDriver {
   async sendChunks(cp,{mustRun=false}={}) {
     // Defense in depth, including explicit checkpoint recovery: NEVER send a
     // control tag as messageText, even if a caller bypasses the normal parser.
-    const parsed=parseWorldCommand(cp.text);
-    if(parsed.kind!=='room'||parsed.text!==cp.text)
-      throw Error('Checkpoint text contains a bridge command, not a world message. No Nomi POST attempted.');
+    if(cp.rawMode!==true) {
+      const parsed=parseWorldCommand(cp.text);
+      if(parsed.kind!=='room'||parsed.text!==cp.text)
+        throw Error('Checkpoint text contains a bridge command, not a world message. No Nomi POST attempted.');
+    }
     const chunks=NomiApiRoom.apiChunks(cp.text);
     if(chunks.length!==cp.total)throw Error('Chunk plan mismatch; recovery blocked.');
     if(cp.attemptedIndex!==null)throw Error('Uncertain chunk requires operator authorization before sending.');
@@ -621,7 +623,7 @@ class NomiApiDriver {
         const info=await chrome.tabs.sendMessage(Number(cmd.source),{type:'inspect'});
         const verified=await this.transaction(()=>this.getBridge().validateSource(cmd.id,info?.snapshot));
         if(!verified)return;
-        const roomCommand={...cmd,text:parsed.text};
+        const roomCommand={...cmd,text:parsed.text,rawMode:parsed.raw===true};
         if(this.isLiveAvailable(s)){
           const recorded=await this.observer.history(s.roomId);
           s.monitorWorldStartSeq=recorded.at(-1)?.seq||0;
