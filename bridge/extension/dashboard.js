@@ -49,6 +49,9 @@ function render(state) {
   const group = $('mode').value === 'group';
   const api = $('mode').value === 'api-room';
   const pulse = $('mode').value === 'heartbeat';
+  for (const [id,active] of [['direct-guide',!group&&!api&&!pulse],['group-guide',group],['api-guide',api],['heartbeat-guide',pulse]]) {
+    $(id).hidden = !active;
+  }
   $('heartbeat-options').hidden = !pulse;
   $('heartbeat-text').disabled=state.running;
   $('heartbeat-delay').disabled=state.running;
