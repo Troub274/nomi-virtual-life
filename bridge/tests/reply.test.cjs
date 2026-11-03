@@ -51,9 +51,9 @@ test('new ChatGPT layout reads full reply only when the turn is complete',async(
 test('current ChatGPT DOM provides a stable backend turn identity even without numbered wrapper',async()=>{
  const original=await inspect({completed:true,modern:true,turnNumber:17,hasLegacy:false});
  const redraw=await inspect({completed:true,modern:true,turnNumber:17,hasLegacy:false});
- assert.equal(original.assistantTurnKey,'node:stable-node-17');
+ assert.equal(original.assistantTurnKey,'turn:stable-node-17');
  assert.equal(redraw.assistantTurnKey,original.assistantTurnKey);
- assert.equal((await inspect({completed:true,modern:true,turnNumber:18,hasLegacy:false})).assistantTurnKey,'node:stable-node-18');
+ assert.equal((await inspect({completed:true,modern:true,turnNumber:18,hasLegacy:false})).assistantTurnKey,'turn:stable-node-18');
 });
 test('legacy ChatGPT DOM remains supported by numbered turn wrappers',async()=>{
  const legacy=await inspect({completed:true,turnNumber:9,hasStableKey:false});
