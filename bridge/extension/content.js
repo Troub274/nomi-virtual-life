@@ -101,16 +101,18 @@
     }
     return messages.slice(-50);
   }
-  function assistantTurnNumber(last) {
+  function assistantTurnKey(last) {
     if(site!=='chatgpt' || !last)return null;
-    // ChatGPT identifies the logical conversation turn on its container.
-    // Unlike a message node, the turn number is preserved through React
-    // remounts and does not depend on how many response blocks are rendered.
-    const container=last.closest('[data-testid^="conversation-turn-"]');
-    const match=/^conversation-turn-(\d+)$/.exec(container?.getAttribute('data-testid')||'');
-    if(!match)return null;
-    const number=Number(match[1]);
-    return Number.isSafeInteger(number)?number:null;
+    // Current ChatGPT conversation turns carry the backend's stable node ID
+    // in data-turn-key. This survives React redraws and is independent of
+    // how many message blocks the assistant renders.
+    const turn=last.closest('[data-turn-key]');
+    const key=turn?.getAttribute('data-turn-key')?.trim();
+    if(key)return 'node:'+key;
+    // The older ChatGPT layout used numbered conversation-turn wrappers.
+    const legacy=last.closest('[data-testid^="conversation-turn-"]');
+    const match=/^conversation-turn-(\d+)$/.exec(legacy?.getAttribute('data-testid')||'');
+    return match?'legacy:'+match[1]:null;
   }
   function snapshot() {
     try {
@@ -128,7 +130,7 @@
         ...(isRoom() ? roomSnapshot() : site === 'nomi' ? {liveMessages} : {}),
         site, title: document.title, url: location.href, document: documentId,
         reply: text, replyKey: `${replies.length}|${messageId}|${text}`,
-        assistantTurnNumber: assistantTurnNumber(last),
+        assistantTurnKey: assistantTurnKey(last),
         busy: generating, complete, completion,
         ready: !!config.verified && !!input && (sends.length === 1 || generating || (!read(input) && sends.length === 0)),
         draft: !!read(input), draftText: read(input), error: '',
