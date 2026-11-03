@@ -260,8 +260,14 @@ class NomiApiDriver {
   }
   async journalState(roomId){
     if(!NomiApiRoom.safeNomiId(roomId))throw Error('Choose a valid API room.');
-    const j=await this.observer.load(roomId);
-    return {events:j.events.slice(-10),count:j.events.length,nextSeq:j.nextSeq};
+    const j=await this.observer.load(roomId),archive=await this.observer.archiveIndex(roomId);
+    return {events:j.events.slice(-10),count:j.events.length,
+      archivedCount:archive?.total??j.events.length,nextSeq:j.nextSeq};
+  }
+  async exportJournalPage(roomId,offset=0,limit=100){
+    if(!NomiApiRoom.safeNomiId(roomId))throw Error('Choose a valid API room.');
+    if(!Number.isSafeInteger(Number(offset))||Number(offset)<0)throw Error('Invalid archive offset.');
+    return this.observer.archivePage(roomId,Number(offset),Math.min(100,Math.max(1,Number(limit)||100)));
   }
   async checkpointState(roomId) {
     if(!NomiApiRoom.safeNomiId(roomId))return {checkpoint:null};
@@ -438,8 +444,8 @@ class NomiApiDriver {
       'World event posted successfully to the API room ('+cp.total+' chunk'+
       (cp.total===1?'':'s')+'). No Nomi room response was requested.\n'+
       'Private conversation monitoring continues. This acknowledgement does not consume any live-chat history.\n'+
-      'Choose [listening] to wait for and receive every complete User / Nomi exchange since the previous listen, '+
-      'or issue a new [say room] world event when appropriate.';
+      'Choose [bridge listen] to retrieve the next complete User / Nomi exchange, '+
+      'or issue [bridge send] with a new world event when appropriate.';
   }
   async confirmWorldDelivery(cp,startedFromRecovery=false){
     if(cp.status!=='awaiting_reply')
@@ -475,9 +481,9 @@ class NomiApiDriver {
     const intro=history?'WORLD ENGINE HISTORY page '+history.page+'/'+history.pages:
       kind==='listening'?'LATEST PRIVATE CHAT OBSERVATION':'LAST 10 WORLD/LIVE MESSAGES';
     let message=entries.length?this.observer.format(entries,intro,history?28000:85000):
-      intro+' — No messages at this offset. If the private chat is closed, [say room] produces a Nomi room reply.\n';
+      intro+' — No messages at this offset. If the private chat is closed, [bridge send] produces a Nomi room reply.\n';
     if(history && history.page<history.pages)
-      message+='\n[Earlier retained events available: ask [history '+(history.page+1)+'] to continue.]';
+      message+='\n[Earlier retained events available: ask [bridge history page='+(history.page+1)+'] to continue.]';
     await this.publishObservation(roomId,message);
   }
   async handleWorldControl(cmd,s) {
@@ -509,8 +515,8 @@ class NomiApiDriver {
       if(feedback)await this.publishObservation(s.roomId,
         'WORLD ENGINE COMMAND REJECTED — INTERNAL BRIDGE FEEDBACK, NOT NOMI.\n'+
         parsed.reason+'\nNothing was sent to Nomi. This response is for GPT only.\n'+
-        'Use ONE command on its own line: [listening], [tail], [history], or [say room] followed by world-event text.\n'+
-        'You may explain your intent in prose BEFORE the standalone command; command names mentioned inside sentences are not executable.');
+        'Use ONE command: [bridge listen], [bridge tail], [bridge history], or [bridge send] followed by world-event text.\n'+
+        'Place a Bridge command at the start of the assistant response; command names mentioned inside prose are not executable.');
       return true;
     }
     if(s.protocolFailures)s.protocolFailures=0;
@@ -524,7 +530,7 @@ class NomiApiDriver {
         if(!bridge.claim(id,cmd.id).allowed)throw Error('World command is no longer current.');
         bridge.acknowledge(id,{id:cmd.id});
       });
-      await this.publishObservation(s.roomId,'[say chat] is disabled. The World Engine writes to the API room only. Use [say room] to describe the world event.');
+      await this.publishObservation(s.roomId,'Private-chat sending is disabled. The output channel is the Nomi API room. Use [bridge send] to describe the world event.');
       return true;
     }
     await this.transaction(()=>{
@@ -545,7 +551,7 @@ class NomiApiDriver {
       if(exchange.events.length){
         const report=this.observer.format(exchange.events,
           'EVERY COMPLETE USER / NOMI MESSAGE SINCE PREVIOUS LISTEN',28000)+
-          (exchange.truncated?'\n[More completed messages are queued; send [listening] to retrieve the next batch.]':'');
+          (exchange.truncated?'\n[More completed messages are queued; send [bridge listen] to retrieve the next batch.]':'');
         await this.publishObservation(s.roomId,report,exchange.cursor);
       }else {
         // [wait] remains an indefinite silent subscription. [listening] is
@@ -607,7 +613,7 @@ class NomiApiDriver {
         const parsed=parseWorldCommand(cmd.text);
         if(s.protocolFailures)s.protocolFailures=0;
         if(parsed.kind!=='room'||!parsed.text.trim())
-          throw Error('Use [say room] followed by a world message, or [listening], [tail], [history], [wait].');
+          throw Error('Use [bridge send] followed by a world message, or [bridge listen], [bridge tail], [bridge history], [bridge wait].');
         s.listenRequestPending=false;
         const info=await chrome.tabs.sendMessage(Number(cmd.source),{type:'inspect'});
         const verified=await this.transaction(()=>this.getBridge().validateSource(cmd.id,info?.snapshot));
@@ -668,7 +674,7 @@ class NomiApiDriver {
         try {
           const observation=this.observer.format(exchange.events,
             'EVERY COMPLETE USER / NOMI MESSAGE SINCE PREVIOUS LISTEN',28000)+
-            (exchange.truncated?'\n[More completed messages are queued; send [listening] for the next batch.]':'');
+            (exchange.truncated?'\n[More completed messages are queued; send [bridge listen] for the next batch.]':'');
           s.listenDeadline=0;
           if(cp?.status==='awaiting_reply'){
             await this.checkpoint.replyCommitted(cp,observation);
@@ -698,8 +704,8 @@ class NomiApiDriver {
             (unpaired.length?'There are '+unpaired.length+' unacknowledged live message(s); the current incomplete exchange is still buffered.\n':'No newer private-chat messages have been observed.\n')+
             'No Nomi API request was made by this check, and no private-chat messages were discarded.\n'+
             (roomOnly
-              ? 'Send [say room] with a world event to receive a Nomi API-room reply. Live monitoring resumes automatically when its tab and fresh conversation activity return.'
-              : 'You may send [listening] again for the next completed exchange or [say room] to advance the world.'));
+              ? 'Send [bridge send] with a world event to receive a Nomi API-room reply. Live monitoring resumes automatically when its tab and fresh conversation activity return.'
+              : 'You may send [bridge listen] again for the next exchange or [bridge send] to advance the world.'));
           s.listenDeadline=0;
         } catch(error){await this.fail('Listen check halted: '+error.message);}
         finally{this.inFlight=false;queueMicrotask(()=>void this.pump());}
