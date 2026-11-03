@@ -542,44 +542,56 @@ class Bridge {
       }
       return controller.replyKey!==this.simpleControllerSeen;
     };
-    if(this.useAiCli && !controller.busy && controller.complete!==false && controller.reply &&
-       this.clock()-controller.changed>=this.stableSeconds && controllerFresh()) {
-      const control=globalThis.AIBridgeCLI?.parse(controller.reply);
-      if(control?.command==='pause' || control?.command==='resume') {
+    // Parse controller actions independently of the peer reply state. Control
+    // commands never require a conversation reply from Window 2.
+    if(this.useAiCli && !controller.busy && controller.complete!==false &&
+       controller.reply && this.clock()-controller.changed>=this.stableSeconds &&
+       controllerFresh() && /^\s*\[bridge(?:\s|\])/i.test(controller.reply)){
+      let parsed,error='';
+      try{parsed=globalThis.AIBridgeCLI?.parse(controller.reply);}
+      catch(e){error=e.message;}
+      if(!parsed && !error)error='Use a single complete [bridge ...] command. Try [bridge help].';
+      const verb=parsed?.command||'invalid';
+      if(verb!=='send' || this.simplePeerAwait || this.cliPaused || error){
         this.consumeSimpleControllerTurn(controller);
-        this.cliPaused=control.command==='pause';
-        this.reason=this.cliPaused?'Bridge paused by Tab 1. [bridge resume] is available.':
-          'Bridge resumed by Tab 1.';
-        this.note('Tab 1 '+control.command+' accepted without a new conversation send.');
-        return;
-      }
-    }
-    // Read-only controls are valid while waiting for Window 2, too.
-    if(this.useAiCli && !this.cliPaused && this.simplePeerAwait &&
-       !controller.busy && controller.complete!==false && controller.reply &&
-       this.clock()-controller.changed>=this.stableSeconds && controllerFresh()){
-      let control;
-      try{control=globalThis.AIBridgeCLI?.parse(controller.reply);}
-      catch(error){
-        this.consumeSimpleControllerTurn(controller);
-        this.reason='Bridge command rejected: '+error.message;
-        return;
-      }
-      if(control && ['status','help','pending','review','listen','tail','history'].includes(control.command)){
-        this.consumeSimpleControllerTurn(controller);
+        let message='';
+        if(error)message='[AI Bridge command rejected — Window 1 only]\n'+error+
+          '\nNo message was sent to the output channel.';
+        else if(verb==='send')message='[AI Bridge send rejected — Window 1 only]\n'+
+          (this.cliPaused?'Bridge is paused. Use [bridge resume].':
+            'The previous send still awaits a peer reply. No second message was sent.');
+        else if(verb==='pause'){
+          this.cliPaused=true;
+          message='[AI Bridge paused — Window 1 only]\nForwarding is suspended. '+
+            'Use [bridge resume] to continue. Previously submitted requests are not resent.';
+        }else if(verb==='resume'){
+          if(this.cliShutdown)message='[AI Bridge resume rejected — Window 1 only]\n'+
+            'The session was shut down; only the operator can restart it.';
+          else{this.cliPaused=false;
+            message='[AI Bridge resumed — Window 1 only]\nForwarding is enabled. '+
+              'The selected output channel is unchanged.';}
+        }else if(verb==='shutdown'){
+          this.lifecycleStopRequested=true;
+          message='[AI Bridge shutdown acknowledged — Window 1 only]\n'+
+            'The session is ending. No further conversation sends will be started. '+
+            'A request already submitted may still finish; nothing is being resent.';
+        }else message=this.controllerReport(verb,parsed?.args||{});
         this.command={id:crypto.randomUUID(),source:controllerId,target:controllerId,
-          text:this.controllerReport(control.command,control.args),
-          url:controller.url,document:controller.document,sourceReply:controller.reply,
-          sourceKey:controller.replyKey,sourceUrl:controller.url,
-          sourceDocument:controller.document,baseline:controller.replyKey,
-          claimed:false,created:this.clock(),simpleControl:true};
+          text:message,url:controller.url,document:controller.document,
+          sourceReply:controller.reply,sourceKey:controller.replyKey,
+          sourceUrl:controller.url,sourceDocument:controller.document,
+          baseline:controller.replyKey,claimed:false,created:this.clock(),
+          simpleControl:true,simpleControlKind:verb,
+          simpleControlFinal:verb==='shutdown'};
         this.phase='send';
-        this.note('Queued private '+control.command+' result while waiting for peer.');
+        this.note('Queued private '+verb+' response for Window 1 only.');
         return;
       }
+      // A valid [bridge send] with no pending peer belongs to the ordinary
+      // source->peer send transaction below, which consumes it exactly once.
     }
     if(this.cliPaused) {
-      this.reason='Bridge paused. Tab 1 may issue [bridge resume].';
+      this.reason='Bridge paused. Window 1 can issue [bridge resume] or [bridge status].';
       return;
     }
     const id=this.simplePeerAwait?peerId:controllerId;
@@ -591,43 +603,29 @@ class Bridge {
       if(tab.replyKey===this.simplePeerSeen)return;
     } else if(!controllerFresh())return;
 
-    // Only the controller parses bridge commands. Tab 2 speaks naturally.
-    let message=tab.reply,shutdown=false;
+    // A valid send reaches this branch only when the previous peer exchange
+    // has completed. Administrative commands were handled above.
+    let message=tab.reply;
     if(!this.simplePeerAwait && this.useAiCli) {
-      const parsed=globalThis.AIBridgeCLI?.parse(tab.reply);
-      if(!parsed) {
+      let parsed;
+      try{parsed=globalThis.AIBridgeCLI?.parse(tab.reply);}
+      catch(error){
         this.consumeSimpleControllerTurn(tab);
-        this.reason='Tab 1 reply is private. Waiting for [bridge send].';
+        this.reason='Bridge command rejected: '+error.message;
         return;
       }
-      if(parsed.command==='send') {
-        const recipient=(parsed.args.to||'').toLowerCase();
-        if(recipient && ![dest.site.toLowerCase(),(dest.name||'').toLowerCase(),'nomi','chatgpt','sera','seraphina'].includes(recipient)) {
-          this.consumeSimpleControllerTurn(tab);
-          this.reason='Recipient does not match selected peer.';
-          return;
-        }
-        message=parsed.message;
-      } else if(parsed.command==='shutdown') {
-        message='[AI Bridge shutdown] Tab 1 ended this session. No further messages will be forwarded.';
-        shutdown=true;
-      } else {
+      if(!parsed || parsed.command!=='send') {
         this.consumeSimpleControllerTurn(tab);
-        if(['status','help','pending','review','listen','tail','history'].includes(parsed.command)){
-          const report=this.controllerReport(parsed.command,parsed.args);
-          this.command={id:crypto.randomUUID(),source:controllerId,target:controllerId,
-            text:report,url:controller.url,document:controller.document,
-            sourceReply:controller.reply,sourceKey:controller.replyKey,
-            sourceUrl:controller.url,sourceDocument:controller.document,
-            baseline:controller.replyKey,claimed:false,created:this.clock(),
-            simpleControl:true};
-          this.phase='send';
-          this.note('Queued private '+parsed.command+' result to Window 1. No peer send.');
-          return;
-        }
-        this.reason='Tab 1 control received: '+parsed.command+'. This command is not implemented.';
+        this.reason='Window 1 reply remains private. Use [bridge send] to contact the selected peer.';
         return;
       }
+      const recipient=(parsed.args.to||'').toLowerCase();
+      if(recipient && ![dest.site.toLowerCase(),(dest.name||'').toLowerCase(),'nomi','chatgpt','sera','seraphina'].includes(recipient)) {
+        this.consumeSimpleControllerTurn(tab);
+        this.reason='Recipient does not match selected output channel.';
+        return;
+      }
+      message=parsed.message;
     }
     if(!dest.ready || dest.busy || dest.complete===false || dest.draft) {
       this.reason='Waiting for '+dest.site+' to be idle with an empty editor. Nothing has been typed.';
@@ -646,7 +644,7 @@ class Bridge {
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
       sourceDocument:tab.document,baseline:dest.replyKey,created:this.clock(),
-      claimed:false,simpleSend:true,simpleShutdown:shutdown,
+      claimed:false,simpleSend:true,simpleShutdown:false,
       truncatedToNomi,originalByteLength};
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
     this.note('Prepared send transaction '+this.command.id+
@@ -1042,9 +1040,16 @@ class Bridge {
         this.stop('Window 1 '+ 'command reply uncertain: '+data.error+
           '. Inspect the controller conversation; nothing was sent to the peer.');
       }else{
-        this.command=null;this.phase='reply';this.startedWait=this.clock();
+        this.command=null;
         this.cliTransactions=(this.cliTransactions||0)+1;
-        this.reason='Window 1 received private bridge command result. Peer state unchanged.';
+        if(cmd.simpleControlFinal){
+          this.running=false;this.phase='shutdown';this.cliShutdown=true;this.cliPaused=true;
+          this.reason='Bridge shutdown confirmed to Window 1. No further sends.';
+        }else{
+          this.phase='reply';this.startedWait=this.clock();
+          this.reason='Window 1 received private '+cmd.simpleControlKind+
+            ' result. Peer state was not changed by the notification.';
+        }
       }
       if(this.pendingControllerNotice && !this.command)this.flushControllerNotice();
       return {};
