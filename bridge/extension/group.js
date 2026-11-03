@@ -51,6 +51,7 @@ class GroupBridge extends BaseBridge {
     if (this.running) throw Error('Stop before changing modes or tabs.');
     if (this.phase === 'uncertain') throw Error('Check the chats, then Reset after an uncertain action.');
     const pair = data.tabs || [];
+    this.useAiCli=typeof data.useAiCli==='boolean'?data.useAiCli:true;
     if (mode !== 'group') {
       if (pair.some(id => this.tabs[id]?.room)) throw Error('Select Group room mode for a Nomi group chat.');
       if (this.mode === 'group') super.reset();
@@ -63,7 +64,10 @@ class GroupBridge extends BaseBridge {
     }
     if (this.mode !== 'group' || this.phase === 'idle' || JSON.stringify(pair) !== JSON.stringify(this.pair)) {
       this.pair = pair; this.phase = 'listen'; this.command = null; this.turns = 0;
-      this.group = {seen: [], deliveredState: '', internal: GROUP_HELP, forceUpdate: true, baseline: null, internalReply: false};
+      this.group = {seen: [], deliveredState: '', internal: this.useAiCli
+        ? '[AI Bridge started — Window 1]\n'+this.controllerHelp()
+        : '[AI Bridge started — Window 1 notification]\nAI-CLI is OFF: every completed reply will be posted to the selected Nomi group room as raw speech.',
+        forceUpdate: true, baseline: null, internalReply: false};
     }
     this.mode = 'group'; this.stableSeconds = Math.max(3, Math.min(60, Number(data.settle) || 8));
     this.running = true; this.startedWait = this.clock();
@@ -107,7 +111,8 @@ class GroupBridge extends BaseBridge {
         g.internalReply = false; g.baseline = gpt.replyKey; this.phase = 'listen';
         this.log('Internal acknowledgment consumed; nothing sent to the room.'); return;
       }
-      const batch = parseGroupBatch(gpt.reply);
+      const batch = this.useAiCli ? parseGroupBatch(gpt.reply)
+        : {commands:chunkGroupText(gpt.reply).map(text=>({action:'say',text}))};
       const cmd = batch.error ? batch : batch.commands[0];
       if (cmd.error || cmd.action === 'help') {
         g.internal = cmd.error ? `INTERNAL BRIDGE NOTICE: ${cmd.error}\nReply [listening].` : GROUP_HELP;
@@ -186,7 +191,7 @@ class GroupBridge extends BaseBridge {
     if (data.error) {this.phase = 'uncertain'; this.stop('Room action not confirmed: ' + data.error + '. Check both tabs, then Reset.'); this.command = null; return {};}
     const g = this.group;
     if (cmd.packet) {
-      g.baseline = cmd.baseline; g.internalReply = !!cmd.internal;
+      g.baseline = cmd.baseline; g.internalReply = !!cmd.internal && this.useAiCli;
       if (cmd.internal) g.internal = null;
       else {g.seen = [...new Set(g.seen.concat(cmd.keys))]; g.deliveredState = cmd.stateKey; g.forceUpdate = false;}
       this.phase = 'gpt'; this.startedWait = this.clock();
