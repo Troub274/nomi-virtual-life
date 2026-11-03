@@ -135,6 +135,8 @@ class Bridge {
     if (this.running) throw Error('Already running. Stop before changing tabs.');
     if (this.phase === 'uncertain') throw Error('Delivery was uncertain. Check both chats, then Reset before starting again.');
     const pair = data.tabs || [data.chatgpt, data.nomi];
+    this.useAiCli=typeof data.useAiCli==='boolean'?data.useAiCli:this.tabs[pair[0]]?.site!=='nomi';
+    this.lifecycleStopRequested=false;
     if (!Array.isArray(pair) || pair.length !== 2 || !pair[0] || !pair[1] || pair[0] === pair[1]) throw Error('Select two different chat tabs.');
     pair.forEach(id => {
       const tab = this.tabs[id];
@@ -174,14 +176,16 @@ class Bridge {
       this.reason='Sending controller startup instructions to Tab 1.';
       const controller=this.tabs[pair[0]];
       this.command={id:crypto.randomUUID(),source:pair[0],target:pair[0],
-        text:'[AI Bridge started — Tab 1 controller]\n'+
-          'You control this bridge; Tab 2 is conversational only.\n'+
+        text:this.useAiCli?('[AI Bridge started — Window 1 controller]\n'+
+          'You control this bridge; Window 2 is conversational only.\n'+
           '[bridge send] Your message to Tab 2 (or put message on next line).\n'+
           '[bridge shutdown] End the session.\n'+
           '[bridge pause] Pause sends.\n'+
           '[bridge resume] Resume sends.\n'+
           'Normal replies stay private. Only one exchange runs at a time.\n'+
-          'Messages entering Nomi are limited to 750 UTF-8 bytes; truncation is reported to you in Nomi’s next reply.',
+          'Messages entering Nomi are limited to 750 UTF-8 bytes; truncation is reported to you in Nomi’s next reply.\n\n'+this.controllerHelp()):
+          '[AI Bridge started — Window 1 notification]\n'+
+          'AI-CLI is OFF. Your next completed reply will be forwarded as raw conversation text to the selected output channel. No commands are required.',
         url:controller.url,document:controller.document,
         sourceReply:controller.reply,sourceKey:controller.replyKey,
         sourceUrl:controller.url,sourceDocument:controller.document,
@@ -201,7 +205,7 @@ class Bridge {
     if (this.mode !== 'api-room' && this.mode !== 'heartbeat') {
       this.queuePairNotice('start',
         '[Bridge started; running]\n' +
-        (globalThis.AIBridgeCLI?.HELP || '[bridge help]') );
+        (this.useAiCli ? this.controllerHelp() : 'AI-CLI is OFF: every completed reply is forwarded raw.'));
     }
     this.tick();
   }
@@ -323,7 +327,7 @@ class Bridge {
     }
   }
   capturePendingCli(id) {
-    if (!this.running || !this.pair?.includes(id) || !this.command ||
+    if (!this.running || !this.useAiCli || !this.pair?.includes(id) || !this.command ||
         this.phase !== 'send') return;
     const tab=this.tabs[id];
     if (!tab?.reply || tab.busy || tab.complete===false ||
@@ -370,7 +374,7 @@ class Bridge {
   }
   dispatchPeerCli(id) {
     // CLI inspection is independent of conversational turn ownership.
-    if (!this.running || !this.pair?.includes(id) || id===this.source ||
+    if (!this.running || !this.useAiCli || !this.pair?.includes(id) || id===this.source ||
         this.phase==='send' || this.phase==='uncertain' || this.pairNotice) return;
     const tab=this.tabs[id], now=this.clock();
     if (!tab || tab.busy || tab.complete===false ||
@@ -479,7 +483,7 @@ class Bridge {
       }
       return controller.replyKey!==this.simpleControllerSeen;
     };
-    if(!controller.busy && controller.complete!==false && controller.reply &&
+    if(this.useAiCli && !controller.busy && controller.complete!==false && controller.reply &&
        this.clock()-controller.changed>=this.stableSeconds && controllerFresh()) {
       const control=globalThis.AIBridgeCLI?.parse(controller.reply);
       if(control?.command==='pause' || control?.command==='resume') {
@@ -506,7 +510,7 @@ class Bridge {
 
     // Only the controller parses bridge commands. Tab 2 speaks naturally.
     let message=tab.reply,shutdown=false;
-    if(!this.simplePeerAwait) {
+    if(!this.simplePeerAwait && this.useAiCli) {
       const parsed=globalThis.AIBridgeCLI?.parse(tab.reply);
       if(!parsed) {
         this.consumeSimpleControllerTurn(tab);
@@ -692,7 +696,7 @@ class Bridge {
     }
     // Idempotency across replyKey changes while ChatGPT re-renders a command.
     // Scope to the source tab, document and exact completed CLI text.
-    if (isBridgeCommandText(source.reply) &&
+    if (this.useAiCli && isBridgeCommandText(source.reply) &&
         !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       const fingerprint = JSON.stringify([this.source, source.url, source.document, source.reply.trim()]);
       if (this.lastCliFingerprint === fingerprint) {
@@ -706,7 +710,7 @@ class Bridge {
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
-    if (isBridgeCommandText(source.reply) &&
+    if (this.useAiCli && isBridgeCommandText(source.reply) &&
         !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       // Either human-selected participant can issue any supported CLI command.
       // The bridge still validates syntax, session state and delivery context.
@@ -1077,7 +1081,7 @@ class Bridge {
         this.reason=detail+(deferred?' Recovery required for superseded commands.':'');
       }
     }
-    return {running: this.running, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, cliControllerTab: this.cliControllerTab || this.pair?.[0] || null, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
+    return {running: this.running, useAiCli:this.useAiCli!==false, paused: !!this.cliPaused, shutdown: !!this.cliShutdown, cliControllerTab: this.cliControllerTab || this.pair?.[0] || null, phase: this.phase, turns: this.turns, cliTransactions: this.cliTransactions || 0, reason: this.reason, pair: this.pair,
       tabRetry:this.tabRetry?{tabId:this.tabRetry.id,expectedUrl:this.tabRetry.expectedUrl,
         elapsedSeconds:Math.max(0,Math.floor(this.clock()-this.tabRetry.startedAt)),
         reconnectChecks:this.tabRetry.attempts}:null,
