@@ -227,6 +227,7 @@ class Bridge {
       this.simpleConsumedControllerTurns=baselineTurn?[baselineTurn]:[];
       this.simpleControllerKeyType=baselineTurn?baselineTurn.split(':',1)[0]:null;
       this.simpleTruncationWarning=null;
+      this.simplePeerWaitSince=null;this.simplePeerTimeoutReported=false;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
@@ -594,6 +595,30 @@ class Bridge {
     if(this.cliPaused) {
       this.reason='Bridge paused. Window 1 can issue [bridge resume] or [bridge status].';
       return;
+    }
+    // An unanswered peer turn produces ONE explicit timeout observation.
+    // Do not resend the message or abandon the original peer reply.
+    if(this.simplePeerAwait && !this.simplePeerTimeoutReported &&
+       Number.isFinite(this.simplePeerWaitSince) &&
+       this.clock()-this.simplePeerWaitSince>=180) {
+      if(controller.ready && !controller.busy && controller.complete!==false &&
+         !controller.draft && this.clock()-controller.seen<70) {
+        this.simplePeerTimeoutReported=true;
+        this.command={id:crypto.randomUUID(),source:controllerId,target:controllerId,
+          text:'[AI Bridge peer timeout — Window 1 only]\\n'+
+            'No new reply from the selected peer after 180 seconds. No message was resent.\\n'+
+            'The original peer reply is still pending and will be forwarded once received. '+
+            'Use [bridge status] or [bridge pending] to inspect.',
+          url:controller.url,document:controller.document,
+          sourceReply:controller.reply,sourceKey:controller.replyKey,
+          sourceUrl:controller.url,sourceDocument:controller.document,
+          baseline:controller.replyKey,claimed:false,created:this.clock(),
+          simpleControl:true,simpleControlKind:'peer-timeout'};
+        this.phase='send';
+        this.note('Peer reply timeout reported to Window 1 without resending.');
+        return;
+      }
+      this.reason='Peer reply overdue, but Window 1 is unavailable for a timeout notice.';
     }
     const id=this.simplePeerAwait?peerId:controllerId;
     const tab=this.tabs[id],dest=this.tabs[id===controllerId?peerId:controllerId];
@@ -1103,7 +1128,9 @@ class Bridge {
           this.simpleControllerSeen=cmd.sourceKey;
           this.simplePeerSeen=cmd.baseline;
           this.simplePeerAwait=!cmd.simpleShutdown;
+          this.simplePeerWaitSince=this.clock();this.simplePeerTimeoutReported=false;
         } else {
+          this.simplePeerWaitSince=null;this.simplePeerTimeoutReported=false;
           this.simplePeerSeen=cmd.sourceKey;
           this.simpleControllerSeen=cmd.baseline;
           this.simplePeerAwait=false;
