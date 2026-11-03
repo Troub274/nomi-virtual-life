@@ -260,6 +260,9 @@
           const liveInput = one(config.input);
           const liveButton = one(config.send);
           if (location.href !== command.url) throw Error('Chat changed before submission');
+          if (command.groupCommand && command.action === 'say' &&
+              snapshot().roomKey !== command.roomKey)
+            throw Error('Room changed before submission; no message sent');
           if (!liveInput || normalize(read(liveInput)) !== normalize(command.text)) {
             await sleep(500);
             continue;
