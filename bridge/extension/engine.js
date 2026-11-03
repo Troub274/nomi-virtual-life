@@ -31,6 +31,13 @@ class Bridge {
       this.reason = 'Updated to one message per turn. Reset before continuing.';
     }
     delete this.pendingNomi;
+    // An in-flight 1.0.42 Direct session has no logical GPT turn cursor.
+    // It cannot be safely resumed under the corrected delivery protocol.
+    if(saved.running && saved.simpleMode && (saved.mode||'direct')==='direct' &&
+       !Number.isSafeInteger(saved.simpleControllerTurn)) {
+      this.running=false;this.phase='uncertain';this.command=null;
+      this.reason='Direct-mode turn tracking upgraded. Inspect both conversations, then Stop/Reset and Play. No previous send will be replayed.';
+    }
   }
   log(text) {
     this.reason = text;
@@ -91,6 +98,7 @@ class Bridge {
       this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
       this.simpleControllerTurn=this.tabs[pair[0]]?.site==='chatgpt'
         ? this.tabs[pair[0]].assistantTurnNumber : null;
+      this.simpleTruncationWarning=null;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
@@ -161,7 +169,7 @@ class Bridge {
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
-    this.simpleControllerTurn=null;this.simpleControllerSeen=null;this.simplePeerSeen=null;
+    this.simpleControllerTurn=null;this.simpleControllerSeen=null;this.simplePeerSeen=null;this.simpleTruncationWarning=null;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
