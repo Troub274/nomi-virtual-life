@@ -223,6 +223,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         if (apiDriver.inFlight) throw Error('A Nomi API operation is still in progress.');
         if (data.mode === 'api-room') await apiDriver.prepareStart(data);
         bridge.start(data);
+        if(data.mode==='api-room')bridge.queueControllerNotice('start',
+          '[AI Bridge started — Window 1 notification]\n'+
+          (bridge.useAiCli?bridge.controllerHelp():
+            'AI-CLI is OFF. Each completed Window 1 response will be sent verbatim to the selected Nomi API room. No commands are required.'));
         if(data.mode==='api-room' && data.monitorLive && data.monitorTab){
           try {
             const info=await chrome.tabs.sendMessage(Number(data.monitorTab),{type:'inspect'});
@@ -252,7 +256,15 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
         return apiDriver.updateRoomNote(data.roomId,data.note,data.expectedNote);
       case '/api/api-delete-room':
         return apiDriver.deleteRoom(data.roomId,data.nomiUuid,data.confirmName);
-      case '/api/stop': bridge.stop(); return bridge.state();
+      case '/api/pause':
+        if(!bridge.running)throw Error('Bridge is not running.');
+        bridge.requestPause();return bridge.state();
+      case '/api/resume':
+        if(!bridge.running)throw Error('Bridge is not running.');
+        bridge.requestResume();return bridge.state();
+      case '/api/stop':
+        if(bridge.running)bridge.requestStop('Stopped from dashboard.');
+        return bridge.state();
       case '/api/reset':
         if (apiDriver.inFlight) throw Error('Nomi API request is still in progress. Stop and inspect before resetting.');
         bridge.reset();
