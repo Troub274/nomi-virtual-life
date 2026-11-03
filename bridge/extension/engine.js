@@ -50,7 +50,9 @@ class Bridge {
   }
   stop(reason = 'Stopped. Press Play to resume.') {this.running = false; this.log(reason);}
   controllerHelp(topic=''){
-    return globalThis.AIBridgeCLI?.helpFor?.(this.mode||'direct',topic,
+    const cli=globalThis.AIBridgeCLI ||
+      (typeof module!=='undefined' ? require('./bridge-cli.js') : null);
+    return cli?.helpFor?.(this.mode||'direct',topic,
       this.tabs[this.pair?.[0]]?.site||'chatgpt') ||
       '[AI Bridge] Control help unavailable. Use the dashboard.';
   }
