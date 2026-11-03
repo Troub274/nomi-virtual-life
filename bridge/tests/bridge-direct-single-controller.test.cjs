@@ -118,3 +118,23 @@ test('old consumed turn cannot be replayed after later turns are accepted',()=>{
  assert.equal(b.command,null);
  assert.deepEqual(b.simpleConsumedControllerTurns,['node:1','node:A','node:B']);
 });
+
+for(const [controller,peer] of [['chatgpt','chatgpt'],['nomi','chatgpt'],['nomi','nomi']]) {
+ test(controller+' to '+peer+' direct-mode startup and round trip',()=>{
+  const b=new HeartbeatBridge(()=>now);
+  b.tabs={g:tab(controller,'Existing controller reply','1|g|existing','g'),
+    n:tab(peer,'Existing peer reply','1|n|existing','n')};
+  b.start({mode:'direct',tabs:['g','n'],settle:1});
+  const startup=deliver(b);
+  assert.equal(startup.target,'g');
+  observe(b,'g',tab(controller,'[bridge send] HELLO','2|g|new','g'));
+  const outbound=deliver(b);
+  assert.equal(outbound.target,'n');
+  assert.equal(outbound.text,'HELLO');
+  observe(b,'n',tab(peer,'PEER-REPLY','2|n|new','n'));
+  const incoming=deliver(b);
+  assert.equal(incoming.target,'g');
+  assert.equal(incoming.text,'PEER-REPLY');
+  assert.equal(b.turns,2);
+ });
+}
