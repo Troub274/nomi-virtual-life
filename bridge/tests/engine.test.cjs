@@ -4,6 +4,9 @@ const {Bridge} = require('../extension/engine.js');
 function fixture() {
   let time = 100;
   const bridge = new Bridge(() => time);
+  // These are the original automatic-alternation engine fixtures. Direct
+  // single-controller behavior is covered by bridge-direct-single-controller.test.cjs.
+  bridge.mode = 'legacy';
   const snapshots = Object.fromEntries(['a','b'].map((id,i) => [id, {site:i?'nomi':'chatgpt', reply:'opening '+id, replyKey:'initial '+id, ready:true,busy:false,draft:false,url:'https://example/'+id,document:id}]));
   const beat = (id, changes={}) => {Object.assign(snapshots[id],changes); return bridge.heartbeat(id,snapshots[id]);};
   const advance = (seconds=9) => {time+=seconds; beat('a');beat('b');};
