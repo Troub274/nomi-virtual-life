@@ -3,10 +3,10 @@ const {test} = require('node:test');
 globalThis.AIBridgeCLI = require('../extension/bridge-cli.js');
 if (!globalThis.crypto) globalThis.crypto = require('node:crypto').webcrypto;
 const {Bridge} = require('../extension/engine.js');
-test('pending after internal status is executed rather than discarded', () => {
+test('legacy controller: pending after internal status is executed rather than discarded', () => {
   let t = 1000;
   const b = new Bridge(() => t);
-  b.mode = 'direct'; b.running = true; b.pair = ['g','n']; b.source = 'g';
+  b.mode = 'legacy'; b.running = true; b.pair = ['g','n']; b.source = 'g';
   b.phase = 'reply'; b.baseline = 'status-result'; b.stableSeconds = 3; b.startedWait = t;
   b.internalResultTab = 'g'; b.internalResultBaseline = 'prior-command';
   b.tabs = {
