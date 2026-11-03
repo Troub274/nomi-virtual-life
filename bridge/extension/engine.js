@@ -135,7 +135,7 @@ class Bridge {
     if (this.running) throw Error('Already running. Stop before changing tabs.');
     if (this.phase === 'uncertain') throw Error('Delivery was uncertain. Check both chats, then Reset before starting again.');
     const pair = data.tabs || [data.chatgpt, data.nomi];
-    this.useAiCli=typeof data.useAiCli==='boolean'?data.useAiCli:this.tabs[pair[0]]?.site!=='nomi';
+    this.useAiCli=data.useAiCli!==false;
     this.lifecycleStopRequested=false;
     if (!Array.isArray(pair) || pair.length !== 2 || !pair[0] || !pair[1] || pair[0] === pair[1]) throw Error('Select two different chat tabs.');
     pair.forEach(id => {
