@@ -107,7 +107,7 @@
     // Unlike a message node, the turn number is preserved through React
     // remounts and does not depend on how many response blocks are rendered.
     const container=last.closest('[data-testid^="conversation-turn-"]');
-    const match=/^conversation-turn-(\\d+)$/.exec(container?.getAttribute('data-testid')||'');
+    const match=/^conversation-turn-(\d+)$/.exec(container?.getAttribute('data-testid')||'');
     if(!match)return null;
     const number=Number(match[1]);
     return Number.isSafeInteger(number)?number:null;
