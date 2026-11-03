@@ -1,4 +1,4 @@
-const WORLD_OBSERVER_BUILD = 'prototype-cli-hotfix';
+const WORLD_OBSERVER_BUILD = 'unified-dispatcher-repair';
 const versionLabel = document.getElementById('build-version');
 const displayVersion = document.getElementById('display-version');
 if (displayVersion) displayVersion.textContent = chrome.runtime.getManifest().version;
