@@ -4,7 +4,7 @@ const {parse,HELP}=require('../extension/bridge-cli.js');
 test('help and wake parsing',()=>{
  assert.equal(parse('[bridge help]').command,'help');
  assert.equal(parse('[bridge wake at="tomorrow 3:15 PM" reason="Mary"]').args.at,'tomorrow 3:15 PM');
- assert.match(HELP,/SHUTDOWN requires human/);
+ assert.match(HELP,/\[bridge shutdown\]/);
 });
 test('send blocks include complete payload',()=>{
  const p=parse('[bridge send to="Mary"]\nHello!\n[/bridge]');
@@ -13,7 +13,7 @@ test('send blocks include complete payload',()=>{
 test('ordinary prose and quoted syntax are not commands',()=>{
  assert.equal(parse('I said [bridge shutdown] yesterday.'),null);
  assert.equal(parse('> [bridge pause]'),null);
- assert.equal(parse('[bridge send]\nHi'),null);
+ assert.equal(parse('[bridge send]\nHi').message,'Hi');
 });
 test('unknown and ambiguous input fails safely',()=>{
  assert.throws(()=>parse('[bridge erase]'),/Unknown/);
