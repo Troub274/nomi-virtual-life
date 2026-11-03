@@ -1,6 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 globalThis.crypto ||= require('node:crypto').webcrypto;
+globalThis.AIBridgeCLI=require('../extension/bridge-cli.js');
 const {GroupBridge}=require('../extension/group.js');
 const utils=require('../extension/api-room.js');
 globalThis.NomiApiRoom=utils;
@@ -38,12 +39,14 @@ function harness(reply='This is a World Engine turn. '+('🌲 '.repeat(750)), op
     pendingReply:'none',sequence:0};
   b.start({mode:'api-room',tabs:[GPT_ID,virtual],first:'first',settle:8,useAiCli:options.useAiCli!==false});
   seconds+=9;b.heartbeat(GPT_ID,source);b.heartbeat(virtual,destination);
-  assert.equal(b.command?.text,reply);
+  if(options.expectLocal)assert.equal(b.command?.target,GPT_ID);
+  else assert.equal(b.command?.text,reply);
   const cp=new ApiRoomCheckpoint(storage);
   const driver=new NomiApiDriver(()=>b,async operation=>operation(),cp);
   driver.delay=async()=>{};
   const settle=async()=>{for(let i=0;i<30;i++)await new Promise(resolve=>setImmediate(resolve));};
-  return {b,driver,storage,cp,source,reply,settle,stop:()=>b.stop()};
+  const advance=(n=9)=>{seconds+=n;b.heartbeat(GPT_ID,{...source});b.heartbeat(virtual,{...destination});};
+  return {b,driver,storage,cp,source,destination,reply,settle,advance,stop:()=>b.stop()};
 }
 test('API room chunking is lossless in 800 UTF-8 byte POSTs with no total character cap',()=>{
   for(const str of ['x'.repeat(100000),'😀'.repeat(2000),
@@ -1363,3 +1366,43 @@ test('unified room control parser distinguishes sending and listening',()=>{
  assert.equal(parseWorldCommand('[bridge tail]').kind,'tail');
  assert.equal(parseWorldCommand('[bridge send]\n[bridge tail]').kind,'invalid');
 });
+
+for(const [command,matcher] of [
+ ['[bridge status]',/AI Bridge status/],
+ ['[bridge help topic="commands"]',/ONE COMMAND PER REPLY/],
+ ['[bridge pending]',/AI Bridge pending/],
+ ['[bridge bogus]',/Unknown bridge command/]
+]){
+ test('API room local '+command+' returns to GPT, never to Nomi API',()=>{
+  const h=harness(command,{expectLocal:true});
+  assert.equal(h.b.command.target,GPT_ID);
+  assert.match(h.b.command.text,matcher);
+  assert.equal(h.b.tabs[virtual].reply,'');
+  assert.equal(h.b.turns,0);
+ });
+}
+test('API room local status works during an outstanding Nomi room reply',()=>{
+ const h=harness('[bridge send]\nOriginal world event.');
+ const original=h.b.command;
+ assert.equal(original.target,virtual);
+ assert.equal(h.b.claim(virtual,original.id).allowed,true);
+ h.b.acknowledge(virtual,{id:original.id});
+ assert.equal(h.b.source,virtual);
+ h.source.reply='[bridge status]';h.source.replyKey='reply-2';
+ h.advance();h.advance();
+ assert.equal(h.b.command?.target,GPT_ID);
+ assert.match(h.b.command.text,/AI Bridge status/);
+ assert.doesNotMatch(h.b.command.text,/Original world event/);
+});
+for(const [command,match] of [
+ ['[bridge pause]',/paused — Window 1/],
+ ['[bridge resume]',/resumed — Window 1/],
+ ['[bridge shutdown]',/shutdown acknowledged — Window 1/]
+]){
+ test('API room '+command+' targets Window 1 only',()=>{
+  const h=harness(command,{expectLocal:true});
+  assert.equal(h.b.command.target,GPT_ID);
+  assert.match(h.b.command.text,match);
+  assert.equal(h.b.tabs[virtual].reply,'');
+ });
+}
