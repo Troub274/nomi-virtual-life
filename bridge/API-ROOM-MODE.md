@@ -7,7 +7,7 @@ Use one ChatGPT tab and a persistent Nomi API room containing **exactly one sele
 1. Install/update the extension following the [main guide](README.md). Select **Nomi API room** in the dashboard.
 2. Save your Nomi API key locally, then refresh the Nomis and rooms list.
 3. Choose one Nomi and a matching existing API room, or create a dedicated room. Multi-Nomi rooms are excluded.
-4. Select the ChatGPT tab with an existing completed opening reply and press Play.
+4. Select ONE ChatGPT tab and press Play. An existing completed assistant reply is treated as the starting baseline, not as a new command. After Play, have GPT generate a **new assistant reply** containing its world command. Do not paste a command as a user message and expect that user message to execute.
 
 The key is stored in Edge extension local storage and sent only in the authorization header to `https://api.nomi.ai/v1`. It is excluded from GPT prompts, session snapshots, and troubleshooting reports. **Clear key** removes it. Access to the browser profile can expose locally stored data.
 
@@ -21,11 +21,11 @@ If monitoring is disabled, disconnected, or inactive beyond the configured thres
 
 ## GPT commands
 
-Use one standalone command per reply, without code fences. For `[say room]`, only text after the tag is posted. A preamble before a single standalone tag is ignored; malformed or multiple commands are rejected internally. Three consecutive malformed commands stop the bridge.
+The commands below are **API Room mode only**. They are not the Direct Chat `[bridge send]` CLI or Group Room `[say]` protocol. Use one standalone command per GPT assistant reply, without code fences or a trailing backslash. For `[say room]`, put the tag alone on its own line and the world event on the next line; only the following event text is posted. A preamble before a single standalone tag is ignored; malformed or multiple commands are rejected internally. Three consecutive malformed commands stop the bridge.
 
 | Command | Effect |
 | --- | --- |
-| `[say room] world event` | Deliver the event to the API room. Untagged replies remain supported as room messages. |
+| `[say room]` on one line, then the world event on the next | Deliver the event to the API room. Untagged GPT replies remain supported as room messages. |
 | `[listening]` | One observation request: return newly captured complete User → Nomi exchanges since the last acknowledged listen. If none completes within 12 seconds, return one internal status and wait for another explicit command. In room-only fallback, report that status immediately. |
 | `[wait]` | Wait passively and indefinitely for a complete exchange; no Nomi send or reply request. |
 | `[tail]` | Return the last ten locally recorded events without consuming the listening position. |
@@ -33,6 +33,8 @@ Use one standalone command per reply, without code fences. For `[say room]`, onl
 | `[say chat]` | Disabled: private-chat access is read-only. |
 
 Neither listening command posts to Nomi or requests a room reply. Catch-up includes all captured new completed exchanges, in order, subject to bounded packets. An unanswered user message remains buffered. The cursor advances only after delivery to GPT is confirmed; another `[listening]` can retrieve further packets. Monitoring alone does not schedule time-of-day world events.
+
+A successful browser-tab delivery confirmation is not the same as a confirmed API-room POST. To diagnose a stalled session, check the selected GPT tab, whether the assistant produced a new completed reply after Play, the API checkpoint, and the Activity log. `roomReplyRequests: 0` alone does not prove a world event was or was not sent: it counts requested Nomi **replies**, not world-event content POSTs.
 
 ## History and room management
 
