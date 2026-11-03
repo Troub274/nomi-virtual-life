@@ -292,3 +292,23 @@ test('unanswered Direct send gets one finite timeout, never resends, and later p
  assert.equal(b.simplePeerAwait,false);
  assert.equal(b.events.filter(e=>/Prepared send transaction/.test(e.text)&&/g to n/.test(e.text)).length,1);
 });
+
+test('reproduced controller deadlock: status then help commands then pending all return in Window 1',()=>{
+ const b=setup();
+ const steps=[
+  ['[bridge status]',/AI Bridge status/],
+  ['[bridge help topic="commands"]',/ONE COMMAND PER REPLY/],
+  ['[bridge pending]',/AI Bridge pending/]
+ ];
+ for(let i=0;i<steps.length;i++){
+  const [reply,match]=steps[i];
+  observe(b,'g',tab('chatgpt',reply,(i+2)+'|controller|'+i,'g','admin-'+i));
+  assert.equal(b.command?.target,'g','command '+(i+1)+' must respond in Window 1');
+  assert.match(deliver(b).text,match);
+  assert.equal(b.command,null);
+  assert.equal(b.simplePeerAwait,false);
+ }
+ assert.equal(b.turns,0);
+ assert.equal(b.cliTransactions,3);
+ assert.equal(b.running,true);
+});
