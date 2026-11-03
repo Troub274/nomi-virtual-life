@@ -6,10 +6,11 @@ test('Heartbeat interface sends one GPT tab, phrase and default delay',async()=>
  const play=payloads.find(m=>m.path==='/api/play');assert.deepEqual(Array.from(play.data.tabs),['1']);assert.equal(play.data.heartbeatText,'Keep going');assert.equal(play.data.heartbeatDelay,10);
 });
 async function setup({blockedStorage=false,rejectPlay=false, sites=['chatgpt','nomi'],room=false}={}) {
- const ids=['direct-guide','group-guide','api-guide','heartbeat-guide','heartbeat-options','heartbeat-text','heartbeat-delay','mode','group-help','room-state','build-version','chatgpt','nomi','first','settle','play','stop','reset','status','error','count','tabs','events','copy-status','api-options','api-nomi','api-room','api-key','save-api-key','clear-api-key','refresh-api','api-room-name','create-api-room','api-key-status','api-status','api-recovery','api-recovery-state','api-recover-send','api-recover-reply','api-abandon','api-new-room-description','api-room-editor','api-room-description','api-save-description','api-delete-room','api-monitor-live','api-monitor-tab','api-monitor-idle','api-monitor-status','api-journal-tools','api-journal-status','api-clear-journal'];
+ const ids=['direct-guide','group-guide','api-guide','heartbeat-guide','heartbeat-options','heartbeat-text','heartbeat-delay','mode','group-help','room-state','build-version','chatgpt','nomi','first','settle','play','stop','reset','status','error','count','tabs','events','copy-status','api-options','api-nomi','api-room','api-key','save-api-key','clear-api-key','refresh-api','api-room-name','create-api-room','api-key-status','api-status','api-recovery','api-recovery-state','api-recover-send','api-recover-reply','api-abandon','api-new-room-description','api-room-editor','api-room-description','api-save-description','api-delete-room','api-monitor-live','api-monitor-tab','api-monitor-idle','api-monitor-status','api-journal-tools','api-journal-status','api-clear-journal','api-export-journal','api-export-text','pause','resume','use-ai-cli','ai-cli-hint','bridge-help-content'];
  const elements=Object.fromEntries(ids.map(id=>[id,{value:'',textContent:'',replaceChildren(){},closest(){return this;},disabled:false}]));
+ elements['use-ai-cli'].checked=true;
  const calls=[];const payloads=[];const state={running:false,reason:'Ready',turns:0,events:[],tabs:[{id:'1',site:sites[0],connected:true},{id:'2',site:sites[1],room,connected:true}]};
- const context={document:{getElementById:id=>elements[id],createElement:()=>({})},Option:class{},setTimeout,clearTimeout,setInterval:()=>{},
+ const context={globalThis:{AIBridgeCLI:require('../extension/bridge-cli.js')},document:{getElementById:id=>elements[id],createElement:()=>({})},Option:class{},setTimeout,clearTimeout,setInterval:()=>{},
  localStorage:{getItem(){if(blockedStorage)throw Error('Storage blocked');return '';},setItem(){if(blockedStorage)throw Error('Storage blocked');}},
  chrome:{runtime:{getManifest:()=>({version:'0.1.8'}),sendMessage:async m=>{calls.push(m.path);payloads.push(m);if(m.path==='/api/play'&&rejectPlay)return {error:'Clear the draft in both chats first.'};return state;}}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('../extension/dashboard.js'),'utf8'),context);
@@ -46,4 +47,23 @@ test('group interface sends mode, shows help and disables first-speaker choice',
  assert.equal(elements['group-help'].hidden,false);assert.equal(elements.first.disabled,true);
  elements.play.onclick();await new Promise(r=>setImmediate(r));
  const play=payloads.find(m=>m.path==='/api/play');assert.equal(play.data.mode,'group');assert.deepEqual(Array.from(play.data.tabs),['1','2']);
+});
+
+test('heartbeat mode can select Nomi and sends its own text with CLI disabled',async()=>{
+ const {elements,payloads}=await setup({sites:['nomi','chatgpt']});
+ elements.mode.value='heartbeat';elements.mode.onchange();
+ assert.equal(elements.chatgpt.value,'1');
+ assert.equal(elements['heartbeat-text'].value,'...');
+ elements['heartbeat-text'].value='1';
+ elements.play.onclick();await new Promise(r=>setImmediate(r));
+ const play=payloads.find(m=>m.path==='/api/play');
+ assert.deepEqual(Array.from(play.data.tabs),['1']);
+ assert.equal(play.data.heartbeatText,'1');
+});
+test('Use AI-CLI checkbox submits off for raw Nomi controller',async()=>{
+ const {elements,payloads}=await setup({sites:['nomi','chatgpt']});
+ assert.equal(elements['use-ai-cli'].checked,false);
+ elements.play.onclick();await new Promise(r=>setImmediate(r));
+ const play=payloads.find(m=>m.path==='/api/play');
+ assert.equal(play.data.useAiCli,false);
 });
