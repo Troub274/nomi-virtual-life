@@ -387,7 +387,8 @@ class Bridge {
     }
   }
   capturePendingCli(id) {
-    if (!this.running || this.useAiCli===false || !this.pair?.includes(id) || !this.command ||
+    if (!this.running || this.useAiCli===false || !this.pair?.includes(id) ||
+        (this.mode!=='legacy'&&id!==this.pair?.[0]) || !this.command ||
         this.phase !== 'send') return;
     const tab=this.tabs[id];
     if (!tab?.reply || tab.busy || tab.complete===false ||
@@ -815,7 +816,8 @@ class Bridge {
     }
     // Idempotency across replyKey changes while ChatGPT re-renders a command.
     // Scope to the source tab, document and exact completed CLI text.
-    if (this.useAiCli!==false && isBridgeCommandText(source.reply) &&
+    if (this.useAiCli!==false && (this.mode==='legacy'||this.source===this.pair?.[0]) &&
+        isBridgeCommandText(source.reply) &&
         !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       const fingerprint = JSON.stringify([this.source, source.url, source.document, source.reply.trim()]);
       if (this.lastCliFingerprint === fingerprint) {
@@ -829,7 +831,8 @@ class Bridge {
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
-    if (this.useAiCli!==false && isBridgeCommandText(source.reply) &&
+    if (this.useAiCli!==false && (this.mode==='legacy'||this.source===this.pair?.[0]) &&
+        isBridgeCommandText(source.reply) &&
         !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       // Either human-selected participant can issue any supported CLI command.
       // The bridge still validates syntax, session state and delivery context.
