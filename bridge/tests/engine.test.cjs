@@ -11,7 +11,7 @@ function fixture() {
   const beat = (id, changes={}) => {Object.assign(snapshots[id],changes); return bridge.heartbeat(id,snapshots[id]);};
   const advance = (seconds=9) => {time+=seconds; beat('a');beat('b');};
   const play = () => bridge.start({chatgpt:'a',nomi:'b'});
-  const deliver = () => {const c=bridge.command; assert.ok(c);assert.ok(bridge.claim(c.target,c.id).allowed);bridge.acknowledge(c.target,{id:c.id});};
+  const deliver = () => {const c=bridge.command; assert.ok(c,JSON.stringify({phase:bridge.phase,mode:bridge.mode,source:bridge.source,baseline:bridge.baseline,reason:bridge.reason,tab:bridge.tabs[bridge.source]}));assert.ok(bridge.claim(c.target,c.id).allowed);bridge.acknowledge(c.target,{id:c.id});};
   beat('a');beat('b');
   return {bridge,beat,advance,play,deliver};
 }
