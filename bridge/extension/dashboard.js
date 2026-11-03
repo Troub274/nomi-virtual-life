@@ -49,6 +49,8 @@ function render(state) {
   const group = $('mode').value === 'group';
   const api = $('mode').value === 'api-room';
   const pulse = $('mode').value === 'heartbeat';
+  $('bridge-help-content').textContent=globalThis.AIBridgeCLI?.helpFor(
+    $('mode').value,'','chatgpt')||'Bridge help is unavailable.';
   for (const [id,active] of [['direct-guide',!group&&!api&&!pulse],['group-guide',group],['api-guide',api],['heartbeat-guide',pulse]]) {
     $(id).hidden = !active;
   }
@@ -151,6 +153,8 @@ $('play').onclick = () => {
   action('play', data);
 };
 $('stop').onclick = () => action('stop');
+$('pause').onclick=()=>action('pause');
+$('resume').onclick=()=>action('resume');
 $('mode').onchange = () => {if (lastState) render(lastState);};
 $('api-monitor-live').onchange=()=>{
   $('api-monitor-tab').disabled=!$('api-monitor-live').checked||!!lastState?.running;
@@ -162,9 +166,41 @@ async function refreshJournalStatus(){
   try{
     const state=await request('api-journal',{roomId});
     if(roomId===$('api-room').value)
-      $('api-journal-status').textContent=(state.count||0)+' locally retained world/live events (latest 500).';
+      $('api-journal-status').textContent=(state.archivedCount??state.count??0)+' archived world/live events ('+(state.count||0)+' in fast monitoring window).';
   }catch(e){$('api-journal-status').textContent=e.message;}
 }
+async function exportBridgeJournal(format) {
+  const roomId=$('api-room').value;
+  if(!roomId || actionPending) return;
+  const label=format==='json'?'api-export-journal':'api-export-text';
+  const button=$(label),original=button.textContent;button.disabled=true;
+  const entries=[];
+  try {
+    let offset=0,total=Infinity;
+    while(offset<total) {
+      const page=await request('api-journal-export',{roomId,offset,limit:100});
+      total=page.total;
+      if(!page.events?.length && offset<total)
+        throw Error('Missing archive page; export stopped rather than producing an incomplete history.');
+      entries.push(...page.events);offset=page.nextOffset;
+      button.textContent='Exporting '+offset+'/'+total;
+      if(offset>=total)break;
+    }
+    const rows=format==='json'
+      ?JSON.stringify({format:'ai-bridge-history-v1',roomId,exportedAt:new Date().toISOString(),entries},null,2)
+      :entries.map(e=>'#'+e.seq+' ['+e.channel.toUpperCase()+'] '+e.speaker+' @ '+e.time+
+        '\n'+e.text+'\n').join('\n');
+    const blob=new Blob([rows],{type:format==='json'?'application/json':'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;
+    a.download='ai-bridge-room-'+roomId+'.'+(format==='json'?'json':'txt');
+    a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    $('api-journal-status').textContent='Exported '+entries.length+' recorded events. Keep this file safe.';
+  }catch(error){$('api-journal-status').textContent='History export failed: '+error.message;}
+  finally{button.disabled=false;button.textContent=original;}
+}
+$('api-export-journal').onclick=()=>void exportBridgeJournal('json');
+$('api-export-text').onclick=()=>void exportBridgeJournal('txt');
 $('api-clear-journal').onclick=async()=>{
   const roomId=$('api-room').value;
   if(!roomId||lastState?.running||apiManagementPending)return;
