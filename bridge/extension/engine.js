@@ -49,6 +49,67 @@ class Bridge {
     this.events = this.events.slice(-100);
   }
   stop(reason = 'Stopped. Press Play to resume.') {this.running = false; this.log(reason);}
+  controllerHelp(topic=''){
+    return globalThis.AIBridgeCLI?.helpFor?.(this.mode||'direct',topic,
+      this.tabs[this.pair?.[0]]?.site||'chatgpt') ||
+      '[AI Bridge] Control help unavailable. Use the dashboard.';
+  }
+  // Lifecycle notices are explicitly addressed to Window 1. Never treat a
+  // notice as a world event, group message or peer conversation reply.
+  queueControllerNotice(kind,text,{final=false}={}) {
+    const id=this.pair?.[0],tab=this.tabs[id];
+    if(!id||!tab||!['chatgpt','nomi'].includes(tab.site)) {
+      this.note('Window 1 lifecycle notification '+kind+' unavailable; bridge status retained.');
+      if(final)this.stop('Stopped. Window 1 was unavailable for the final notice.');
+      return false;
+    }
+    this.pendingControllerNotice={kind,text,final};
+    if(final) {
+      this.lifecycleStopRequested=true;
+      this.cliPaused=true;
+      this.outboundCredits={};
+    }
+    return this.flushControllerNotice();
+  }
+  flushControllerNotice(){
+    const notice=this.pendingControllerNotice;
+    if(!notice||this.command?.claimed)return false;
+    const id=this.pair?.[0],tab=this.tabs[id];
+    if(!tab?.ready||tab.busy||tab.draft||tab.complete===false||
+       this.clock()-tab.seen>70)return false;
+    // A queued but never claimed data action is safe to revoke. Once claimed,
+    // the handler above waits for its acknowledgment before notifying.
+    if(this.command && !this.command.claimed)this.command=null;
+    this.pendingControllerNotice=null;
+    this.command={id:crypto.randomUUID(),source:id,target:id,
+      text:notice.text,url:tab.url,document:tab.document,
+      sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
+      sourceDocument:tab.document,baseline:tab.replyKey,
+      claimed:false,created:this.clock(),controllerNotice:notice};
+    this.phase='send';this.running=true;
+    this.note('Queued private '+notice.kind+' lifecycle notice to Window 1 only.');
+    return true;
+  }
+  requestStop(reason='Stopped by the operator.'){
+    const notice='[AI Bridge stopped — Window 1 notification]\n'+reason+
+      '\nNo new sends will be started. Previously submitted Nomi API requests '+
+      'may still complete; inspect checkpoints before resuming. '+
+      'Only the human can restart or authorize uncertain recovery.';
+    this.queueControllerNotice('stop',notice,{final:true});
+  }
+  requestPause(){
+    this.cliPaused=true;
+    this.queueControllerNotice('pause',
+      '[AI Bridge paused — Window 1 notification]\nNew outbound sends are suspended. '+
+      'Already submitted API requests may complete. Use [bridge resume] or the dashboard Resume button.');
+  }
+  requestResume(){
+    if(this.lifecycleStopRequested)throw Error('Bridge is stopping; only the human can restart.');
+    this.cliPaused=false;
+    this.queueControllerNotice('resume',
+      '[AI Bridge resumed — Window 1 notification]\nThe controller may issue a new command. '+
+      'The selected output channel remains unchanged.');
+  }
   retryGPTTab(id,observedUrl,originalUrl){
     id=String(id);
     const s=this.apiSession;
@@ -337,6 +398,7 @@ class Bridge {
     let old = this.tabs[id];
     const changed = !old || old.replyKey !== snapshot.replyKey || old.reply !== snapshot.reply || old.busy !== snapshot.busy || old.complete !== snapshot.complete || old.roomKey !== snapshot.roomKey || old.autoChat !== snapshot.autoChat || old.userTurn !== snapshot.userTurn;
     this.tabs[id] = {...snapshot, id, seen: this.clock(), changed: changed ? this.clock() : old.changed};
+    if(this.pendingControllerNotice && !this.command)this.flushControllerNotice();
     // Keep the original URL across a transient navigation. A snapshot from
     // the wrong conversation must not update the trusted destination URL.
     if(this.tabRetry?.id===String(id)){
@@ -394,7 +456,7 @@ class Bridge {
     }
   }
   simpleTick() {
-    if(!this.running || this.phase==='send' || !this.pair)return;
+    if(!this.running || this.phase==='send' || !this.pair || this.lifecycleStopRequested)return;
     const controllerId=this.pair[0],peerId=this.pair[1];
     const controller=this.tabs[controllerId];
     if(!controller)return;
@@ -493,7 +555,7 @@ class Bridge {
   }
   tick() {
     if (this.simpleMode && (this.mode||'direct')==='direct') return this.simpleTick();
-    if (!this.running) return;
+    if (!this.running || this.lifecycleStopRequested)return;
     this.pumpOutbound();
     const now = this.clock();
     if(this.tabRetry){
@@ -856,6 +918,24 @@ class Bridge {
   }
   acknowledge(tab, data) {
     const cmd = this.command;
+    if(cmd?.controllerNotice) {
+      if(this.phase!=='send'||cmd.id!==data.id||cmd.target!==tab||!cmd.claimed)return {};
+      const notice=cmd.controllerNotice;
+      this.command=null;
+      if(data.error){
+        this.running=false;this.phase='uncertain';
+        this.log('Window 1 '+notice.kind+' notification uncertain: '+data.error);
+      } else if(notice.final){
+        this.running=false;this.phase='shutdown';this.cliShutdown=true;
+        this.log('Bridge stopped. Final lifecycle notification reached Window 1 only.');
+      } else {
+        this.phase='reply';this.startedWait=this.clock();
+        this.source=this.pair?.[0];
+        this.baseline=this.tabs[this.source]?.replyKey||cmd.baseline;
+        this.log('Window 1 received the '+notice.kind+' notification.');
+      }
+      return {};
+    }
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
     if(cmd.simpleStartup) {
       if(data.error) {
