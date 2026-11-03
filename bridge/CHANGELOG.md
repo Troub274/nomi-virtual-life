@@ -1,5 +1,13 @@
 # Release notes
 
+## 1.0.44 — 2026-11-02 (development)
+
+- Fixes the GPT turn-ID availability error in 1.0.43: current ChatGPT UI variants may identify assistant turns with `data-turn-key`, `data-chatgpt-search-unit-key`, or other stable identity attributes rather than numbered `conversation-turn-N` elements.
+- Direct mode now records a ledger of **consumed GPT logical-turn keys** (not text fingerprints, DOM message counts or elapsed times). Two genuine GPT turns may send identical text; repainting an already-consumed turn does not authorize a second transaction.
+- The selected identity scheme is held stable for the session. A mid-session layout change that makes turn identity ambiguous fails closed instead of replaying a prior command.
+- Adds targeted round-trip compatibility tests for GPT→GPT, Nomi→GPT, and Nomi→Nomi alongside GPT→Nomi regression tests. GPT-as-Tab-1 uses the new identity tracking; Nomi-as-Tab-1 retains existing Nomi reply detection.
+- Test validation includes 14 engine scenarios and simulated modern ChatGPT DOM extraction. **A live Edge browser verification remains necessary.**
+
 ## 1.0.43 — 2026-11-02 (development)
 
 - Fixes a reproducible Direct-mode source-turn replay regression. A GPT `[bridge send]` was previously eligible for a new transaction if React remounted its message node after Nomi replied; the bridge now consumes the ChatGPT logical conversation-turn number once per completed assistant turn.
