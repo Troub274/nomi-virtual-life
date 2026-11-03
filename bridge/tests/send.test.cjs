@@ -14,9 +14,11 @@ async function simulate(replaceButton, richMode) {
  const message=richMode?'Hello Nomi.\n\n[Bridge reminder: Keep replies within 750 characters.]':'Hello';
  function button(){return {disabled:false,isConnected:true,getClientRects:()=>[{}],getAttribute:()=>null,click(){if(this.isConnected){clicks++;if(richMode)input.innerText='';else input.value='';}}};}
  let currentButton=button();
- const context={location:{hostname:richMode?'chatgpt.com':'beta.nomi.ai',href:'https://beta.nomi.ai/nomis/test'},crypto:globalThis.crypto,
+ const completedTurn={getAttribute:()=> 'complete',querySelectorAll:()=>[assistantReply]};
+ const assistantReply={innerText:'Last complete GPT reply',getClientRects:()=>[{}],getAttribute:()=>null,closest:sel=>sel==='[data-talvt-turn-state]'?completedTurn:null};
+ const context={location:{hostname:richMode?'chatgpt.com':'beta.nomi.ai',href:richMode?'https://chatgpt.com/c/test':'https://beta.nomi.ai/nomis/test'},crypto:globalThis.crypto,
  HTMLTextAreaElement:TextArea,HTMLInputElement:class{},Event:class{},getComputedStyle:()=>({visibility:'visible'}),
- window:{getSelection:()=>({removeAllRanges(){},addRange(){}})},document:{createRange:()=>({selectNodeContents(){}}),execCommand(cmd,ui,text){input.innerText=richMode==='corrupt'?text.slice(0,10):text.replace(/\n/g,'\n\n').replace(/ /g,'\u00a0');return true;},title:'Nomi',querySelectorAll(selector){if(selector.startsWith('textarea')||selector.startsWith('#prompt-textarea'))return [input];if(selector.startsWith('button')&&!selector.includes('stop-button'))return [currentButton];return [];}},
+ window:{getSelection:()=>({removeAllRanges(){},addRange(){}})},document:{createRange:()=>({selectNodeContents(){}}),execCommand(cmd,ui,text){input.innerText=richMode==='corrupt'?text.slice(0,10):text.replace(/\n/g,'\n\n').replace(/ /g,'\u00a0');return true;},title:'Nomi',querySelectorAll(selector){if(richMode && selector.includes('data-message-author-role'))return [assistantReply];if(selector.startsWith('textarea')||selector.startsWith('#prompt-textarea'))return [input];if(selector.startsWith('button')&&!selector.includes('stop-button'))return [currentButton];return [];}},
  setInterval:()=>{},setTimeout:fn=>{setImmediate(fn);},
  chrome:{storage:{local:{get:async()=>({})},onChanged:{addListener:()=>{}}},runtime:{onMessage:{addListener:()=>{}},sendMessage:async m=>{
   if(m.path==='/api/heartbeat')return {command:{id:'cmd',url:context.location.href,document:m.data.snapshot.document,text:message}};
