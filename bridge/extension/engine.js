@@ -56,6 +56,61 @@ class Bridge {
       this.tabs[this.pair?.[0]]?.site||'chatgpt') ||
       '[AI Bridge] Control help unavailable. Use the dashboard.';
   }
+  controllerReport(command,args={}){
+    const mode=this.mode||'direct';
+    if(command==='help')
+      return '[AI Bridge help — internal, Window 1 only]\n'+this.controllerHelp(args.topic||'');
+    if(command==='status'){
+      const dest=this.pair?.[1],endpoint=this.tabs[dest];
+      const room=this.apiSession;
+      return '[AI Bridge status — internal, Window 1 only]\n'+
+        'State: '+(this.running?'running':'stopped')+
+        '\nMode: '+mode+'\nOutput: '+(mode==='api-room'
+          ?'Nomi API room '+(room?.roomName||room?.roomId||'selected')
+          :endpoint?.site||'not selected')+
+        '\nUse AI-CLI: '+(this.useAiCli===false?'off (raw)':'on')+
+        '\nPhase: '+this.phase+
+        '\nPaused: '+(this.cliPaused?'yes':'no')+
+        '\nCompleted sends: '+this.turns+
+        '\nPending delivery: '+(this.command
+          ?(this.command.claimed?'claimed; awaiting confirmation':'queued, not yet submitted')
+          :'none')+
+        (mode==='api-room'?'\nRoom reply: '+(room?.pendingReply||'none')+
+          '\nLive monitor: '+(room?.monitorEnabled?'enabled':'disabled'):'')+
+        '\n[End status]';
+    }
+    if(command==='pending'){
+      const cmd=this.command;
+      return '[AI Bridge pending — internal, Window 1 only]\n'+
+        'Delivery: '+(cmd?(cmd.claimed?'claimed; outcome pending':'queued, unclaimed'):'none')+
+        (cmd?'\nTransaction: '+cmd.id+'\nTarget: '+cmd.target:'')+
+        '\nWaiting for peer: '+(this.simplePeerAwait?'yes':'no')+
+        '\nPause: '+(this.cliPaused?'on':'off')+
+        (mode==='api-room'?'\nRoom reply: '+(this.apiSession?.pendingReply||'none'):'')+
+        '\n[End pending]';
+    }
+    if(command==='tail'||command==='history'){
+      if(mode==='api-room')
+        return '[AI Bridge] API Room '+command+' is handled by the local room archive.';
+      return '[AI Bridge '+command+' — internal, Window 1 only]\n'+
+        'Browser-chat transcript archiving is not available in this mode. '+
+        'This command did not ask the peer for history or send any message. '+
+        'Use [bridge review] for recent bridge activity, not conversation text.';
+    }
+    if(command==='review'){
+      const n=Math.max(1,Math.min(50,Number(args.last)||10));
+      return '[AI Bridge review — internal, Window 1 only]\n'+
+        (this.events.slice(-n).map(e=>e.time+' '+e.text).join('\n')||'No recorded bridge activity.')+
+        '\n[End review]';
+    }
+    if(command==='listen')
+      return '[AI Bridge listen — internal, Window 1 only]\n'+
+        (this.simplePeerAwait
+          ?'Waiting for the selected peer to complete its reply. Nothing was sent.'
+          :'Listening for the next peer reply. Nothing was sent.');
+    return '[AI Bridge '+command+' — internal, Window 1 only]\n'+
+      'This command is not implemented in '+mode+' mode; nothing was sent.';
+  }
   // Lifecycle notices are explicitly addressed to Window 1. Never treat a
   // notice as a world event, group message or peer conversation reply.
   queueControllerNotice(kind,text,{final=false}={}) {
@@ -499,6 +554,30 @@ class Bridge {
         return;
       }
     }
+    // Read-only controls are valid while waiting for Window 2, too.
+    if(this.useAiCli && !this.cliPaused && this.simplePeerAwait &&
+       !controller.busy && controller.complete!==false && controller.reply &&
+       this.clock()-controller.changed>=this.stableSeconds && controllerFresh()){
+      let control;
+      try{control=globalThis.AIBridgeCLI?.parse(controller.reply);}
+      catch(error){
+        this.consumeSimpleControllerTurn(controller);
+        this.reason='Bridge command rejected: '+error.message;
+        return;
+      }
+      if(control && ['status','help','pending','review','listen','tail','history'].includes(control.command)){
+        this.consumeSimpleControllerTurn(controller);
+        this.command={id:crypto.randomUUID(),source:controllerId,target:controllerId,
+          text:this.controllerReport(control.command,control.args),
+          url:controller.url,document:controller.document,sourceReply:controller.reply,
+          sourceKey:controller.replyKey,sourceUrl:controller.url,
+          sourceDocument:controller.document,baseline:controller.replyKey,
+          claimed:false,created:this.clock(),simpleControl:true};
+        this.phase='send';
+        this.note('Queued private '+control.command+' result while waiting for peer.');
+        return;
+      }
+    }
     if(this.cliPaused) {
       this.reason='Bridge paused. Tab 1 may issue [bridge resume].';
       return;
@@ -534,7 +613,19 @@ class Bridge {
         shutdown=true;
       } else {
         this.consumeSimpleControllerTurn(tab);
-        this.reason='Tab 1 control received: '+parsed.command+'.';
+        if(['status','help','pending','review','listen','tail','history'].includes(parsed.command)){
+          const report=this.controllerReport(parsed.command,parsed.args);
+          this.command={id:crypto.randomUUID(),source:controllerId,target:controllerId,
+            text:report,url:controller.url,document:controller.document,
+            sourceReply:controller.reply,sourceKey:controller.replyKey,
+            sourceUrl:controller.url,sourceDocument:controller.document,
+            baseline:controller.replyKey,claimed:false,created:this.clock(),
+            simpleControl:true};
+          this.phase='send';
+          this.note('Queued private '+parsed.command+' result to Window 1. No peer send.');
+          return;
+        }
+        this.reason='Tab 1 control received: '+parsed.command+'. This command is not implemented.';
         return;
       }
     }
@@ -801,7 +892,7 @@ class Bridge {
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
-            parsed.command === 'help' ? (parsed.args.topic === 'schedule' ? '[AI Bridge schedule help]\nWake scheduler not yet active. Planned syntax: [bridge wake at="2026-11-03T15:10:00-05:00" reason="Visit"] or [bridge wake in="30 minutes"].' : globalThis.AIBridgeCLI.HELP) :
+            parsed.command === 'help' ? this.controllerReport('help',parsed.args) :
             parsed.command !== 'status' ? '[AI Bridge] NOT_IMPLEMENTED: ' + parsed.command + '. No action was taken.' :
             '[AI Bridge status]\nState: ' + (this.running?'running':'stopped') +
             '\nMode: ' + (this.mode||'direct') + '\nPhase: ' + this.phase +
@@ -945,6 +1036,19 @@ class Bridge {
       return {};
     }
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
+    if(cmd.simpleControl){
+      if(data.error){
+        this.phase='uncertain';
+        this.stop('Window 1 '+ 'command reply uncertain: '+data.error+
+          '. Inspect the controller conversation; nothing was sent to the peer.');
+      }else{
+        this.command=null;this.phase='reply';this.startedWait=this.clock();
+        this.cliTransactions=(this.cliTransactions||0)+1;
+        this.reason='Window 1 received private bridge command result. Peer state unchanged.';
+      }
+      if(this.pendingControllerNotice && !this.command)this.flushControllerNotice();
+      return {};
+    }
     if(cmd.simpleStartup) {
       if(data.error) {
         this.phase='uncertain';
