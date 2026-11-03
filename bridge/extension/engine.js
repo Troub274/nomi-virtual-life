@@ -239,6 +239,8 @@ class Bridge {
   }
   reset() {
     if (this.running) throw Error('Stop before resetting.');
+    this.lifecycleStopRequested=false;this.pendingControllerNotice=null;
+    this.useAiCli=true;
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
@@ -948,8 +950,10 @@ class Bridge {
       } else {
         this.command=null;this.phase='reply';this.simplePeerAwait=false;
         this.simpleControllerSeen=this.tabs[this.pair[0]]?.replyKey;
-        this.reason='Startup help delivered to Tab 1. Waiting for [bridge send].';
+        this.reason=this.useAiCli?'Startup help delivered to Window 1. Waiting for [bridge send].':
+          'Startup notice delivered to Window 1. Waiting for the next raw reply.';
       }
+      if(this.pendingControllerNotice && !this.command)this.flushControllerNotice();
       return {};
     }
     if(cmd.simpleSend) {
@@ -975,8 +979,10 @@ class Bridge {
           truncated:!!cmd.truncatedToNomi};
         this.command=null;this.phase='reply';
         if(cmd.simpleShutdown){this.running=false;this.phase='shutdown';}
-        else this.reason=this.simplePeerAwait?'Waiting for a new peer response.':'Waiting for a new Tab 1 command.';
+        else this.reason=this.simplePeerAwait?'Waiting for a new peer response.':
+          (this.useAiCli?'Waiting for a new Window 1 command.':'Waiting for the next raw Window 1 reply.');
       }
+      if(this.pendingControllerNotice && !this.command)this.flushControllerNotice();
       return {};
     }
     if (data.error && cmd.queuedOutbound &&
@@ -1065,6 +1071,8 @@ class Bridge {
       } else this.log(`${this.running ? 'Running' : 'Stopped'}: waiting for ${this.tabs[tab].site} to reply.`);
     }
     this.command = null;
+    if(this.pendingControllerNotice){this.flushControllerNotice();return {};}
+    if(this.lifecycleStopRequested)return {};
     this.drainPendingCli();
     this.pumpOutbound();
     return {};
