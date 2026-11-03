@@ -15,7 +15,7 @@ const NOMI='22222222-2222-2222-2222-222222222222';
 const GPT_ID='123';
 const virtual=utils.apiRoomId(ROOM);
 
-function harness(reply='This is a World Engine turn. '+('🌲 '.repeat(750))) {
+function harness(reply='This is a World Engine turn. '+('🌲 '.repeat(750)), options={}) {
   let seconds=100;
   const b=new GroupBridge(()=>seconds);
   const local=new Map();
@@ -36,7 +36,7 @@ function harness(reply='This is a World Engine turn. '+('🌲 '.repeat(750))) {
   b.heartbeat(GPT_ID,source);b.heartbeat(virtual,destination);
   b.apiSession={roomId:ROOM,nomiUuid:NOMI,nomiName:'Gwen',roomName:'World',
     pendingReply:'none',sequence:0};
-  b.start({mode:'api-room',tabs:[GPT_ID,virtual],first:'first',settle:8});
+  b.start({mode:'api-room',tabs:[GPT_ID,virtual],first:'first',settle:8,useAiCli:options.useAiCli!==false});
   seconds+=9;b.heartbeat(GPT_ID,source);b.heartbeat(virtual,destination);
   assert.equal(b.command?.text,reply);
   const cp=new ApiRoomCheckpoint(storage);
@@ -782,7 +782,7 @@ test('malformed World Engine reply generates feedback to GPT but never sends Nom
   assert.equal(posts,0);
   assert.equal(h.b.source,virtual);
   assert.match(h.b.tabs[virtual].reply,/WORLD ENGINE COMMAND REJECTED/);
-  assert.match(h.b.tabs[virtual].reply,/Use ONE command on its own line/);
+  assert.match(h.b.tabs[virtual].reply,/Use ONE command:/);
   assert.equal(h.b.running,true);
   assert.equal(await h.cp.load(ROOM),null);
 });
@@ -1337,8 +1337,7 @@ test('unified Bridge send command uses selected API room, with no room selector 
 });
 test('AI-CLI off forwards command-looking room text literally, without interpretation',async()=>{
  const literal='[bridge tail]';
- const h=harness(literal),sent=[];
- h.b.useAiCli=false;
+ const h=harness(literal,{useAiCli:false}),sent=[];
  h.driver.request=async(path,method,body)=>{
   if(path.endsWith('/chat')){sent.push(body.messageText);return {};}
   if(path.endsWith('/chat/request'))return {replyMessage:{messageText:'I read the literal words.'}};
