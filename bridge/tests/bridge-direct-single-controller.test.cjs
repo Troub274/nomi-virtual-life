@@ -149,3 +149,58 @@ test('changing ChatGPT identity-marker type mid-session fails closed rather than
  assert.equal(b.command,null);
  assert.match(b.reason,/changed its turn-identity layout/);
 });
+
+for(const [controller,peer,reply] of [
+ ['nomi','chatgpt','Hello there. [bridge pause] is a literal phrase.'],
+ ['nomi','nomi','[bridge shutdown]'],
+ ['chatgpt','nomi','[bridge send]\nThis is literal text.'],
+ ['chatgpt','chatgpt','Everything is forwarded verbatim.']
+]){
+ test('Use AI-CLI off forwards raw '+controller+' to '+peer+' without parsing',()=>{
+  const b=new HeartbeatBridge(()=>now);
+  b.tabs={g:tab(controller,'Previous','1|g|Previous','g'),
+    n:tab(peer,'Previous','1|n|Previous','n')};
+  b.start({mode:'direct',tabs:['g','n'],settle:1,useAiCli:false});
+  const startup=deliver(b);
+  assert.equal(startup.target,'g');
+  assert.match(startup.text,/AI-CLI is OFF/);
+  observe(b,'g',tab(controller,reply,'2|new|'+reply,'g'));
+  const sent=deliver(b);
+  assert.equal(sent.text,reply);
+  assert.equal(sent.target,'n');
+  assert.equal(b.cliPaused,false);
+  assert.equal(b.running,true);
+ });
+}
+test('Use AI-CLI on still interprets send commands without forwarding tags',()=>{
+ const b=new HeartbeatBridge(()=>now);
+ b.tabs={g:tab('nomi','Previous','1|g|Previous','g'),
+   n:tab('chatgpt','Previous','1|n|Previous','n')};
+ b.start({mode:'direct',tabs:['g','n'],settle:1,useAiCli:true});
+ deliver(b);
+ observe(b,'g',tab('nomi','[bridge send]\nHello','2|new|Hello','g'));
+ assert.equal(deliver(b).text,'Hello');
+});
+test('pause and stop notices are internal Window 1 messages only with AI-CLI off',()=>{
+ const b=new HeartbeatBridge(()=>now);
+ b.tabs={g:tab('nomi','Previous','1|g|Previous','g'),
+   n:tab('chatgpt','Previous','1|n|Previous','n')};
+ b.start({mode:'direct',tabs:['g','n'],settle:1,useAiCli:false});
+ deliver(b);
+ b.requestPause();
+ const pause=deliver(b);
+ assert.equal(pause.target,'g');
+ assert.match(pause.text,/paused — Window 1/);
+ assert.equal(b.cliPaused,true);
+ b.requestResume();
+ const resume=deliver(b);
+ assert.equal(resume.target,'g');
+ assert.match(resume.text,/resumed — Window 1/);
+ assert.equal(b.cliPaused,false);
+ b.requestStop('Stopped from dashboard.');
+ const stop=deliver(b);
+ assert.equal(stop.target,'g');
+ assert.match(stop.text,/stopped — Window 1/);
+ assert.equal(b.running,false);
+ assert.equal(b.phase,'shutdown');
+});
