@@ -201,3 +201,30 @@ class ExportOptionsTests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+
+class DesktopJavaScriptTests(unittest.TestCase):
+    """Reject HTML-script parse errors that silently disable all GUI tabs."""
+
+    def test_inline_scripts_parse_with_node(self):
+        import re
+        import shutil
+        import subprocess
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js unavailable on this test host")
+        html = (ROOT / "gui" / "index.html").read_text(encoding="utf-8")
+        scripts = re.findall(r"<script\\b[^>]*>(.*?)</script>", html, re.DOTALL)
+        self.assertGreaterEqual(len(scripts), 2)
+        for index, script in enumerate(scripts):
+            result = subprocess.run(
+                [node, "--check", "-"],
+                input=script,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0,
+                             f"Inline script {index} cannot parse:\\n{result.stderr}")
+
+
