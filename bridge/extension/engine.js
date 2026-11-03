@@ -79,14 +79,16 @@ class Bridge {
     }
     this.cliControllerTab = String(pair[0]);
     if ((this.mode||'direct')==='direct') {
+      if(this.tabs[pair[0]]?.site==='chatgpt' && this.tabs[pair[0]].reply &&
+         !Number.isSafeInteger(this.tabs[pair[0]].assistantTurnNumber))
+        throw Error('ChatGPT conversation turn number is unavailable. Reload ChatGPT and check selectors before Play.');
       this.pair=pair;this.source=pair[0];this.simpleMode=true;
       this.simplePeerAwait=false;
       this.simpleControllerSeen=this.tabs[pair[0]]?.replyKey;
       this.simplePeerSeen=this.tabs[pair[1]]?.replyKey;
       this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
-      this.simpleAccepted={};
-      this.simpleWaitForControllerTurn=null;
-      this.simpleLastControllerCommand=null;
+      this.simpleControllerTurn=this.tabs[pair[0]]?.site==='chatgpt'
+        ? this.tabs[pair[0]].assistantTurnNumber : null;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
       this.phase='reply';this.startedWait=this.clock();
@@ -159,7 +161,7 @@ class Bridge {
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
-    this.simpleCommandHistory={};this.simpleAccepted={};
+    this.simpleControllerTurn=null;this.simpleControllerSeen=null;this.simplePeerSeen=null;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -365,34 +367,34 @@ class Bridge {
     if (this.running && this.phase === 'send' && this.command?.target === id && !this.command.claimed) return {command: {...this.command}};
     return {};
   }
-  simpleAssistantCount(tab) {
-    // Message count is supplied by the content adapter. The replyKey prefix
-    // is a fallback for older snapshots and controlled engine tests.
-    const matches=Number(tab?.matches);
-    if(tab?.matches!==undefined && Number.isSafeInteger(matches) && matches>=0)return matches;
-    const fromKey=/^(\\d+)\\|/.exec(String(tab?.replyKey||''));
-    return fromKey?Number(fromKey[1]):null;
-  }
-  simpleReplyIdentity(tab) {
-    // replyKey is count|DOM message id|text. Ignore the trailing text,
-    // which can change on harmless re-render; keep count/id and full reply.
-    const key=String(tab.replyKey||'');
-    const split=key.indexOf('|',key.indexOf('|')+1);
-    return JSON.stringify([tab.document,tab.url,split>=0?key.slice(0,split):key,tab.reply]);
+  consumeSimpleControllerTurn(tab) {
+    this.simpleControllerSeen=tab.replyKey;
+    if(tab.site==='chatgpt')this.simpleControllerTurn=tab.assistantTurnNumber;
   }
   simpleTick() {
     if(!this.running || this.phase==='send' || !this.pair)return;
     const controllerId=this.pair[0],peerId=this.pair[1];
-    // Control is always inspected from Tab 1, including while paused or
-    // while awaiting the conversational peer. Otherwise [bridge resume]
-    // can never execute after [bridge pause].
     const controller=this.tabs[controllerId];
-    if(controller && !controller.busy && controller.complete!==false &&
-       controller.reply && this.clock()-controller.changed>=this.stableSeconds &&
-       controller.replyKey!==this.simpleControllerSeen) {
+    if(!controller)return;
+    // A conversation turn is the unit of delivery, not a DOM replyKey.
+    // One completed GPT turn may authorize at most one command, even when
+    // React remounts its message node or changes the reply text wrapping.
+    const controllerFresh=()=>{
+      if(controller.site==='chatgpt') {
+        const current=controller.assistantTurnNumber;
+        if(!Number.isSafeInteger(current)) {
+          this.reason='Cannot identify ChatGPT conversation turn; refusing to reuse the previous reply. Check GPT selectors.';
+          return false;
+        }
+        return current>this.simpleControllerTurn;
+      }
+      return controller.replyKey!==this.simpleControllerSeen;
+    };
+    if(!controller.busy && controller.complete!==false && controller.reply &&
+       this.clock()-controller.changed>=this.stableSeconds && controllerFresh()) {
       const control=globalThis.AIBridgeCLI?.parse(controller.reply);
       if(control?.command==='pause' || control?.command==='resume') {
-        this.simpleControllerSeen=controller.replyKey;
+        this.consumeSimpleControllerTurn(controller);
         this.cliPaused=control.command==='pause';
         this.reason=this.cliPaused?'Bridge paused by Tab 1. [bridge resume] is available.':
           'Bridge resumed by Tab 1.';
@@ -409,62 +411,23 @@ class Bridge {
     if(!tab || !dest || tab.busy || tab.complete===false ||
        !tab.reply || this.clock()-tab.changed<this.stableSeconds ||
        this.clock()-tab.seen>70 || this.clock()-dest.seen>70)return;
-    const old=this.simplePeerAwait?this.simplePeerSeen:this.simpleControllerSeen;
-    if(tab.replyKey===old)return;
-    // The Tab 2 reply just submitted to Tab 1 is a USER turn, not a new
-    // completed assistant turn. The old Tab 1 [bridge send] remains the
-    // most recent assistant response until GPT produces its NEXT answer.
-    // A replyKey repaint (or changing message element count) cannot cross
-    // this causal barrier; it must be a genuinely new assistant response.
-    if(!this.simplePeerAwait && this.simpleWaitForControllerTurn) {
-      const expected=this.simpleWaitForControllerTurn;
-      const currentCount=this.simpleAssistantCount(tab);
-      const isOldCommand=tab.reply.trim()===expected.previousText;
-      const countNotAdvanced=expected.assistantCount!==null &&
-        currentCount!==null && currentCount<=expected.assistantCount;
-      if(isOldCommand || countNotAdvanced) {
-        this.simpleControllerSeen=tab.replyKey;
-        this.reason='Waiting for a NEW Tab 1 assistant reply after receiving Tab 2. '+
-          'Old controller command is not eligible for replay.';
-        return;
-      }
-      this.simpleWaitForControllerTurn=null;
-    }
-    const identity=this.simpleReplyIdentity(tab);
-    this.simpleAccepted ||= {};
-    if(this.simpleAccepted[id]===identity) {
-      if(this.simplePeerAwait)this.simplePeerSeen=tab.replyKey;
-      else this.simpleControllerSeen=tab.replyKey;
-      return;
-    }
-    // React can replace a GPT message node and change its DOM count / ID.
-    // Treat unchanged controller commands as one message despite repaint.
-    const exactCommand=JSON.stringify([tab.document,tab.url,tab.reply.replace(/\s+/gu,' ').trim()]);
-    this.simpleCommandHistory ||= {};
-    const observedAt=this.clock();
-    for(const [key,at] of Object.entries(this.simpleCommandHistory))
-      if(observedAt-at>300)delete this.simpleCommandHistory[key];
-    if(!this.simplePeerAwait && this.simpleCommandHistory[exactCommand]!==undefined) {
-      this.simpleControllerSeen=tab.replyKey;
-      this.simpleAccepted[id]=identity;
-      this.note('Duplicate Tab 1 command suppressed after DOM re-render; no send created.');
-      this.reason='Duplicate controller command ignored; waiting for a new message.';
-      return;
-    }
-    // Read only one complete reply from the active participant, with no command
-    // interpretation whatsoever on the conversational peer.
+    if(this.simplePeerAwait) {
+      if(tab.replyKey===this.simplePeerSeen)return;
+    } else if(!controllerFresh())return;
+
+    // Only the controller parses bridge commands. Tab 2 speaks naturally.
     let message=tab.reply,shutdown=false;
     if(!this.simplePeerAwait) {
       const parsed=globalThis.AIBridgeCLI?.parse(tab.reply);
       if(!parsed) {
-        this.simpleControllerSeen=tab.replyKey;
+        this.consumeSimpleControllerTurn(tab);
         this.reason='Tab 1 reply is private. Waiting for [bridge send].';
         return;
       }
       if(parsed.command==='send') {
         const recipient=(parsed.args.to||'').toLowerCase();
         if(recipient && ![dest.site.toLowerCase(),(dest.name||'').toLowerCase(),'nomi','chatgpt','sera','seraphina'].includes(recipient)) {
-          this.simpleControllerSeen=tab.replyKey;
+          this.consumeSimpleControllerTurn(tab);
           this.reason='Recipient does not match selected peer.';
           return;
         }
@@ -472,14 +435,10 @@ class Bridge {
       } else if(parsed.command==='shutdown') {
         message='[AI Bridge shutdown] Tab 1 ended this session. No further messages will be forwarded.';
         shutdown=true;
-      } else if(parsed.command==='pause') {
-        this.simpleControllerSeen=tab.replyKey;this.cliPaused=true;
-        this.reason='Bridge paused by Tab 1.';return;
-      } else if(parsed.command==='resume') {
-        this.simpleControllerSeen=tab.replyKey;this.cliPaused=false;return;
       } else {
-        this.simpleControllerSeen=tab.replyKey;
-        this.reason='Tab 1 control received: '+parsed.command+'.';return;
+        this.consumeSimpleControllerTurn(tab);
+        this.reason='Tab 1 control received: '+parsed.command+'.';
+        return;
       }
     }
     if(!dest.ready || dest.busy || dest.complete===false || dest.draft) {
@@ -488,23 +447,19 @@ class Bridge {
     }
     const originalByteLength=new TextEncoder().encode(message).length;
     if(dest.site==='nomi')message=nomiByteWindow(message);
-    const truncatedToNomi=dest.site==='nomi' && originalByteLength>new TextEncoder().encode(message).length;
+    const truncatedToNomi=dest.site==='nomi' &&
+      originalByteLength>new TextEncoder().encode(message).length;
     if(this.simplePeerAwait && this.simpleTruncationWarning) {
-      message+='\n\n'+this.simpleTruncationWarning;
+      message+='\\n\\n'+this.simpleTruncationWarning;
       this.simpleTruncationWarning=null;
     }
-    this.simpleAccepted[id]=identity;
-    if(!this.simplePeerAwait) {
-      this.simpleCommandHistory[exactCommand]=this.clock();
-      this.simpleLastControllerCommand=tab.reply.trim();
-    }
+    if(!this.simplePeerAwait)this.consumeSimpleControllerTurn(tab);
     this.command={id:crypto.randomUUID(),source:id,target:dest.id||this.pair.find(x=>x!==id),
       text:message,url:dest.url,document:dest.document,
       sourceReply:tab.reply,sourceKey:tab.replyKey,sourceUrl:tab.url,
       sourceDocument:tab.document,baseline:dest.replyKey,created:this.clock(),
       claimed:false,simpleSend:true,simpleShutdown:shutdown,
-      truncatedToNomi,originalByteLength,
-      controllerAssistantCountBefore:this.simplePeerAwait?this.simpleAssistantCount(dest):null};
+      truncatedToNomi,originalByteLength};
     this.phase='send';this.reason='Sending one message; waiting for confirmation.';
     this.note('Prepared send transaction '+this.command.id+
       ', '+id+' to '+this.command.target+', '+new TextEncoder().encode(message).length+' bytes.');
@@ -893,19 +848,18 @@ class Bridge {
         if(cmd.source===this.pair[0]) {
           if(cmd.truncatedToNomi) this.simpleTruncationWarning='[Bridge warning: Your previous message was '+cmd.originalByteLength+' UTF-8 bytes. Only the first 750 bytes were delivered to Nomi; the remainder was truncated. Keep future messages to Nomi within 750 UTF-8 bytes.]';
           this.simpleControllerSeen=cmd.sourceKey;
-          this.simplePeerSeen=this.tabs[this.pair[1]]?.replyKey;
+          this.simplePeerSeen=cmd.baseline;
           this.simplePeerAwait=!cmd.simpleShutdown;
         } else {
           this.simplePeerSeen=cmd.sourceKey;
-          this.simpleControllerSeen=this.tabs[this.pair[0]]?.replyKey;
-          this.simpleWaitForControllerTurn={
-            assistantCount:cmd.controllerAssistantCountBefore??null,
-            previousText:this.simpleLastControllerCommand||''
-          };
+          this.simpleControllerSeen=cmd.baseline;
           this.simplePeerAwait=false;
-          this.note('Tab 2 reply delivered. Waiting for a new Tab 1 assistant turn after count '+
-            String(this.simpleWaitForControllerTurn.assistantCount)+'.');
+          this.note('Tab 2 reply delivered. Waiting for a new Tab 1 assistant turn.');
         }
+        this.turns=(this.turns||0)+1;
+        this.lastDelivery={transactionId:cmd.id,from:this.tabs[cmd.source]?.site,
+          to:this.tabs[tab]?.site,sentCharacters:cmd.text.length,
+          truncated:!!cmd.truncatedToNomi};
         this.command=null;this.phase='reply';
         if(cmd.simpleShutdown){this.running=false;this.phase='shutdown';}
         else this.reason=this.simplePeerAwait?'Waiting for a new peer response.':'Waiting for a new Tab 1 command.';
