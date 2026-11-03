@@ -19,6 +19,7 @@ let recoveryInProgress = false;
 let apiNoteBaseline = '';
 let apiEditorRoomId = '';
 let apiManagementPending = false;
+let cliSelectionKey='',cliManuallySet=false;
 function savedSelection(site) {try {return localStorage.getItem('bridge-' + site);} catch {return '';}}
 function showError(error) {
   const message = error?.message || String(error);
@@ -90,6 +91,17 @@ function render(state) {
   }
   $('first').disabled = state.running || group || api || pulse;
   if (api) $('first').value = 'first';
+  const firstTab=(state.tabs||[]).find(t=>t.id===$('chatgpt').value);
+  const selectionKey=String($('chatgpt').value||'')+'|'+$('mode').value;
+  if(!state.running && selectionKey!==cliSelectionKey){
+    cliSelectionKey=selectionKey;cliManuallySet=false;
+    $('use-ai-cli').checked=firstTab?.site!=='nomi';
+  }
+  if(state.running && typeof state.useAiCli==='boolean') $('use-ai-cli').checked=state.useAiCli;
+  $('use-ai-cli').disabled=state.running||pulse;
+  $('ai-cli-hint').textContent=$('use-ai-cli').checked
+    ? 'AI-CLI on: Window 1 issues bridge commands; detailed help is available.'
+    : 'AI-CLI off: every completed Window 1 reply is sent as raw conversation text. No command parsing or special tags.';
   $('settle').disabled = state.running;
   $('play').disabled = actionPending;
   $('play').textContent = state.running ? '▶ Running — check status' : '▶ Play';
@@ -134,6 +146,7 @@ $('play').onclick = () => {
     tabs: pulse ? [$('chatgpt').value] : [$('chatgpt').value, api ? 'api:room:' + roomId : $('nomi').value],
     ...(pulse ? {heartbeatText:$('heartbeat-text').value,heartbeatDelay:Number($('heartbeat-delay').value)} : {}),
     first: api ? 'first' : $('first').value, settle: $('settle').value,
+    useAiCli:$('use-ai-cli').checked,
     ...(api ? {nomiUuid:$('api-nomi').value,
       monitorLive:$('api-monitor-live').checked,monitorTab:$('api-monitor-tab').value,
       monitorIdleSeconds:Number($('api-monitor-idle').value)||300} : {})};
@@ -156,6 +169,12 @@ $('stop').onclick = () => action('stop');
 $('pause').onclick=()=>action('pause');
 $('resume').onclick=()=>action('resume');
 $('mode').onchange = () => {if (lastState) render(lastState);};
+$('chatgpt').onchange=()=>{if(lastState)render(lastState);};
+$('use-ai-cli').onchange=()=>{cliManuallySet=true;
+  $('ai-cli-hint').textContent=$('use-ai-cli').checked
+    ? 'AI-CLI on: Window 1 issues bridge commands.'
+    : 'AI-CLI off: raw passthrough. No command parsing of Window 1 replies.';
+};
 $('api-monitor-live').onchange=()=>{
   $('api-monitor-tab').disabled=!$('api-monitor-live').checked||!!lastState?.running;
   $('api-monitor-idle').disabled=!$('api-monitor-live').checked||!!lastState?.running;
