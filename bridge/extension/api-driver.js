@@ -487,6 +487,7 @@ class NomiApiDriver {
     await this.publishObservation(roomId,message);
   }
   async handleWorldControl(cmd,s) {
+    if(this.getBridge()?.useAiCli===false)return false;
     const parsed=parseWorldCommand(cmd.text);
     if(!['tail','history','listening','wait','chat','invalid'].includes(parsed.kind))return false;
     const b=this.getBridge(),id=b.pair?.[1];
@@ -610,7 +611,9 @@ class NomiApiDriver {
         // Recognize controls even if the live monitor is disabled.
         // Otherwise [wait] would be posted literally to the Nomi room.
         if(await this.handleWorldControl(cmd,s))return;
-        const parsed=parseWorldCommand(cmd.text);
+        const parsed=this.getBridge().useAiCli===false
+          ? {kind:'room',text:cmd.text,explicit:false,raw:true}
+          : parseWorldCommand(cmd.text);
         if(s.protocolFailures)s.protocolFailures=0;
         if(parsed.kind!=='room'||!parsed.text.trim())
           throw Error('Use [bridge send] followed by a world message, or [bridge listen], [bridge tail], [bridge history], [bridge wait].');
