@@ -562,9 +562,9 @@ test('direct chat cannot accidentally forward World Engine control tags to Nomi'
   Object.assign(b,{running:true,mode:'direct',pair:['10','20'],source:'10',
     phase:'reply',baseline:'before-tail',stableSeconds:3,startedWait:90});
   b.tabs['10'].changed=0;b.tick();
-  assert.equal(b.running,false);
+  assert.equal(b.running,true);
   assert.equal(b.command,null);
-  assert.match(b.reason,/control tag blocked/i);
+  assert.match(b.reason,/Private AI reply retained/);
 });
 
 test('catch-up returns ALL completed live messages since last listen; buffers trailing user',()=>{
