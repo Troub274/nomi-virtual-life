@@ -271,3 +271,24 @@ test('Direct command-looking raw reply still bypasses CLI when Use AI-CLI off',(
  assert.equal(result.target,'n');
  assert.equal(result.text,'[bridge status]');
 });
+
+test('unanswered Direct send gets one finite timeout, never resends, and later peer reply still arrives',()=>{
+ const b=setup();
+ observe(b,'g',tab('chatgpt','[bridge send] hello','2|send|one','g','send-1'));
+ const original=deliver(b);
+ assert.equal(original.target,'n');assert.equal(b.simplePeerAwait,true);
+ now+=181;
+ observe(b,'g',tab('chatgpt','[bridge send] hello','2|send|one','g','send-1'));
+ const timeout=b.command;
+ assert.equal(timeout?.target,'g');
+ assert.match(timeout.text,/peer timeout/);
+ assert.match(timeout.text,/No message was resent/);
+ deliver(b);
+ assert.equal(b.simplePeerAwait,true);
+ observe(b,'g',tab('chatgpt','[bridge send] hello','2|send|one','g','send-1'));
+ assert.equal(b.command,null,'timeout must only be emitted once');
+ observe(b,'n',tab('nomi','Finally answering','2|answer|one','n'));
+ assert.equal(deliver(b).text,'Finally answering');
+ assert.equal(b.simplePeerAwait,false);
+ assert.equal(b.events.filter(e=>/Prepared send transaction/.test(e.text)&&/g to n/.test(e.text)).length,1);
+});
