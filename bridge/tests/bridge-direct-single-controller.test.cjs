@@ -204,3 +204,68 @@ test('pause and stop notices are internal Window 1 messages only with AI-CLI off
  assert.equal(b.running,false);
  assert.equal(b.phase,'shutdown');
 });
+
+for(const verb of ['status','help','pending','review','listen','tail','history','florb']){
+ test('Direct controller '+verb+' gets definitive private result without posting to peer',()=>{
+  const b=setup();
+  const line='[bridge '+verb+']';
+  observe(b,'g',tab('chatgpt',line,'2|cmd|'+verb,'g','cmd-'+verb));
+  assert.equal(b.command?.target,'g');
+  assert.equal(b.command?.simpleControl,true);
+  const reply=deliver(b);
+  assert.equal(reply.target,'g');
+  assert.equal(b.simplePeerAwait,false);
+  assert.equal(b.running,true);
+  if(verb==='florb')assert.match(reply.text,/Unknown bridge command/);
+  else assert.match(reply.text,new RegExp(verb==='florb'?'rejected':verb,'i'));
+ });
+}
+test('Direct read-only commands work while the peer is still responding',()=>{
+ const b=setup();
+ observe(b,'g',tab('chatgpt','[bridge send] hello','2|cmd|send','g','send-a'));
+ const send=deliver(b);
+ assert.equal(send.target,'n');
+ assert.equal(b.simplePeerAwait,true);
+ for(const verb of ['status','help','pending']){
+  observe(b,'g',tab('chatgpt','[bridge '+verb+']','3|cmd|'+verb,'g','cmd-'+verb));
+  const result=deliver(b);
+  assert.equal(result.target,'g');
+  assert.equal(b.simplePeerAwait,true);
+ }
+ observe(b,'n',tab('nomi','peer eventually replied','2|n|reply','n'));
+ assert.equal(deliver(b).text,'peer eventually replied');
+ assert.equal(b.simplePeerAwait,false);
+});
+test('Direct pause/resume are acknowledged in Window 1, even while paused',()=>{
+ const b=setup();
+ observe(b,'g',tab('chatgpt','[bridge pause]','2|pause','g','pause'));
+ assert.match(deliver(b).text,/paused/i);
+ assert.equal(b.cliPaused,true);
+ observe(b,'g',tab('chatgpt','[bridge status]','3|status','g','status'));
+ assert.match(deliver(b).text,/status/i);
+ assert.equal(b.cliPaused,true);
+ observe(b,'g',tab('chatgpt','[bridge resume]','4|resume','g','resume'));
+ assert.match(deliver(b).text,/resumed/i);
+ assert.equal(b.cliPaused,false);
+});
+test('Direct shutdown never sends a shutdown payload to Window 2',()=>{
+ const b=setup();
+ observe(b,'g',tab('chatgpt','[bridge shutdown]','2|shutdown','g','shutdown'));
+ const c=deliver(b);
+ assert.equal(c.target,'g');
+ assert.match(c.text,/shutdown acknowledged/i);
+ assert.equal(b.running,false);
+ assert.equal(b.phase,'shutdown');
+ assert.equal(b.command,null);
+});
+test('Direct command-looking raw reply still bypasses CLI when Use AI-CLI off',()=>{
+ const b=new HeartbeatBridge(()=>now);
+ b.tabs={g:tab('nomi','Existing','1|g|existing','g'),
+   n:tab('chatgpt','Existing','1|n|existing','n')};
+ b.start({mode:'direct',tabs:['g','n'],settle:1,useAiCli:false});
+ deliver(b);
+ observe(b,'g',tab('nomi','[bridge status]','2|raw','g'));
+ const result=deliver(b);
+ assert.equal(result.target,'n');
+ assert.equal(result.text,'[bridge status]');
+});
