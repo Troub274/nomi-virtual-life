@@ -557,7 +557,10 @@ test('direct chat cannot accidentally forward World Engine control tags to Nomi'
     url:'https://chatgpt.com/c/test',document:'g',ready:true,complete:true,busy:false,draft:false,error:''});
   b.heartbeat('20',{site:'nomi',reply:'Hello',replyKey:'n1',
     url:'https://nomi.ai/nomis/nomi-test',document:'n',ready:true,complete:true,busy:false,draft:false,error:''});
-  b.start({mode:'direct',tabs:['10','20'],first:'first',settle:3});
+  // Exercise the explicit direct-chat safety gate independently of the
+  // single-controller startup handshake, which requires a logical turn key.
+  Object.assign(b,{running:true,mode:'direct',pair:['10','20'],source:'10',
+    phase:'reply',baseline:'before-tail',stableSeconds:3,startedWait:90});
   b.tabs['10'].changed=0;b.tick();
   assert.equal(b.running,false);
   assert.equal(b.command,null);
@@ -954,7 +957,8 @@ test('legacy browser relay mode still stops on 15-minute timeout',()=>{
     document:'doc1',ready:true,complete:true,busy:false,draft:false,error:''});
   b.heartbeat('20',{site:'nomi',reply:'Answer',replyKey:'n1',url:'https://nomi.ai/nomis/1',
     document:'doc2',ready:true,complete:true,busy:false,draft:false,error:''});
-  b.start({mode:'direct',tabs:['10','20'],first:'first',settle:8});
+  Object.assign(b,{running:true,mode:'legacy',pair:['10','20'],source:'10',
+    phase:'reply',baseline:'g1',stableSeconds:8});
   b.startedWait=-1200;
   b.tick();
   assert.equal(b.running,false);
