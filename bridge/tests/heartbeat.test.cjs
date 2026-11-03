@@ -43,3 +43,34 @@ test('configured delay and validation',()=>{
  const h=setup();assert.throws(()=>h.b.start({mode:'heartbeat',tabs:['1'],heartbeatText:'x',heartbeatDelay:0}));
  h.b.start({mode:'heartbeat',tabs:['1'],heartbeatText:'x',heartbeatDelay:20,settle:3});h.send();h.reply('ok');h.advance(19);assert.equal(h.b.command,null);h.advance(1);assert.ok(h.b.command);
 });
+
+function nomiSetup(){
+ let now=100,b=new HeartbeatBridge(()=>now);
+ let snap={site:'nomi',url:'https://nomi.ai/nomis/example',document:'nomi-1',
+   ready:true,busy:false,draft:false,reply:'',replyKey:'',complete:true};
+ const update=(patch={})=>{snap={...snap,...patch};return b.heartbeat('1',snap);};
+ const advance=n=>{now+=n;update();};
+ const start=(overrides={})=>b.start({mode:'heartbeat',tabs:['1'],settle:3,heartbeatDelay:10,...overrides});
+ const send=()=>{const c=b.command;assert.ok(c);assert.equal(b.validateSource(c.id,snap),true);
+   assert.equal(b.claim('1',c.id).allowed,true);b.acknowledge('1',{id:c.id});return c;};
+ const reply=text=>{update({reply:text,replyKey:'nomi-reply-'+now,complete:true,busy:false});advance(3);};
+ update();return {get b(){return b;},update,advance,start,send,reply};
+}
+test('Nomi heartbeat defaults to ellipsis and sends no GPT sleep instructions',()=>{
+ const h=nomiSetup();h.start();assert.equal(h.b.command.text,'...');
+ h.send();assert.equal(h.b.lastDelivery.to,'nomi');
+ h.reply('I am here.');h.advance(10);assert.equal(h.b.command.text,'...');
+});
+test('Nomi sleep-looking reply is ordinary text and cannot stop heartbeat',()=>{
+ const h=nomiSetup();h.start();h.send();h.reply('[sleep]');
+ assert.equal(h.b.running,true);
+ h.advance(10);assert.equal(h.b.command.text,'...');
+});
+test('Nomi heartbeat respects drafts, message byte limits, and configured phrase',()=>{
+ const h=nomiSetup();
+ assert.throws(()=>h.start({heartbeatText:'🍃'.repeat(300)}),/750 UTF-8 bytes/);
+ h.start({heartbeatText:'1',heartbeatDelay:20});
+ assert.equal(h.b.command.text,'1');h.send();h.reply('OK');
+ h.update({draft:true});h.advance(20);assert.equal(h.b.command,null);
+ h.update({draft:false});h.advance(3);assert.equal(h.b.command.text,'1');
+});
