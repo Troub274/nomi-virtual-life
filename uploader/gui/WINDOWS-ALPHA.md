@@ -4,7 +4,7 @@
 
 ## Download / install (no terminal, no Python required)
 
-1. Visit the [Windows alpha download page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3).
+1. Visit the [Windows 1.3i download page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3i).
 2. Under **Assets**, download **NomiUploader-Windows.zip**.
 3. Extract the ZIP into a normal folder.
 4. Open **NomiUploader.exe**. Do **not** open `index.html`.

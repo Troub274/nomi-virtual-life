@@ -12,7 +12,7 @@ Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key on
 
 ## Downloads and setup (all platforms)
 
-**Unified v1.3 release (publication pending):** [Nomi Uploader 1.3](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3).\nThe packages build successfully in CI, but the release page may not exist until the publish job runs from the current `main` commit. Do not treat a successful job that says `Stale build skipped` as a published release.
+**Published unified v1.3i release:** [Download Nomi Uploader 1.3i](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3i). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.

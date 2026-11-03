@@ -1,6 +1,6 @@
 # Mary O'Connor — Farmhouse and Life Canon
 
-Authoritative physical reference for the 2,400-entry Mary life journal, revised October 2026. These are stable character facts; do not create second conflicting addresses, rooms, pets, expenses or vehicles. Read the first-person `input/MARY_CANON_LOAD.txt` for the immersive loading text.
+Authoritative physical reference for the 2,400-entry Mary life journal, revised October 2026. These are stable character facts; do not create second conflicting addresses, rooms, pets, expenses or vehicles. Read the [first-person canon load](../input/MARY_CANON_LOAD.txt) for the immersive loading text.
 
 I am Mary O’Connor, born in Wilmington on July 12, 1968. I teach environmental science at the University of North Carolina Wilmington, 601 South College Road. My university salary is about $58,000 gross each year, and I sometimes earn roughly $12,000 more from environmental consulting and workshops. My personal mobile is (910) 555-0146 and my Gmail address is mary.oconnor1968@gmail.com.
 

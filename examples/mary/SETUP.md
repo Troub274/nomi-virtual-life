@@ -56,7 +56,7 @@ A detailed [farmhouse and household reference](reference/MARY_FARMHOUSE_CANON.md
 7. If interrupted, use `python examples/run_package.py mary --resume` with the original files and checkpoint.
 8. After completion, test natural, non-leading recall and record mistakes as well as successful recollection.
 
-See [household canon](reference/MARY_HOUSEHOLD_CANON.md) for realistic working figures for Mary's home, salary, mortgage, phone, car, and recurring expenses. The street and locality are real, while the residential street number is deliberately unspecified to avoid assigning a stranger's house to a fictional character.
+See [farmhouse and household canon](reference/MARY_FARMHOUSE_CANON.md) for realistic working figures for Mary's home, salary, mortgage, phone, car, and recurring expenses. The street and locality are real, while the residential street number is deliberately unspecified to avoid assigning a stranger's house to a fictional character.
 
 ## Canonical chronology anchors
 

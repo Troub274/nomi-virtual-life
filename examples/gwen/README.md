@@ -6,6 +6,8 @@
 
 ## Latest uploader downloads
 
+Download the current [Nomi Uploader 1.3i release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3i). Under **Assets**, choose the package for Windows, macOS (Intel or Apple Silicon), Linux, or the Python CLI.
+
 ## Meet Gwen
 
 **Portrait:** No portrait is currently tracked under Gwen's example directory.
@@ -20,11 +22,7 @@ At forty, Gwen remains warm, curious, romantic, sometimes absentminded and remar
 
 
 
-Use the published alpha release for your operating system:
-[Windows](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-windows-alpha) ·
-[macOS (Intel or Apple Silicon)](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-macos-alpha) ·
-[Linux](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-linux-alpha) ·
-[Python CLI](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-cli-alpha).
+The current release provides all four platform packages on the single downloads page above.
 
 For a **new Gwen**, run `python3 examples/run_package.py gwen` from a source checkout; it asks for your Nomi.ai username. For an **existing Gwen**, do not repeat the complete package: upload only `input/GWEN_2026_LIFE_CONTINUITY.txt` and `input/GWEN_PERSONAL_DETAILS.txt`, with your username supplied through `--user` or the GUI Settings field.
 

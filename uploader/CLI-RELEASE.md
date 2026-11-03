@@ -1,8 +1,8 @@
-# Nomi Uploader — CLI within the unified 1.3 release
+# Nomi Uploader — CLI within the unified 1.3i release
 
 The CLI is the **same Nomi Uploader v1.3 engine bundled in every GUI release** and works on Windows, macOS and Linux with Python 3.10+.
 
-Download `NomiUploader-Python-CLI.zip` from the [unified Uploader release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3), then extract it.
+Download `NomiUploader-Python-CLI.zip` from the [unified Uploader release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.3i), then extract it.
 
 The ZIP contains `nomi-uploader.py`, its required compatibility module `legacy_v085.py`, `requirements.txt`, and uploader documentation. **Both Python files must stay together.** `legacy_v085.py` is a dependency, not an alternative executable.
 
