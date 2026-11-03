@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "AI Bridge",
-  "version": "1.0.44",
+  "version": "1.0.45",
   "description": "AI-controlled conversation bridge with existing Nomi browser and API-room adapters.",
   "permissions": [
     "storage",
     "alarms",
     "scripting",
-    "tabs"
+    "tabs",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",
@@ -34,5 +35,5 @@
       "run_at": "document_idle"
     }
   ],
-  "version_name": "1.0.44 - stable ChatGPT turn keys"
+  "version_name": "1.0.45 - unified interface development"
 }
