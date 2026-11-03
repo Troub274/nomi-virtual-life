@@ -86,7 +86,7 @@ class GroupBridge extends BaseBridge {
   }
   tick() {
     if (this.mode !== 'group') return super.tick();
-    if (!this.running) return;
+    if (!this.running || this.lifecycleStopRequested) return;
     const now = this.clock(), [gptId, roomId] = this.pair;
     if (this.pair.some(id => !this.tabs[id] || now - this.tabs[id].seen > 120)) {
       if (this.command?.claimed) this.phase = 'uncertain';
@@ -185,7 +185,8 @@ class GroupBridge extends BaseBridge {
     return !!ok;
   }
   acknowledge(tab, data) {
-    if (this.mode !== 'group') return super.acknowledge(tab, data);
+    if (this.mode !== 'group' || this.command?.controllerNotice)
+      return super.acknowledge(tab, data);
     const cmd = this.command;
     if (this.phase !== 'send' || !cmd || cmd.id !== data.id || cmd.target !== tab || !cmd.claimed) return {};
     if (data.error) {this.phase = 'uncertain'; this.stop('Room action not confirmed: ' + data.error + '. Check both tabs, then Reset.'); this.command = null; return {};}
@@ -205,6 +206,7 @@ class GroupBridge extends BaseBridge {
       }
     }
     this.command = null; this.log(cmd.packet ? 'GPT received the bridge update.' : 'Room action confirmed: [' + cmd.action + '].');
+    if(this.pendingControllerNotice)this.flushControllerNotice();
     if (!cmd.packet && data.snapshot && data.snapshot.document === cmd.document && data.snapshot.url === cmd.url) {
       // Preserve Edge metadata and record the committed message before tick can
       // create the next invite/play command.
