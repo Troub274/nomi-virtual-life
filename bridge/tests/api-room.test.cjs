@@ -1414,7 +1414,7 @@ test('Nomi API reply that looks like a Bridge command is conversation data, not 
  h.b.acknowledge(virtual,{id:outgoing.id});
  h.destination.reply='[bridge status]';
  h.destination.replyKey='nomi-reply-control-looking';
- h.advance();
+ h.advance();h.advance(); // wait for the configured reply-settle interval
  assert.equal(h.b.command?.target,GPT_ID);
  assert.equal(h.b.command?.text,'[bridge status]');
  assert.equal(h.b.useAiCli,true);
