@@ -78,6 +78,8 @@ class Bridge {
       this.phase = 'source'; this.command = null; this.baseline = null; this.remindChatGPT = false; this.turns = 0; this.cliTransactions = 0;
     }
     this.cliControllerTab = String(pair[0]);
+    const settle = Number(data.settle ?? 2);
+    this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if ((this.mode||'direct')==='direct') {
       if(this.tabs[pair[0]]?.site==='chatgpt' && this.tabs[pair[0]].reply &&
          !Number.isSafeInteger(this.tabs[pair[0]].assistantTurnNumber))
@@ -112,8 +114,6 @@ class Bridge {
       return;
     }
     this.cliSeen = Object.fromEntries(pair.map(id=>[id,this.tabs[id]?.replyKey]));
-    const settle = Number(data.settle ?? 2);
-    this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if (this.command && !this.command.claimed) this.command.created = this.clock();
     this.tabRetry=null;
     this.cliShutdown=false;
