@@ -1,6 +1,9 @@
 /* Pure turn engine. State is persisted in extension session storage by the worker. */
 const NOMI_MESSAGE_LIMIT = 750;
 function isBridgeCommandText(value) {return /^\s*\[(?:bridge\s+|next message\]|clear queue\])/i.test(value||'');}
+// API-room data commands share the Bridge CLI spelling but are handled by
+// the room transport, not the Direct-mode command processor.
+function isApiRoomDataCommand(value) {return /^\s*\[bridge\s+(?:send|listen|wait|tail|history)(?:\s|\])/i.test(value||'');}
 const LENGTH_REMINDER = '\n\n[Bridge reminder: Your previous reply exceeded 750 characters and was truncated before Nomi received it. Keep your entire next reply and subsequent replies within 750 characters, including spaces and punctuation.]';
 function limitNomiMessage(text) {
   if (text.length <= NOMI_MESSAGE_LIMIT) return text;
@@ -263,7 +266,8 @@ class Bridge {
         this.phase !== 'send') return;
     const tab=this.tabs[id];
     if (!tab?.reply || tab.busy || tab.complete===false ||
-        !isBridgeCommandText(tab.reply)) return;
+        !isBridgeCommandText(tab.reply) ||
+         (this.mode==='api-room'&&isApiRoomDataCommand(tab.reply))) return;
     this.cliSeen ||= {};
     if (this.cliSeen[id] === tab.replyKey) return;
     if (this.command.source === id && this.command.sourceReply === tab.reply) return;
@@ -309,7 +313,8 @@ class Bridge {
         this.phase==='send' || this.phase==='uncertain' || this.pairNotice) return;
     const tab=this.tabs[id], now=this.clock();
     if (!tab || tab.busy || tab.complete===false ||
-        now-tab.changed < this.stableSeconds || !isBridgeCommandText(tab.reply)) return;
+        now-tab.changed < this.stableSeconds || !isBridgeCommandText(tab.reply) ||
+         (this.mode==='api-room'&&isApiRoomDataCommand(tab.reply))) return;
     this.cliSeen ||= {};
     if (this.cliSeen[id]===tab.replyKey) return;
     // Remember this reply before attempting dispatch; never re-execute after a repaint.
@@ -625,7 +630,8 @@ class Bridge {
     }
     // Idempotency across replyKey changes while ChatGPT re-renders a command.
     // Scope to the source tab, document and exact completed CLI text.
-    if (isBridgeCommandText(source.reply)) {
+    if (isBridgeCommandText(source.reply) &&
+        !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       const fingerprint = JSON.stringify([this.source, source.url, source.document, source.reply.trim()]);
       if (this.lastCliFingerprint === fingerprint) {
         this.baseline = source.replyKey;
@@ -638,7 +644,8 @@ class Bridge {
     // AI Bridge 1.0: reserve standalone CLI output before any conversation forwarding.
     // This safety gate prevents control text leaking into Nomi or another AI.
     // It consumes a new reply once by advancing the source checkpoint.
-    if (isBridgeCommandText(source.reply)) {
+    if (isBridgeCommandText(source.reply) &&
+        !(this.mode==='api-room'&&isApiRoomDataCommand(source.reply))) {
       // Either human-selected participant can issue any supported CLI command.
       // The bridge still validates syntax, session state and delivery context.
       let parsed;
