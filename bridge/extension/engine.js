@@ -614,8 +614,8 @@ class Bridge {
     }
     // Explicit-send mode: ChatGPT's ordinary replies remain private to the human.
     // Only a standalone [bridge send ...] block can reach the peer.
-    if (this.mode !== 'api-room' &&
-        (source.site === 'chatgpt' || (this.mode === 'direct' && source.site === 'nomi')) &&
+    if (this.mode === 'direct' &&
+        (source.site === 'chatgpt' || source.site === 'nomi') &&
         !isBridgeCommandText(source.reply)) {
       this.baseline = source.replyKey;
       this.phase = 'reply';
