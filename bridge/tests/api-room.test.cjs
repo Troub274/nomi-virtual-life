@@ -1406,3 +1406,16 @@ for(const [command,match] of [
   assert.equal(h.b.tabs[virtual].reply,'');
  });
 }
+
+test('Nomi API reply that looks like a Bridge command is conversation data, not a controller instruction',()=>{
+ const h=harness('[bridge send]\nOriginal room event.');
+ const outgoing=h.b.command;
+ assert.equal(h.b.claim(virtual,outgoing.id).allowed,true);
+ h.b.acknowledge(virtual,{id:outgoing.id});
+ h.destination.reply='[bridge status]';
+ h.destination.replyKey='nomi-reply-control-looking';
+ h.advance();
+ assert.equal(h.b.command?.target,GPT_ID);
+ assert.equal(h.b.command?.text,'[bridge status]');
+ assert.equal(h.b.useAiCli,true);
+});
