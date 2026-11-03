@@ -972,7 +972,7 @@ test('room-only fallback immediately returns an internal status for [listening] 
   h.driver.request=async()=>{apiCalls++;throw Error('Passive listen cannot request Nomi room reply');};
   await h.driver.pump();await h.settle();
   assert.match(h.b.tabs[virtual].reply,/ROOM-ONLY FALLBACK ACTIVE/);
-  assert.match(h.b.tabs[virtual].reply,/Send \[say room\]/);
+  assert.match(h.b.tabs[virtual].reply,/Send \[bridge send\]/);
   assert.equal(s.listenDeadline,0);
   assert.equal(s.monitorLastSeq||0,0);
   assert.equal(apiCalls,0);
