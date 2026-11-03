@@ -214,7 +214,7 @@ class DesktopJavaScriptTests(unittest.TestCase):
         if node is None:
             self.skipTest("Node.js unavailable on this test host")
         html = (ROOT / "gui" / "index.html").read_text(encoding="utf-8")
-        scripts = re.findall(r"<script\\b[^>]*>(.*?)</script>", html, re.DOTALL)
+        scripts = re.findall(r"<script\b[^>]*>(.*?)</script>", html, re.DOTALL)
         self.assertGreaterEqual(len(scripts), 2)
         for index, script in enumerate(scripts):
             result = subprocess.run(
