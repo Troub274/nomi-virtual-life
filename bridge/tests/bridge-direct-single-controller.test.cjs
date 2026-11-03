@@ -138,3 +138,14 @@ for(const [controller,peer] of [['chatgpt','chatgpt'],['nomi','chatgpt'],['nomi'
   assert.equal(b.turns,2);
  });
 }
+
+test('changing ChatGPT identity-marker type mid-session fails closed rather than replaying',()=>{
+ const b=setup();
+ observe(b,'g',tab('chatgpt','[bridge send] A','2|A|send','g','A'));
+ deliver(b);observe(b,'n',tab('nomi','ACK','2|ack|reply','n'));deliver(b);
+ const reobserved=tab('chatgpt','[bridge send] A','5|changed-layout|same','g','A');
+ reobserved.assistantTurnKey='unit:backend-id-A';
+ observe(b,'g',reobserved);
+ assert.equal(b.command,null);
+ assert.match(b.reason,/changed its turn-identity layout/);
+});
