@@ -8,7 +8,20 @@ class WorldObserver {
     this.maxEvents=maxEvents;
   }
   storageKey(roomId){return 'nomiWorldJournal:'+roomId;}
-  async clear(roomId){await this.storage.remove(this.storageKey(roomId));}
+  archiveIndexKey(roomId){return 'nomiWorldArchiveIndex:'+roomId;}
+  archivePartKey(roomId,part){return 'nomiWorldArchive:'+roomId+':'+part;}
+  async archiveIndex(roomId){
+    const k=this.archiveIndexKey(roomId);
+    return (await this.storage.get(k))[k]||null;
+  }
+  async clear(roomId){
+    const index=await this.archiveIndex(roomId);
+    // Delete the append-only archive as well as the live monitoring window.
+    if(index)for(let part=0;part<index.segments;part++)
+      await this.storage.remove(this.archivePartKey(roomId,part));
+    await this.storage.remove(this.archiveIndexKey(roomId));
+    await this.storage.remove(this.storageKey(roomId));
+  }
   async load(roomId){
     const key=this.storageKey(roomId),saved=(await this.storage.get(key))[key];
     return saved && Array.isArray(saved.events) ? saved :
@@ -18,11 +31,43 @@ class WorldObserver {
     await this.storage.set({[this.storageKey(journal.roomId)]:journal});
     return journal;
   }
+  // Archive is segmented so a long-running room does not rewrite its entire
+  // history or exceed the per-item storage limit. The legacy rolling journal
+  // remains available to monitor and replay a bounded live observation window.
+  async archivePage(roomId,offset=0,limit=100){
+    const index=await this.archiveIndex(roomId);
+    if(!index) {
+      const events=(await this.load(roomId)).events;
+      return {events:events.slice(offset,offset+limit),total:events.length,
+        nextOffset:Math.min(events.length,offset+limit),legacy:true};
+    }
+    const size=40,total=index.total,events=[];
+    let part=Math.floor(offset/size),skip=offset%size;
+    const wanted=Math.max(1,Math.min(200,limit));
+    while(part<index.segments && events.length<wanted) {
+      const key=this.archivePartKey(roomId,part);
+      const shard=(await this.storage.get(key))[key];
+      if(!shard?.events)throw Error('Local room history shard '+part+' is missing; do not silently skip history.');
+      events.push(...shard.events.slice(skip,skip+(wanted-events.length)));
+      part++;skip=0;
+    }
+    return {events,total,nextOffset:Math.min(total,offset+events.length),legacy:false};
+  }
+  async allArchivedEvents(roomId){
+    const index=await this.archiveIndex(roomId);
+    if(!index)return (await this.load(roomId)).events;
+    const events=[];
+    for(let part=0;part<index.segments;part++){
+      const key=this.archivePartKey(roomId,part);
+      const shard=(await this.storage.get(key))[key];
+      if(!shard?.events)throw Error('Local room history shard '+part+' is missing.');
+      events.push(...shard.events);
+    }
+    return events;
+  }
   async append(roomId,entries){
     if(!Array.isArray(entries)||!entries.length)return [];
-    const j=await this.load(roomId);
-    const seen=new Set(j.seenKeys);
-    const added=[];
+    const j=await this.load(roomId),seen=new Set(j.seenKeys),added=[],full=[];
     for(const entry of entries){
       if(!entry||typeof entry.text!=='string'||!entry.text.trim()||
          typeof entry.key!=='string'||!entry.key||!['live','room'].includes(entry.channel)||
@@ -30,15 +75,49 @@ class WorldObserver {
       const key=entry.channel+':'+entry.key;
       if(seen.has(key))continue;
       seen.add(key);j.seenKeys.push(key);
-      const event={seq:j.nextSeq++,time:new Date().toISOString(),channel:entry.channel,
-        speaker:entry.speaker,text:entry.text.slice(0,6000),truncated:entry.text.length>6000};
+      const seq=j.nextSeq++,time=new Date().toISOString();
+      const event={seq,time,channel:entry.channel,speaker:entry.speaker,
+        text:entry.text.slice(0,6000),truncated:entry.text.length>6000};
       j.events.push(event);added.push(event);
+      full.push({...event,text:entry.text,truncated:false,recordKey:key});
     }
-    if(added.length){
-      j.events=j.events.slice(-this.maxEvents);
-      j.seenKeys=j.seenKeys.slice(-Math.max(300,this.maxEvents*3));
-      await this.save(j);
+    if(!added.length)return [];
+    j.events=j.events.slice(-this.maxEvents);
+    j.seenKeys=j.seenKeys.slice(-Math.max(300,this.maxEvents*3));
+    let index=await this.archiveIndex(roomId);
+    // Existing rooms have a bounded 500-event journal. Preserve every entry
+    // still available on first upgrade, explicitly marking historical excerpts.
+    const old=!index;
+    if(!index)index={version:1,roomId,segments:0,total:0};
+    const preceding=old ? (await this.load(roomId)).events.map(e=>({
+      ...e,recordKey:'legacy:'+e.seq,provenance:'migrated-rolling-window'
+    })) : [];
+    const all=[...preceding,...full];
+    const writes={};
+    let part=index.segments?index.segments-1:0;
+    let shard;
+    if(index.segments){
+      const key=this.archivePartKey(roomId,part);
+      shard=(await this.storage.get(key))[key];
+      if(!shard?.events)throw Error('Cannot append: local room archive shard missing.');
+      shard={version:1,roomId,part,events:[...shard.events]};
+    }else shard={version:1,roomId,part:0,events:[]};
+    for(const event of all){
+      if(shard.events.length>=40){
+        writes[this.archivePartKey(roomId,part)]=shard;
+        part++;shard={version:1,roomId,part,events:[]};
+      }
+      shard.events.push(event);
     }
+    writes[this.archivePartKey(roomId,part)]=shard;
+    index.segments=part+1;
+    index.total+=all.length;
+    index.updatedAt=new Date().toISOString();
+    writes[this.archiveIndexKey(roomId)]=index;
+    writes[this.storageKey(roomId)]=j;
+    // Publish journal + new archive shard(s) in one storage transaction.
+    // A failed save must be surfaced, never silently acknowledge lost history.
+    await this.storage.set(writes);
     return added;
   }
   async observeLive(roomId,conversationUrl,messages){
@@ -56,7 +135,7 @@ class WorldObserver {
   }
   async history(roomId){return (await this.load(roomId)).events;}
   async historyPage(roomId,page=1,maxChars=24000){
-    const events=await this.history(roomId),pages=[];
+    const events=await this.allArchivedEvents(roomId),pages=[];
     let batch=[],used=0;
     for(const event of [...events].reverse()){
       const size=event.text.length+120;
