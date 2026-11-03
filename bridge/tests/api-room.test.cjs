@@ -1323,3 +1323,44 @@ test('stopped recovery binding does not itself re-trigger a ChatGPT navigation s
   b.heartbeat(GPT_ID,{...h.source,url:oldUrl,document:'restored'});
   assert.equal(b.reason,'Intentional pause for recovery');
 });
+
+test('unified Bridge send command uses selected API room, with no room selector in text',async()=>{
+ const h=harness('[bridge send]\nThe Bean lights reflect across the waterfront.'),sent=[];
+ h.driver.request=async(path,method,body)=>{
+  if(path.endsWith('/chat')){sent.push(body.messageText);return {};}
+  if(path.endsWith('/chat/request'))return {replyMessage:{messageText:'Mary sees the dock lights.'}};
+  throw Error('Unexpected API call: '+path);
+ };
+ await h.driver.pump();await h.settle();
+ assert.deepEqual(sent,['The Bean lights reflect across the waterfront.']);
+ assert.equal(h.b.tabs[virtual].reply,'Mary sees the dock lights.');
+});
+test('AI-CLI off forwards command-looking room text literally, without interpretation',async()=>{
+ const literal='[bridge tail]';
+ const h=harness(literal),sent=[];
+ h.b.useAiCli=false;
+ h.driver.request=async(path,method,body)=>{
+  if(path.endsWith('/chat')){sent.push(body.messageText);return {};}
+  if(path.endsWith('/chat/request'))return {replyMessage:{messageText:'I read the literal words.'}};
+  throw Error('Unexpected API call: '+path);
+ };
+ await h.driver.pump();await h.settle();
+ assert.deepEqual(sent,[literal]);
+ assert.equal(h.b.tabs[virtual].reply,'I read the literal words.');
+});
+test('unified Bridge tail reads the local journal and posts no room message',async()=>{
+ const h=harness('[bridge tail]'),sent=[];
+ await h.driver.observer.roomEvent(ROOM,'Nomi','Previously recorded reply.','test-recorded');
+ h.driver.request=async(path,method,body)=>{sent.push(path);throw Error('No Nomi POST for tail');};
+ await h.driver.pump();await h.settle();
+ assert.deepEqual(sent,[]);
+ assert.match(h.b.tabs[virtual].reply,/Previously recorded reply/);
+});
+test('unified room control parser distinguishes sending and listening',()=>{
+ assert.equal(parseWorldCommand('[bridge send]\n( world: The Bean is quiet.)').kind,'room');
+ assert.equal(parseWorldCommand('[bridge listen]').kind,'listening');
+ assert.equal(parseWorldCommand('[bridge wait]').kind,'wait');
+ assert.equal(parseWorldCommand('[bridge history page=2]').page,2);
+ assert.equal(parseWorldCommand('[bridge tail]').kind,'tail');
+ assert.equal(parseWorldCommand('[bridge send]\n[bridge tail]').kind,'invalid');
+});
