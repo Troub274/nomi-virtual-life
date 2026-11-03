@@ -25,7 +25,7 @@ test('120 alternating turns without a turn limit',()=>{
 test('waits through streaming and then quiet time',()=>{
  const f=fixture();f.play();f.advance();f.deliver();
  f.beat('b',{reply:'partial',replyKey:'new',busy:true});f.advance(30);assert.equal(f.bridge.command,null);
- f.beat('b',{reply:'complete',busy:false});f.advance(4);assert.equal(f.bridge.command,null);
+ f.beat('b',{reply:'complete',busy:false});f.advance(1);assert.equal(f.bridge.command,null);
  f.advance(5);assert.equal(f.bridge.command.text,'complete');
 });
 test('stop revokes send and resume retains pending reply',()=>{
@@ -34,9 +34,15 @@ test('stop revokes send and resume retains pending reply',()=>{
  const c=f.bridge.command;assert.ok(f.bridge.claim(c.target,c.id).allowed);assert.equal(f.bridge.claim(c.target,c.id).allowed,false);
  f.bridge.stop();assert.equal(f.bridge.claim(c.target,c.id,true).allowed,false);
 });
-test('uncertain send cannot be replayed',()=>{
- const f=fixture();f.play();f.advance();const c=f.bridge.command;f.bridge.claim(c.target,c.id);f.advance(91);
- assert.equal(f.bridge.phase,'uncertain');assert.throws(f.play,/uncertain/);
+test('claimed send is never silently timed out or resent while tab remains connected',()=>{
+ const f=fixture();f.play();f.advance();const c=f.bridge.command;
+ assert.equal(f.bridge.claim(c.target,c.id).allowed,true);
+ f.advance(91);
+ assert.equal(f.bridge.phase,'send');
+ assert.equal(f.bridge.command.id,c.id,'same immutable claimed transaction');
+ assert.equal(f.bridge.claim(c.target,c.id).allowed,false,'cannot claim or resend twice');
+ f.bridge.stop();
+ assert.equal(f.bridge.claim(c.target,c.id,true).allowed,false);
 });
 test('late ack cannot clear navigation uncertainty',()=>{
  const f=fixture();f.play();f.advance();const c=f.bridge.command;f.bridge.claim(c.target,c.id);
