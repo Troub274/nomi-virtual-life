@@ -111,3 +111,50 @@ test('room packets keep newer messages queued until subsequent delivery',()=>{
 test('parser accepts case variants and rejects missing payloads',()=>{
   assert.equal(parseGroupCommand('[LISTENING]').action,'listening'); assert.ok(parseGroupCommand('[say]').error); assert.ok(parseGroupCommand('[wait] blah').error);
 });
+
+test('unified Group CLI replies to status/help/pending and errors only in Window 1',()=>{
+ for(const [command,match] of [
+  ['[bridge status]',/AI Bridge status/],
+  ['[bridge help topic="commands"]',/ONE COMMAND PER REPLY/],
+  ['[bridge pending]',/AI Bridge pending/],
+  ['[bridge blorb]',/Unknown bridge command/]
+ ]){
+  const f=setup();f.ack(); // startup guide has already been delivered to Window 1
+  f.reply(command);f.advance();
+  assert.equal(f.b.command?.target,'a',command);
+  assert.equal(f.b.command?.bridgeLocal,true,command);
+  assert.match(f.b.command.text,match,command);
+  f.ack();assert.equal(f.b.command,null);
+  assert.equal(f.b.running,true);
+ }
+});
+test('unified Group CLI [bridge send] posts to the selected room without the command tag',()=>{
+ const f=setup();f.ack();
+ f.reply('[bridge send]\nHello, room.');f.advance();
+ assert.equal(f.b.command.target,'b');
+ assert.equal(f.b.command.action,'say');
+ assert.equal(f.b.command.text,'Hello, room.');
+});
+test('unified Group CLI pause/resume acknowledge in Window 1 and block room sends',()=>{
+ const f=setup();f.ack();
+ f.reply('[bridge pause]');f.advance();
+ assert.equal(f.b.cliPaused,true);
+ assert.equal(f.b.command.target,'a');assert.match(f.ack().text,/paused/i);
+ f.reply('[bridge send]\nThis must not post.');f.advance();
+ assert.equal(f.b.command.target,'a');assert.match(f.ack().text,/No Nomi group message was sent/);
+ f.reply('[bridge resume]');f.advance();
+ assert.equal(f.b.cliPaused,false);
+ assert.equal(f.b.command.target,'a');assert.match(f.ack().text,/resumed/i);
+ f.reply('[bridge send]\nNow post.');f.advance();
+ assert.equal(f.b.command.target,'b');
+ assert.equal(f.b.command.text,'Now post.');
+});
+test('unified Group shutdown acknowledges Window 1 without room transmission',()=>{
+ const f=setup();f.ack();
+ f.reply('[bridge shutdown]');f.advance();
+ assert.equal(f.b.command.target,'a');
+ assert.match(f.b.command.text,/shutdown/i);
+ f.ack();
+ assert.equal(f.b.running,false);
+ assert.equal(f.b.phase,'shutdown');
+});
