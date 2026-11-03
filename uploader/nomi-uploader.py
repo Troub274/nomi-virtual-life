@@ -1244,6 +1244,7 @@ def interactive_menu():
 
 def main(argv=None):
     """Parse CLI commands, validate incompatible flags and resolve credentials."""
+    legacy.configure_text_output()
     argv=list(sys.argv[1:] if argv is None else argv)
     parser=argparse.ArgumentParser(description="Nomi Uploader v1.3")
     parser.add_argument("files",nargs="*")

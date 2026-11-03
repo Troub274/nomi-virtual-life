@@ -265,8 +265,10 @@ class API:
         env["NOMI_GUI_TARGET_NOMI"] = self.project.get("nomi","")
         env["NOMI_GUI_TARGET_UUID"] = self.project.get("nomi_uuid","")
         self.proc = subprocess.Popen(self._cli(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                     stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(DATA),
-                     env={**env, "PYTHONUNBUFFERED":"1"}, creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
+                     stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+                     bufsize=1, cwd=str(DATA),
+                     env={**env, "PYTHONUNBUFFERED":"1", "PYTHONIOENCODING":"utf-8:backslashreplace",
+                          "PYTHONUTF8":"1"}, creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
         def reader():
             for line in self.proc.stdout:
                 with self.lock: self.lines.append(line.rstrip())

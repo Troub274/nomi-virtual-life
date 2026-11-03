@@ -880,8 +880,21 @@ def relive_after_episode(ep,a,rid,nid,name,journal,events):
     body=reply.get('messageText') or reply.get('text') or reply.get('content') or '' if isinstance(reply,dict) else ''
     if body: print('    %s: %s'%(name,str(body)[:250].replace('\n',' ')),flush=True)
 
+def configure_text_output():
+    """Use Unicode-safe text output for consoles and redirected GUI pipes."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding='utf-8', errors='backslashreplace')
+            except (OSError, ValueError):
+                # Captured/closed streams may not support changing their codec.
+                pass
+
+
 def main():
     """Run the standalone legacy compatibility entry point."""
+    configure_text_output()
     ap=argparse.ArgumentParser(description='Nomi v0.85: room-based, automatic durable resume')
     ap.add_argument('files',nargs='*',help='diary TXT/DOCX files in chronological order')
     ap.add_argument('--mode',choices=['journal','conversation'],default='journal')

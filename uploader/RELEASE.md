@@ -12,6 +12,12 @@ One version and one download page for Windows, macOS, Linux, and Python CLI.
 
 Each GUI package includes `CLI-IN-GUI-DOWNLOAD.md` and the Python uploader. The standalone CLI ZIP remains an asset **within the same release**, not a separate version or release.
 
+## Unicode output hotfix
+
+- Windows previews and upload logs now use UTF-8, including emoji, non-Latin names, and private-use citation characters from imported ChatGPT transcripts.
+- The GUI explicitly decodes the uploader subprocess output as UTF-8, preventing Windows code-page errors from aborting a preview or interrupting its log reader.
+- Transcript text, upload planning, and checkpoint compatibility are unchanged.
+
 ## Version 1.3i interface highlights
 
 - Nomi-inspired dark/light/system appearance selection.
