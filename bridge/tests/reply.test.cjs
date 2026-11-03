@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm');const fs=require('node:fs');
-async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false}={}) {
+async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false,turnNumber=12}={}) {
  let snapshot;
  const visual={getClientRects:()=>[{}]};
  const modernTurn={getAttribute:()=>completed?"complete":"streaming",querySelectorAll:()=>parts};
@@ -8,7 +8,11 @@ async function inspect({completed=false,streaming=false,rootStreaming=false,cont
   if(selector.startsWith('button'))return completed?[visual]:[];
   return streaming?[visual]:[];
  }};
- const parts=['The whole response begins here.','And ends.'].map(text=>({...visual,innerText:text,getAttribute:()=>null,closest:selector=>modern&&selector==='[data-talvt-turn-state]'?modernTurn:selector.startsWith('article')&&container?turn:null}));
+ const logicalTurn={getAttribute:attr=>attr==='data-testid'?'conversation-turn-'+turnNumber:null};
+ const parts=['The whole response begins here.','And ends.'].map(text=>({...visual,innerText:text,getAttribute:()=>null,closest:selector=>
+  selector==='[data-testid^="conversation-turn-"]' ? (container?logicalTurn:null) :
+  modern&&selector==='[data-talvt-turn-state]'?modernTurn:
+  selector.startsWith('article')&&container?turn:null}));
  const context={location:{hostname:'chatgpt.com',href:'https://chatgpt.com/c/test'},crypto:globalThis.crypto,
  document:{title:'ChatGPT',querySelectorAll:selector=>selector.startsWith('[data-message-author-role=')?parts:[]},
  getComputedStyle:()=>({visibility:'visible'}),setInterval:()=>{},setTimeout,
@@ -37,4 +41,16 @@ test('new ChatGPT layout reads full reply only when the turn is complete',async(
  const done=await inspect({modern:true,completed:true});
  assert.equal(done.reply,'The whole response begins here.\n\nAnd ends.');assert.equal(done.complete,true);
  const streaming=await inspect({modern:true});assert.equal(streaming.complete,false);
+});
+
+test('adapter reports stable logical GPT turn number through message-node redraws',async()=>{
+ const original=await inspect({completed:true,turnNumber:17});
+ const redraw=await inspect({completed:true,turnNumber:17,modern:true});
+ assert.equal(original.assistantTurnNumber,17);
+ assert.equal(redraw.assistantTurnNumber,17);
+ assert.equal((await inspect({completed:true,turnNumber:18})).assistantTurnNumber,18);
+});
+test('unidentifiable GPT assistant turn exposes null, not a fabricated count',async()=>{
+ const s=await inspect({completed:true,container:false});
+ assert.equal(s.assistantTurnNumber,null);
 });
