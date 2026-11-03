@@ -3,9 +3,9 @@ const {test} = require('node:test');
 globalThis.AIBridgeCLI = require('../extension/bridge-cli.js');
 if (!globalThis.crypto) globalThis.crypto = require('node:crypto').webcrypto;
 const {Bridge}=require('../extension/engine.js');
-test('shutdown sends acknowledgment before revoking session',()=>{
+test('legacy controller: shutdown sends acknowledgment before revoking session',()=>{
  const t=1000, b=new Bridge(()=>t);
- b.running=true;b.mode='direct';b.pair=['g','n'];b.source='g';b.phase='reply';
+ b.running=true;b.mode = 'legacy';b.pair=['g','n'];b.source='g';b.phase='reply';
  b.stableSeconds=1;b.startedWait=t;b.baseline='prior';
  b.tabs={g:{site:'chatgpt',ready:true,busy:false,draft:false,complete:true,seen:t,changed:t-2,reply:'[bridge shutdown]',replyKey:'shut',url:'https://chatgpt.com/c/one',document:'doc-g'},n:{site:'nomi',ready:true,busy:false,draft:false,complete:true,seen:t,changed:t-2,reply:'hello',replyKey:'n',url:'https://nomi.ai/chats/one',document:'doc-n'}};
  b.tick();assert.equal(b.running,true);assert.equal(b.phase,'send');assert.equal(b.command.shutdownAfterAck,true);
