@@ -450,7 +450,7 @@ class Bridge {
     const truncatedToNomi=dest.site==='nomi' &&
       originalByteLength>new TextEncoder().encode(message).length;
     if(this.simplePeerAwait && this.simpleTruncationWarning) {
-      message+='\\n\\n'+this.simpleTruncationWarning;
+      message+='\n\n'+this.simpleTruncationWarning;
       this.simpleTruncationWarning=null;
     }
     if(!this.simplePeerAwait)this.consumeSimpleControllerTurn(tab);
