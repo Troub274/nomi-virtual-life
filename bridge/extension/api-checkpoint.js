@@ -25,7 +25,7 @@ class ApiRoomCheckpoint {
       sourceTab:command.source,sourceUrl:command.sourceUrl,
       sourceDocument:command.sourceDocument,sourceReplyKey:command.sourceKey,
       sourceFullReply:command.sourceReply||command.text,
-      text:command.text,
+      text:command.text,rawMode:command.rawMode===true,
       total:chunks.length,confirmed:0,attemptedIndex:null,
       status:'planned', events:[],startedAt:new Date().toISOString()
     };
