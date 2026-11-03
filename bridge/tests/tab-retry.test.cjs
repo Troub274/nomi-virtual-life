@@ -35,6 +35,7 @@ test('background wakes and reinjects only the original GPT tab after temporary w
     observeLive(){return Promise.resolve();} stopWaiting(){}
   };
   const chrome={
+    action:{onClicked:{addListener(){}}},
     runtime:{getURL:()=> 'chrome-extension://bridge/',
       onMessage:{addListener(){}}},
     storage:{session:{get:async()=>({bridge:bridge.serialize()}),set:async()=>{}}},
