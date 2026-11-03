@@ -30,6 +30,23 @@ function parseGroupBatch(text) {
   return {commands: commands.flatMap(c => c.action === 'say' ? chunkGroupText(c.text).map(text => ({action:'say',text})) : [c])};
 }
 
+// Shared CLI spelling for Group mode. The room is selected in the dashboard;
+// never let a control report become a Nomi group message.
+function parseGroupBridgeCommand(text){
+  const trimmed=String(text||'').trim();
+  if(!/^\[bridge(?:\s|\])/i.test(trimmed))return null;
+  let parsed;
+  try{parsed=globalThis.AIBridgeCLI?.parse(trimmed) ||
+    (typeof module!=='undefined'?require('./bridge-cli.js').parse(trimmed):null);}
+  catch(error){return {control:{command:'invalid',error:error.message}};}
+  if(!parsed)return {control:{command:'invalid',error:'Invalid Bridge command. Use [bridge help].'}};
+  const verb=parsed.command;
+  if(verb==='send')return {commands:chunkGroupText(parsed.message).map(text=>({action:'say',text}))};
+  if(verb==='listen'||verb==='wait')return {commands:[{action:verb==='listen'?'listening':'wait',text:''}]};
+  if(verb==='play')return {commands:[{action:'play',text:''}]};
+  if(verb==='invite')return {commands:[{action:'invite',text:parsed.args.name}]};
+  return {control:parsed};
+}
 function chunkGroupText(text) {
   const chunks = [];
   while (text.length > 800) {
@@ -107,12 +124,48 @@ class GroupBridge extends BaseBridge {
       if (now - this.startedWait > 900) {this.stop('GPT has not completed a response for 15 minutes.'); return;}
       if (!gpt.reply || gpt.replyKey === g.baseline || gpt.busy || gpt.complete === false || now - gpt.changed < this.stableSeconds) {this.reason = 'Waiting for GPT’s complete tagged response.'; return;}
       g.lastHandled = gpt.replyKey;
+      // Legacy untagged acknowledgments are private; a new explicit
+      // [bridge ...] command following help/startup is actionable immediately.
       if (g.internalReply) {
-        g.internalReply = false; g.baseline = gpt.replyKey; this.phase = 'listen';
-        this.log('Internal acknowledgment consumed; nothing sent to the room.'); return;
+        g.internalReply=false;
+        if(!(this.useAiCli && /^\s*\[bridge(?:\s|\])/i.test(gpt.reply))){
+          g.baseline=gpt.replyKey;this.phase='listen';
+          this.log('Internal acknowledgment consumed; nothing sent to the room.');return;
+        }
       }
-      const batch = this.useAiCli ? parseGroupBatch(gpt.reply)
+      const batch=this.useAiCli
+        ? (parseGroupBridgeCommand(gpt.reply)||parseGroupBatch(gpt.reply))
         : {commands:chunkGroupText(gpt.reply).map(text=>({action:'say',text}))};
+      if(batch.control){
+        const control=batch.control,verb=control.command;
+        let reply;
+        if(control.error)reply='[AI Bridge command rejected — Window 1 only]\n'+
+          control.error+'\nNothing was posted to the Nomi group.';
+        else if(verb==='pause'){
+          this.cliPaused=true;
+          reply='[AI Bridge paused — Window 1 only]\nRoom forwarding is suspended. Use [bridge resume] to continue.';
+        }else if(verb==='resume'){
+          this.cliPaused=false;
+          reply='[AI Bridge resumed — Window 1 only]\nRoom forwarding has resumed.';
+        }else if(verb==='shutdown'){
+          this.queueControllerNotice('stop',
+            '[AI Bridge shutdown acknowledged — Window 1 only]\n'+
+            'The bridge is ending. No new group messages will be sent.',
+            {final:true});
+          return;
+        }else reply=this.controllerReport(verb,control.args||{});
+        this.enqueue(gptId,reply,{packet:true,bridgeLocal:true,
+          source:gptId,sourceReply:gpt.reply,sourceKey:gpt.replyKey,
+          sourceUrl:gpt.url,sourceDocument:gpt.document});
+        return;
+      }
+      if(this.cliPaused){
+        this.enqueue(gptId,'[AI Bridge paused — Window 1 only]\n'+
+          'No Nomi group message was sent. Use [bridge resume].',
+          {packet:true,bridgeLocal:true,source:gptId,sourceReply:gpt.reply,
+            sourceKey:gpt.replyKey,sourceUrl:gpt.url,sourceDocument:gpt.document});
+        return;
+      }
       const cmd = batch.error ? batch : batch.commands[0];
       if (cmd.error || cmd.action === 'help') {
         g.internal = cmd.error ? `INTERNAL BRIDGE NOTICE: ${cmd.error}\nReply [listening].` : GROUP_HELP;
@@ -192,10 +245,14 @@ class GroupBridge extends BaseBridge {
     if (data.error) {this.phase = 'uncertain'; this.stop('Room action not confirmed: ' + data.error + '. Check both tabs, then Reset.'); this.command = null; return {};}
     const g = this.group;
     if (cmd.packet) {
-      g.baseline = cmd.baseline; g.internalReply = !!cmd.internal && this.useAiCli;
-      if (cmd.internal) g.internal = null;
-      else {g.seen = [...new Set(g.seen.concat(cmd.keys))]; g.deliveredState = cmd.stateKey; g.forceUpdate = false;}
-      this.phase = 'gpt'; this.startedWait = this.clock();
+      g.baseline=cmd.baseline;
+      g.internalReply=!!cmd.internal && this.useAiCli;
+      if(cmd.internal)g.internal=null;
+      else if(!cmd.bridgeLocal){
+        g.seen=[...new Set(g.seen.concat(cmd.keys))];
+        g.deliveredState=cmd.stateKey;g.forceUpdate=false;
+      }
+      this.phase='gpt';this.startedWait=this.clock();
     } else {
       this.phase = 'listen'; g.forceUpdate = true;
       if (cmd.batchItem) {g.batch.shift(); if (g.batch.length) this.phase = 'batch';}
