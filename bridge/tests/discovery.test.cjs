@@ -20,7 +20,7 @@ test('discovers existing tabs, injects only missing scripts and lists sleeping t
 
 test('an unresponsive tab cannot block the dropdown or Stop',async()=>{
  let listener;const timers=[];
- const context={NomiApiDriver,queueMicrotask,GroupBridge,setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);timers.push(t);return t;},clearTimeout,importScripts(){},chrome:{
+ const context={NomiApiDriver,queueMicrotask,GroupBridge,setTimeout:(fn,ms)=>{const t=setTimeout(fn,ms);timers.push(t);return t;},clearTimeout,importScripts(){},chrome:{action:{onClicked:{addListener(){}}},
  runtime:{onMessage:{addListener:fn=>listener=fn},getURL:()=> 'chrome-extension://bridge/'},storage:{session:{get:async()=>({}),set:async()=>{}}},alarms:{create(){},onAlarm:{addListener(){}}},
  tabs:{query:async()=>[{id:1,url:'https://chatgpt.com/c/1',title:'Frozen tab'}],sendMessage:()=>new Promise(()=>{}),onRemoved:{addListener(){}}},scripting:{executeScript:()=>new Promise(()=>{})}}};
  vm.runInNewContext(fs.readFileSync(require.resolve('../extension/background.js'),'utf8'),context);
