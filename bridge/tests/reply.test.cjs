@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm');const fs=require('node:fs');
-async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false,turnNumber=12}={}) {
+async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false,turnNumber=12,hasStableKey=true,hasLegacy=true}={}) {
  let snapshot;
  const visual={getClientRects:()=>[{}]};
  const modernTurn={getAttribute:()=>completed?"complete":"streaming",querySelectorAll:()=>parts};
@@ -9,8 +9,10 @@ async function inspect({completed=false,streaming=false,rootStreaming=false,cont
   return streaming?[visual]:[];
  }};
  const logicalTurn={getAttribute:attr=>attr==='data-testid'?'conversation-turn-'+turnNumber:null};
+ const stableTurn={getAttribute:attr=>attr==='data-turn-key'?'stable-node-'+turnNumber:null};
  const parts=['The whole response begins here.','And ends.'].map(text=>({...visual,innerText:text,getAttribute:()=>null,closest:selector=>
-  selector==='[data-testid^="conversation-turn-"]' ? (container?logicalTurn:null) :
+  selector==='[data-turn-key]' ? (container&&hasStableKey?stableTurn:null) :
+  selector==='[data-testid^="conversation-turn-"]' ? (container&&hasLegacy?logicalTurn:null) :
   modern&&selector==='[data-talvt-turn-state]'?modernTurn:
   selector.startsWith('article')&&container?turn:null}));
  const context={location:{hostname:'chatgpt.com',href:'https://chatgpt.com/c/test'},crypto:globalThis.crypto,
@@ -43,14 +45,19 @@ test('new ChatGPT layout reads full reply only when the turn is complete',async(
  const streaming=await inspect({modern:true});assert.equal(streaming.complete,false);
 });
 
-test('adapter reports stable logical GPT turn number through message-node redraws',async()=>{
- const original=await inspect({completed:true,turnNumber:17});
- const redraw=await inspect({completed:true,turnNumber:17,modern:true});
- assert.equal(original.assistantTurnNumber,17);
- assert.equal(redraw.assistantTurnNumber,17);
- assert.equal((await inspect({completed:true,turnNumber:18})).assistantTurnNumber,18);
+
+test('current ChatGPT DOM provides a stable backend turn identity even without numbered wrapper',async()=>{
+ const original=await inspect({completed:true,modern:true,turnNumber:17,hasLegacy:false});
+ const redraw=await inspect({completed:true,modern:true,turnNumber:17,hasLegacy:false});
+ assert.equal(original.assistantTurnKey,'node:stable-node-17');
+ assert.equal(redraw.assistantTurnKey,original.assistantTurnKey);
+ assert.equal((await inspect({completed:true,modern:true,turnNumber:18,hasLegacy:false})).assistantTurnKey,'node:stable-node-18');
 });
-test('unidentifiable GPT assistant turn exposes null, not a fabricated count',async()=>{
- const s=await inspect({completed:true,container:false});
- assert.equal(s.assistantTurnNumber,null);
+test('legacy ChatGPT DOM remains supported by numbered turn wrappers',async()=>{
+ const legacy=await inspect({completed:true,turnNumber:9,hasStableKey:false});
+ assert.equal(legacy.assistantTurnKey,'legacy:9');
+});
+test('no logical GPT turn identity fails closed',async()=>{
+ const s=await inspect({completed:true,hasStableKey:false,hasLegacy:false});
+ assert.equal(s.assistantTurnKey,null);
 });
