@@ -49,7 +49,7 @@ function setup() {
   return {b,gpt,room,beat,advance,ack,reply,begin};
 }
 test('startup instructions and acknowledgments never become room messages',()=>{
-  const f=setup(); assert.match(f.b.command.text,/\[help\]/); f.ack();
+  const f=setup(); assert.match(f.b.command.text,/AI BRIDGE — CONTROLLER GUIDE/); f.ack();
   f.reply('[say] This acknowledgment must stay internal'); f.advance();
   assert.equal(f.b.command.target,'a'); assert.equal(f.b.command.internal,undefined);
   assert.match(f.b.command.text,/Gwen/); assert.equal(f.b.turns,0);
