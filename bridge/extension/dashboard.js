@@ -20,6 +20,14 @@ let apiNoteBaseline = '';
 let apiEditorRoomId = '';
 let apiManagementPending = false;
 let cliSelectionKey='',cliManuallySet=false;
+let heartbeatTargetSite='',heartbeatAutoText='';
+function defaultHeartbeatText(site){return site==='nomi'?'...':'Continue the task.';}
+function savedHeartbeatText(site){
+  const fallback=defaultHeartbeatText(site);
+  try {return localStorage.getItem('bridge-heartbeat-text-'+site)||
+    (site==='chatgpt'?localStorage.getItem('bridge-heartbeat-text'):'')||
+    fallback;}catch{return fallback;}
+}
 function savedSelection(site) {try {return localStorage.getItem('bridge-' + site);} catch {return '';}}
 function showError(error) {
   const message = error?.message || String(error);
@@ -78,7 +86,9 @@ function render(state) {
     const select = $(site);
     const old = select.value || savedSelection(site);
     const tabs = state.tabs.filter(tab => (group ? site === 'chatgpt' ? tab.site === 'chatgpt' : tab.room :
-      (api || pulse) ? tab.site === 'chatgpt' : !tab.room));
+      api ? tab.site === 'chatgpt' :
+      pulse ? ['chatgpt','nomi'].includes(tab.site)&&!tab.room :
+      !tab.room));
     const options = tabs.map(tab => new Option(`${tab.room ? 'Nomi room' : tab.site === 'nomi' ? 'Nomi' : 'ChatGPT'} · ${tab.browser} · window ${tab.window} · ${tab.title || tab.url || tab.id}${tab.connected ? '' : ' — '+(tab.diagnostic || 'Connecting…')}`, tab.id));
     select.replaceChildren(new Option('Select a chat tab…', ''), ...options);
     if (tabs.some(tab => tab.id === old)) select.value = old;
@@ -92,6 +102,18 @@ function render(state) {
   $('first').disabled = state.running || group || api || pulse;
   if (api) $('first').value = 'first';
   const firstTab=(state.tabs||[]).find(t=>t.id===$('chatgpt').value);
+  if(pulse && firstTab?.site && !state.running && firstTab.site!==heartbeatTargetSite){
+    const editor=$('heartbeat-text');
+    if(!heartbeatTargetSite || editor.value===heartbeatAutoText){
+      editor.value=savedHeartbeatText(firstTab.site);
+      heartbeatAutoText=editor.value;
+    }
+    heartbeatTargetSite=firstTab.site;
+  }
+  if(pulse){
+    const target=firstTab?.site||'chatgpt';
+    $('heartbeat-text').placeholder=defaultHeartbeatText(target);
+  }
   const selectionKey=String($('chatgpt').value||'')+'|'+$('mode').value;
   if(!state.running && selectionKey!==cliSelectionKey){
     cliSelectionKey=selectionKey;cliManuallySet=false;
@@ -160,7 +182,9 @@ $('play').onclick = () => {
     try {localStorage.setItem('bridge-' + site, data.tabs[index]);} catch { /* Saving a selection must not prevent Play. */ }
   }
   if(pulse) try {
-    localStorage.setItem('bridge-heartbeat-text',data.heartbeatText);
+    const heartbeatSite=(lastState?.tabs||[]).find(t=>t.id===data.tabs[0])?.site||'chatgpt';
+    localStorage.setItem('bridge-heartbeat-text-'+heartbeatSite,data.heartbeatText);
+    if(heartbeatSite==='chatgpt')localStorage.setItem('bridge-heartbeat-text',data.heartbeatText);
     localStorage.setItem('bridge-heartbeat-delay',String(data.heartbeatDelay));
   } catch {}
   action('play', data);
