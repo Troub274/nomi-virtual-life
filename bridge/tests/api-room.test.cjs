@@ -1344,7 +1344,7 @@ test('AI-CLI off forwards command-looking room text literally, without interpret
   throw Error('Unexpected API call: '+path);
  };
  await h.driver.pump();await h.settle();
- assert.deepEqual(sent,[literal]);
+ assert.deepEqual(sent,[literal],h.b.reason);
  assert.equal(h.b.tabs[virtual].reply,'I read the literal words.');
 });
 test('unified Bridge tail reads the local journal and posts no room message',async()=>{
