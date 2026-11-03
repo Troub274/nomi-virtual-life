@@ -1,6 +1,6 @@
-# Nomi Uploader v1.3
+# Nomi Uploader v1.3i
 
-**Current:** Nomi Uploader 1.3 — improved recovery / resume. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.3i — redesigned desktop interface with the v1.3 recovery / resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
@@ -46,7 +46,16 @@ python examples/run_package.py tammy --restart
 
 `--restart` is explicit. An unfinished checkpoint is still protected and will not be silently discarded.
 
-## Version 1.3: Better Recovery / Resume
+## Version 1.3i: Desktop Interface
+
+- Destination, Files, Upload, History and Settings navigation.
+- Nomi Dark, Nomi Light and system theme choices.
+- API-key management on Destination and in Settings; global upload defaults in Settings.
+- Selectable upload history, reply and status text with copy controls.
+- Normal Resume, Manual Restart, uncertain-send/reply recovery and advanced NoReply/room-migration controls. The CLI validates checkpoint eligibility.
+- Manual GitHub release update checking without automatic installation.
+
+## Version 1.3 engine: Better Recovery / Resume
 
 The GUI now presents **Normal Resume** and **Manual Restart**, and recommends a recovery path using the selected run's checkpoint status. Normal Resume keeps the existing deterministic manifest and never silently retries ambiguous sends.
 
@@ -232,7 +241,7 @@ For a new upload, the uploader finds existing rooms for the chosen Nomi (using t
 In `--utility`, enter a room number or `ALL`. The room manager shows the exact eligible rooms, excludes rooms protected by checkpoints in the selected directory, and asks **once**: `Delete these N room(s)? [y/N]`. `y`, `Y`, or `yes` (any capitalization) confirms; anything else cancels. No `DELETE N` or per-room UUID entry is required. Room deletion is permanent, so examine the filtered list and use the appropriate checkpoint directory.
  Completion confirms API transmission, **not** long-term memory consolidation.
 
-**Caution:** This remains an experimental v1.3 implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
+**Caution:** This remains an experimental v1.3i implementation. Live Nomi API sending, reply capture, and checkpoint recovery have been observed with Beth; a complete 765-message pass and durable memory retention have not been confirmed. Validate dry runs and use a test Nomi before production.
 
 ## Type-aware processing and response capture
 
