@@ -30,9 +30,9 @@ test('first send after startup happens only once despite repeat heartbeats and D
 });
 test('Tab 1 can resume from a paused bridge',()=>{
  const b=setup();observe(b,'g',tab('chatgpt','[bridge pause]','2|g|pause','g'));
- assert.equal(b.cliPaused,true);
+ assert.equal(b.cliPaused,true);assert.match(deliver(b).text,/paused/i);
  observe(b,'g',tab('chatgpt','[bridge resume]','3|g|resume','g'));
- assert.equal(b.cliPaused,false);assert.equal(b.command,null);
+ assert.equal(b.cliPaused,false);assert.match(deliver(b).text,/resumed/i);
  observe(b,'g',tab('chatgpt','[bridge send] Back to work','4|g|send','g'));
  assert.equal(b.command?.text,'Back to work');
 });
@@ -40,8 +40,10 @@ test('Tab 1 can pause and resume while waiting on Tab 2',()=>{
  const b=setup();observe(b,'g',tab('chatgpt','[bridge send] First','2|g|send','g'));deliver(b);
  assert.equal(b.simplePeerAwait,true);
  observe(b,'g',tab('chatgpt','[bridge pause]','3|g|pause','g'));assert.equal(b.cliPaused,true);
+ assert.match(deliver(b).text,/paused/i);
  observe(b,'n',tab('nomi','Nomi reply','2|n|reply','n'));assert.equal(b.command,null);
  observe(b,'g',tab('chatgpt','[bridge resume]','4|g|resume','g'));assert.equal(b.cliPaused,false);
+ assert.match(deliver(b).text,/resumed/i);
  observe(b,'n',tab('nomi','Nomi reply','2|n|reply','n'));assert.equal(b.command?.text,'Nomi reply');
 });
 
