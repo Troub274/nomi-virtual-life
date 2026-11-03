@@ -31,10 +31,10 @@ class Bridge {
       this.reason = 'Updated to one message per turn. Reset before continuing.';
     }
     delete this.pendingNomi;
-    // An in-flight 1.0.42 Direct session has no logical GPT turn cursor.
-    // It cannot be safely resumed under the corrected delivery protocol.
+    // Existing running Direct sessions created before stable turn-key support
+    // have no trustworthy source-consumption ledger. Never replay uncertain work.
     if(saved.running && saved.simpleMode && (saved.mode||'direct')==='direct' &&
-       !Number.isSafeInteger(saved.simpleControllerTurn)) {
+       !Array.isArray(saved.simpleConsumedControllerTurns)) {
       this.running=false;this.phase='uncertain';this.command=null;
       this.reason='Direct-mode turn tracking upgraded. Inspect both conversations, then Stop/Reset and Play. No previous send will be replayed.';
     }
@@ -89,15 +89,18 @@ class Bridge {
     this.stableSeconds = Number.isFinite(settle) ? Math.max(1, Math.min(60, settle)) : 2;
     if ((this.mode||'direct')==='direct') {
       if(this.tabs[pair[0]]?.site==='chatgpt' && this.tabs[pair[0]].reply &&
-         !Number.isSafeInteger(this.tabs[pair[0]].assistantTurnNumber))
-        throw Error('ChatGPT conversation turn number is unavailable. Reload ChatGPT and check selectors before Play.');
+         !this.tabs[pair[0]].assistantTurnKey)
+        throw Error('ChatGPT logical turn key is unavailable. Check the reply selector before Play.');
       this.pair=pair;this.source=pair[0];this.simpleMode=true;
       this.simplePeerAwait=false;
       this.simpleControllerSeen=this.tabs[pair[0]]?.replyKey;
       this.simplePeerSeen=this.tabs[pair[1]]?.replyKey;
       this.command=null;this.outboundQueue=[];this.waitingCli=[];this.deferredCli=[];
-      this.simpleControllerTurn=this.tabs[pair[0]]?.site==='chatgpt'
-        ? this.tabs[pair[0]].assistantTurnNumber : null;
+      // The cursor is a ledger of consumed GPT turns, not a text filter.
+      // The already-visible assistant turn is a baseline, never a new send.
+      const baselineTurn=this.tabs[pair[0]]?.site==='chatgpt'
+        ? this.tabs[pair[0]].assistantTurnKey : null;
+      this.simpleConsumedControllerTurns=baselineTurn?[baselineTurn]:[];
       this.simpleTruncationWarning=null;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
@@ -169,7 +172,7 @@ class Bridge {
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
-    this.simpleControllerTurn=null;this.simpleControllerSeen=null;this.simplePeerSeen=null;this.simpleTruncationWarning=null;
+    this.simpleConsumedControllerTurns=[];this.simpleControllerSeen=null;this.simplePeerSeen=null;this.simpleTruncationWarning=null;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -377,7 +380,11 @@ class Bridge {
   }
   consumeSimpleControllerTurn(tab) {
     this.simpleControllerSeen=tab.replyKey;
-    if(tab.site==='chatgpt')this.simpleControllerTurn=tab.assistantTurnNumber;
+    if(tab.site==='chatgpt' && tab.assistantTurnKey) {
+      this.simpleConsumedControllerTurns ||= [];
+      if(!this.simpleConsumedControllerTurns.includes(tab.assistantTurnKey))
+        this.simpleConsumedControllerTurns.push(tab.assistantTurnKey);
+    }
   }
   simpleTick() {
     if(!this.running || this.phase==='send' || !this.pair)return;
@@ -385,16 +392,17 @@ class Bridge {
     const controller=this.tabs[controllerId];
     if(!controller)return;
     // A conversation turn is the unit of delivery, not a DOM replyKey.
-    // One completed GPT turn may authorize at most one command, even when
-    // React remounts its message node or changes the reply text wrapping.
+    // Modern GPT turn keys are stable node IDs, not ordered counters.
+    // The consumed-turn ledger rejects redraws without rejecting identical
+    // messages deliberately produced in distinct GPT turns.
     const controllerFresh=()=>{
       if(controller.site==='chatgpt') {
-        const current=controller.assistantTurnNumber;
-        if(!Number.isSafeInteger(current)) {
-          this.reason='Cannot identify ChatGPT conversation turn; refusing to reuse the previous reply. Check GPT selectors.';
+        const current=controller.assistantTurnKey;
+        if(!current) {
+          this.reason='Cannot identify current ChatGPT turn key; refusing to reuse an old reply.';
           return false;
         }
-        return current>this.simpleControllerTurn;
+        return !(this.simpleConsumedControllerTurns||[]).includes(current);
       }
       return controller.replyKey!==this.simpleControllerSeen;
     };
