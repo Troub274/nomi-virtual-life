@@ -34,7 +34,8 @@ class Bridge {
     // Existing running Direct sessions created before stable turn-key support
     // have no trustworthy source-consumption ledger. Never replay uncertain work.
     if(saved.running && saved.simpleMode && (saved.mode||'direct')==='direct' &&
-       !Array.isArray(saved.simpleConsumedControllerTurns)) {
+       (!Array.isArray(saved.simpleConsumedControllerTurns) ||
+        (saved.tabs?.[saved.pair?.[0]]?.site==='chatgpt' && !saved.simpleControllerKeyType))) {
       this.running=false;this.phase='uncertain';this.command=null;
       this.reason='Direct-mode turn tracking upgraded. Inspect both conversations, then Stop/Reset and Play. No previous send will be replayed.';
     }
@@ -101,6 +102,7 @@ class Bridge {
       const baselineTurn=this.tabs[pair[0]]?.site==='chatgpt'
         ? this.tabs[pair[0]].assistantTurnKey : null;
       this.simpleConsumedControllerTurns=baselineTurn?[baselineTurn]:[];
+      this.simpleControllerKeyType=baselineTurn?baselineTurn.split(':',1)[0]:null;
       this.simpleTruncationWarning=null;
       this.outboundCredits={};this.acceptedOutbound={};this.pairNotice=null;
       this.running=true;this.cliPaused=false;this.cliShutdown=false;
@@ -172,7 +174,7 @@ class Bridge {
     this.cliPaused=false;
     this.cliShutdown=false;
     this.outboundQueue=[];this.outboundCredits={};this.deliveredCounts={};this.waitingCli=[];this.acceptedOutbound={};this.shutdownPending=false;
-    this.simpleConsumedControllerTurns=[];this.simpleControllerSeen=null;this.simplePeerSeen=null;this.simpleTruncationWarning=null;
+    this.simpleConsumedControllerTurns=[];this.simpleControllerKeyType=null;this.simpleControllerSeen=null;this.simplePeerSeen=null;this.simpleTruncationWarning=null;
     this.phase = 'idle'; this.pair = null; this.command = null; this.remindChatGPT = false;
     this.log('Reset. Next Play starts with the selected speaker’s latest reply.');
   }
@@ -400,6 +402,10 @@ class Bridge {
         const current=controller.assistantTurnKey;
         if(!current) {
           this.reason='Cannot identify current ChatGPT turn key; refusing to reuse an old reply.';
+          return false;
+        }
+        if(this.simpleControllerKeyType && !current.startsWith(this.simpleControllerKeyType+':')) {
+          this.reason='ChatGPT changed its turn-identity layout during the bridge session. Stop and Reset before resuming; no message was resent.';
           return false;
         }
         return !(this.simpleConsumedControllerTurns||[]).includes(current);
