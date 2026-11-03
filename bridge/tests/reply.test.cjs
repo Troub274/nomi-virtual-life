@@ -1,5 +1,5 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const vm=require('node:vm');const fs=require('node:fs');
-async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false,turnNumber=12,hasStableKey=true,hasLegacy=true}={}) {
+async function inspect({completed=false,streaming=false,rootStreaming=false,container=true,modern=false,turnNumber=12,hasStableKey=true,hasLegacy=true,unitKey=null}={}) {
  let snapshot;
  const visual={getClientRects:()=>[{}]};
  const modernTurn={getAttribute:()=>completed?"complete":"streaming",querySelectorAll:()=>parts};
@@ -10,7 +10,9 @@ async function inspect({completed=false,streaming=false,rootStreaming=false,cont
  }};
  const logicalTurn={getAttribute:attr=>attr==='data-testid'?'conversation-turn-'+turnNumber:null};
  const stableTurn={getAttribute:attr=>attr==='data-turn-key'?'stable-node-'+turnNumber:null};
+ const unitTurn={getAttribute:attr=>attr==='data-chatgpt-search-unit-key'?unitKey:null};
  const parts=['The whole response begins here.','And ends.'].map(text=>({...visual,innerText:text,getAttribute:()=>null,closest:selector=>
+  selector==='[data-chatgpt-search-unit-key]' ? (container&&unitKey?unitTurn:null) :
   selector==='[data-turn-key]' ? (container&&hasStableKey?stableTurn:null) :
   selector==='[data-testid^="conversation-turn-"]' ? (container&&hasLegacy?logicalTurn:null) :
   modern&&selector==='[data-talvt-turn-state]'?modernTurn:
@@ -60,4 +62,9 @@ test('legacy ChatGPT DOM remains supported by numbered turn wrappers',async()=>{
 test('no logical GPT turn identity fails closed',async()=>{
  const s=await inspect({completed:true,hasStableKey:false,hasLegacy:false});
  assert.equal(s.assistantTurnKey,null);
+});
+
+test('assistant unit key is preferred when supplied by the current GPT layout',async()=>{
+ const s=await inspect({completed:true,modern:true,unitKey:'response-491:assistant',hasStableKey:false,hasLegacy:false});
+ assert.equal(s.assistantTurnKey,'unit:response-491:assistant');
 });
