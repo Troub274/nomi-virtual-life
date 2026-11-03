@@ -490,7 +490,6 @@ class Bridge {
     if (this.simpleMode && (this.mode||'direct')==='direct') return this.simpleTick();
     if (!this.running) return;
     this.pumpOutbound();
-    if(this.phase==='send')return;
     const now = this.clock();
     if(this.tabRetry){
       const age=Math.max(0,now-this.tabRetry.startedAt);
