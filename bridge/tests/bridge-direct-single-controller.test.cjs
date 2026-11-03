@@ -92,3 +92,17 @@ test('direct refuses to start if GPT conversation cannot identify its turn',()=>
  b.tabs.g.assistantTurnNumber=null;
  assert.throws(()=>b.start({mode:'direct',tabs:['g','n']}),/conversation turn number is unavailable/);
 });
+
+test('30-turn alternating run never replays the preceding controller turn after repaints',()=>{
+ const b=setup();
+ for(let i=1;i<=30;i++) {
+   const ordinal=i+1,body='[bridge send] MESSAGE-'+i;
+   observe(b,'g',tab('chatgpt',body,ordinal+'|original-'+i+'|message','g',ordinal));
+   assert.equal(deliver(b).text,'MESSAGE-'+i);
+   observe(b,'n',tab('nomi','ACK-'+i,(i+1)+'|nomi-'+i+'|ack','n'));deliver(b);
+   observe(b,'g',tab('chatgpt',body,(ordinal+100)+'|repaint-'+i+'|message','g',ordinal));
+   assert.equal(b.command,null,'old GPT turn replayed after Nomi response '+i);
+ }
+ assert.equal(b.turns,60);
+ assert.equal(b.events.filter(e=>/Prepared send transaction/.test(e.text)&&/g to n/.test(e.text)).length,30);
+});
