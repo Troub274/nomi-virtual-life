@@ -433,7 +433,8 @@ class Bridge {
   }
   dispatchPeerCli(id) {
     // CLI inspection is independent of conversational turn ownership.
-    if (!this.running || this.useAiCli===false || !this.pair?.includes(id) || id===this.source ||
+    if (!this.running || this.useAiCli===false || !this.pair?.includes(id) ||
+         (this.mode!=='legacy'&&id!==this.pair?.[0]) || id===this.source ||
         this.phase==='send' || this.phase==='uncertain' || this.pairNotice) return;
     const tab=this.tabs[id], now=this.clock();
     if (!tab || tab.busy || tab.complete===false ||
@@ -809,11 +810,33 @@ class Bridge {
       // The bridge still validates syntax, session state and delivery context.
       let parsed;
       try {parsed = globalThis.AIBridgeCLI?.parse(source.reply);}
-      catch(error) {this.log('AI Bridge CLI rejected: ' + error.message);}
+      catch(error) {
+        parsed={command:'invalid',args:{},error:error.message};
+        this.log('AI Bridge CLI rejected: ' + error.message);
+      }
       this.baseline = source.replyKey;
       this.phase = 'reply';
       this.startedWait = now;
+      if (!parsed)parsed={command:'invalid',args:{},error:'Use one complete [bridge ...] command.'};
       if (parsed) {
+        // Window 1 is the only controller in the unified interface. No
+        // lifecycle control should be sent into the selected Nomi API room.
+        if(this.mode!=='legacy' && ['pause','resume','shutdown'].includes(parsed.command)){
+          if(parsed.command==='shutdown'){
+            this.queueControllerNotice('stop',
+              '[AI Bridge shutdown acknowledged — Window 1 only]\n'+
+              'The session is ending. No further sends will be initiated.',
+              {final:true});
+          }else{
+            this.cliPaused=parsed.command==='pause';
+            this.queueControllerNotice(parsed.command,
+              '[AI Bridge '+(this.cliPaused?'paused':'resumed')+
+              ' — Window 1 only]\n'+
+              (this.cliPaused?'Relay forwarding is suspended. Use [bridge resume].':
+                'Relay forwarding is enabled. Output channel unchanged.'));
+          }
+          return;
+        }
         const summary = parsed.command === 'status' ?
           'State=' + (this.running ? 'running' : 'stopped') + '; phase=' + this.phase + '; turns=' + this.turns :
           'Command=' + parsed.command;
@@ -890,6 +913,8 @@ class Bridge {
             parsed.command === 'schedule' ? scheduleReport :
             parsed.command === 'review' ? reviewReport :
             parsed.command === 'pending' ? pendingReport :
+            parsed.command === 'invalid' ? '[AI Bridge command rejected — Window 1 only]\\n'+
+              parsed.error+'\\nNo message was sent to the output channel.' :
             parsed.command === 'help' ? this.controllerReport('help',parsed.args) :
             parsed.command !== 'status' ? '[AI Bridge] NOT_IMPLEMENTED: ' + parsed.command + '. No action was taken.' :
             '[AI Bridge status]\nState: ' + (this.running?'running':'stopped') +
