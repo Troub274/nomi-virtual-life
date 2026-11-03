@@ -11,6 +11,13 @@ test('shutdown sends acknowledgment before revoking session',()=>{
  b.tick();assert.equal(b.running,true);assert.equal(b.phase,'send');assert.equal(b.command.shutdownAfterAck,true);
  const cmd=b.command;assert.equal(cmd.target,'g');assert.match(cmd.text,/shutdown acknowledgment/);
  assert.equal(b.claim('g',cmd.id).allowed,true);
- b.acknowledge('g',{id:cmd.id});assert.equal(b.running,false);assert.equal(b.cliShutdown,true);assert.equal(b.phase,'shutdown');
+ b.acknowledge('g',{id:cmd.id});
+ assert.equal(b.running,true,'first acknowledgment does not revoke before peer notice');
+ assert.equal(b.command?.target,'n');
+ assert.equal(b.command?.shutdownSecond,true);
+ const peer=b.command;
+ assert.equal(b.claim('n',peer.id).allowed,true);
+ b.acknowledge('n',{id:peer.id});
+ assert.equal(b.running,false);assert.equal(b.cliShutdown,true);assert.equal(b.phase,'shutdown');
  assert.equal(b.claim('g',cmd.id).allowed,false);
 });
