@@ -240,6 +240,10 @@ Type defaults to Knowledge; source defaults to System except Journal (selected N
 
 Rooms persist after upload. `--utility` lists and explicitly deletes selected rooms; no automatic deletion.
 
+### Replay a chunk range
+
+Use `--start-chunk FIRST` and `--end-chunk LAST` to select an inclusive range from the original numbered upload plan. Either endpoint can be omitted to select from the beginning or through the end. The original numbering includes introductory messages and reflection prompts, so use the same input, chunk size, and planning options as the run you are matching. Use a new checkpoint for a separate replay. The range is saved in the new checkpoint, whose progress starts at 1 within the selected range. Resume with that checkpoint and omit both range flags.
+
 ### Room reuse and deletion (v1.1)
 
 For a new upload, the uploader finds existing rooms for the chosen Nomi (using the Nomi UUID) and offers **reuse as choice 1 (the default)**, using existing Nomi room membership. Select another room by number, or explicitly choose to create a new room. `--room UUID` directly reuses a verified room; `--resume` keeps the room and manifest from the original checkpoint. Rooms associated with checkpoints in the selected checkpoint directory are excluded from automatic reuse.

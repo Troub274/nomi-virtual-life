@@ -74,6 +74,35 @@ class StateMachineTests(unittest.TestCase):
              contextlib.redirect_stdout(io.StringIO()):
             u.upload(args)
 
+    def test_chunk_range_is_inclusive_and_saved_for_resume(self):
+        args = self.args()
+        args.start_chunk = 2
+        args.end_chunk = 3
+        full_plan = u.plan_text(args.files, "Beth", args.user, "US", 2026, 750)
+        fake = FakeNomi()
+        self.run_upload(fake, args)
+        sent = [call[2]["messageText"] for call in fake.calls_to("/chat")]
+        self.assertEqual(sent, [message["text"] for message in full_plan[1:3]])
+        history = u.records(self.checkpoint)
+        self.assertEqual(history[0]["start_chunk"], 2)
+        self.assertEqual(history[0]["end_chunk"], 3)
+        self.assertEqual(history[0]["messages_per_pass"], 2)
+        resumed = FakeNomi()
+        self.run_upload(resumed, self.args(resume=True))
+        self.assertEqual(resumed.calls_to("/chat"), [])
+
+    def test_chunk_range_rejects_invalid_bounds_before_sending(self):
+        for first, last in ((0, 2), (3, 2), (1, 999)):
+            with self.subTest(first=first, last=last):
+                args = self.args()
+                args.start_chunk = first
+                args.end_chunk = last
+                fake = FakeNomi()
+                with self.assertRaisesRegex(ValueError, "Chunk range"):
+                    self.run_upload(fake, args)
+                self.assertFalse(self.checkpoint.exists())
+                self.assertEqual(fake.calls, [])
+
     def test_noreply_retries_with_visible_backoff(self):
         calls=[]
         responses=iter([

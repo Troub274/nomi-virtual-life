@@ -91,3 +91,26 @@ Useful flags:
 The CLI and GUI use the **same upload engine** but do **not automatically share checkpoint paths**. Always pass the intended checkpoint path explicitly when resuming a GUI-created run. Do not run two uploaders against the same room/checkpoint concurrently.
 
 See `cli/README.md` and `cli/RECOVERY.md` for full usage and recovery precautions.
+
+## Replay from one chunk through another
+
+The bundled Python CLI and the embedded Linux/macOS command-line mode accept
+inclusive `--start-chunk FIRST --end-chunk LAST` limits. For example:
+
+```sh
+python3 cli/nomi-uploader.py --start-chunk 12006 --end-chunk 31886 --checkpoint april-replay.jsonl archive.zip
+```
+
+On Linux, the equivalent embedded command is:
+
+```sh
+./NomiUploader --uploader-cli --start-chunk 12006 --end-chunk 31886 --checkpoint april-replay.jsonl archive.zip
+```
+
+Use the original input and chunk settings to match an earlier run's numbering.
+The new checkpoint counts within this range from 1 and saves the endpoints.
+Resume with `--resume --checkpoint april-replay.jsonl`, omitting both range flags.
+
+GUI follow-up: add From chunk and Through chunk controls to the upload screen,
+show the selected range in preview, pass the limits to the shared CLI, and restore
+them from the checkpoint on resume. These controls are pending.

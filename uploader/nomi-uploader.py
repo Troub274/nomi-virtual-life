@@ -800,6 +800,19 @@ def _upload_locked(args):
     messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
                        args.process_every,entry_range,chunk_mode,export_options,
                        args.header_every,args.header_text,args.reply_prompt)
+    requested_start = getattr(args, "start_chunk", None)
+    requested_end = getattr(args, "end_chunk", None)
+    if old and not manual and (requested_start is not None or requested_end is not None):
+        raise ValueError("Resume uses the checkpoint's chunk range; omit --start-chunk and --end-chunk")
+    start_chunk = requested_start if requested_start is not None else (init.get("start_chunk") if old else None)
+    end_chunk = requested_end if requested_end is not None else (init.get("end_chunk") if old else None)
+    if start_chunk is not None or end_chunk is not None:
+        first = 1 if start_chunk is None else start_chunk
+        last = len(messages) if end_chunk is None else end_chunk
+        if not 1 <= first <= last <= len(messages):
+            raise ValueError("Chunk range must satisfy 1 <= start <= end <= %d" % len(messages))
+        messages = messages[first - 1:last]
+        print("Selected original plan chunks %d–%d (checkpoint counts from 1)" % (first, last))
     manifest=digest(messages)
     if old and not manual and manifest!=init["manifest"]:
         raise ValueError("Manifest changed: resume requires identical content and options")
@@ -818,6 +831,8 @@ def _upload_locked(args):
             "reply_prompt":args.reply_prompt,"export_options":export_options,
             "entry_range":entry_range_text(entry_range),"chunk_mode":chunk_mode,
             "chunk_limit":chunk_limit,"chunk_chars":chunk_limit})
+        if start_chunk is not None or end_chunk is not None:
+            new_start.update(start_chunk=start_chunk, end_chunk=end_chunk)
         prefix_prompts=[[p,i] for p in range(1,passes+1)
                         for i,m in enumerate(messages,1)
                         if (p,i)<(p0,i0) and m["kind"]=="prompt"]
@@ -870,6 +885,8 @@ def _upload_locked(args):
                      "header_every":args.header_every,"header_text":args.header_text,"reply_prompt":args.reply_prompt,
                      "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
                      "entry_range":entry_range_text(entry_range)}
+        if start_chunk is not None or end_chunk is not None:
+            start_event.update(start_chunk=start_chunk, end_chunk=end_chunk)
         if chunk_mode=="chars": start_event["chunk_chars"]=chunk_limit
         else: start_event["chunk_bytes"]=chunk_limit
         record(cp,start_event)
@@ -1267,6 +1284,8 @@ def main(argv=None):
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
+    parser.add_argument("--start-chunk", type=int, help="First inclusive message in the original upload plan (1-based)")
+    parser.add_argument("--end-chunk", type=int, help="Last inclusive message in the original upload plan (1-based)")
     parser.add_argument("--nomi-uuid",help="Select Nomi by API UUID without an interactive prompt")
     parser.add_argument("--export-options",help="JSON map of ZIP/JSON paths to prompt options")
     parser.add_argument("--passes",type=int,default=1)
