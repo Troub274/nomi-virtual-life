@@ -8,6 +8,56 @@
 **Updated:** November 2, 2026 — v1.3 normal resume, manual restart and current recovery guidance  
 **Status:** Operational manual. The exact v1.0 uploader is preserved at `uploader/archive/nomi-uploader-v1.0.py`.
 
+## Protected rooms and checkpoint locks
+
+The room utility marks a room `PROTECTED` when an unfinished checkpoint in the
+chosen checkpoint directory refers to it. Protection helps prevent deleting a
+room needed to resume an upload. The utility scans `*.jsonl` directly in that
+directory, including custom checkpoint filenames. More than one checkpoint can
+protect the same room.
+
+A successful upload automatically releases that checkpoint's protection when
+all expected messages are confirmed, all requested replies are committed or
+explicitly abandoned, and a matching `*completed.json` receipt is present in the
+same directory. Keep the checkpoint and completion receipt together. A paused,
+failed, or damaged checkpoint remains protective. Another unfinished run may
+still protect the room after one run completes.
+
+### Releasing protection manually
+
+First stop any uploader using the room. In the utility, choose the same checkpoint
+directory used by the upload. Inspect the checkpoints that name the room and
+check their status. Completing or resuming the run is the normal way to release
+protection.
+
+If you intentionally retire an unfinished run, preserve its history by moving
+its checkpoint into an archive subdirectory outside the utility's direct scan.
+Move its completion receipt and replies together if present. On Linux, from the
+upload directory, an example for the default checkpoint is:
+
+```bash
+mkdir -p retired-runs
+mv -i -- nomi_uploader_checkpoint.jsonl retired-runs/
+```
+
+Use the actual custom checkpoint filename when applicable. The utility can then
+be run again with the original checkpoint directory. Every unfinished checkpoint
+protecting the selected room must be retired or completed to release it there.
+If you later want to resume the archived run, supply its archived checkpoint,
+completion, and replies paths, and retain access to its original source files.
+Deleting the room makes that run's original-room resume impossible.
+
+### Why the .lock file can remain
+
+The sibling `<checkpoint>.lock` file coordinates concurrent uploader processes.
+The operating system releases the actual lock when the process exits, even if
+the file remains on disk. Its presence alone does not indicate an active lock
+and does not produce the room's `PROTECTED` label. Leave the lock file in place.
+Unlinking it while another process holds it can defeat concurrent-run exclusion.
+
+There is currently no Unprotect action in the utility. This procedure changes
+which checkpoints the utility scans while preserving the upload's audit history.
+
 ## v1.3 GUI recovery (current)
 
 Use **Normal Resume** when the GUI recommends it. For an ambiguous
