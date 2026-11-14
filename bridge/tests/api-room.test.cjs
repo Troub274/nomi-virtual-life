@@ -121,7 +121,7 @@ test('operator-authorized send recovery never repeats earlier confirmed chunks',
   const events=(await h.cp.load(ROOM)).events.map(e=>e.type);
   assert.ok(events.includes('send_retry_authorized'));
 });
-test('explicit NoReply retries reply request with exponential backoff, not World Engine content',async()=>{
+test('explicit NoReply retries reply request with adaptive backoff, not World Engine content',async()=>{
   const h=harness('Hello Gwen.'),sent=[],delays=[];
   let replies=0;
   h.driver.delay=async ms=>{
@@ -146,13 +146,33 @@ test('explicit NoReply retries reply request with exponential backoff, not World
   await h.driver.pump();await h.settle();
   assert.equal(sent.length,1);
   assert.equal(replies,4);
-  assert.deepEqual(delays,[1000,2000,4000]);
+  assert.deepEqual(delays,[2000,2500,3000]);
   assert.equal(h.b.apiSession.replyAttemptsInTurn,4);
   assert.equal(h.b.apiSession.replyLastErrorType,null);
   assert.equal(h.b.apiSession.replyNextRetrySeconds,null);
   assert.match(h.b.events.map(e=>e.text).join('\n'),/Nomi API RoomNomiNotReadyForMessage \(HTTP 400\) after reply attempt 3/);
   assert.match(h.b.events.map(e=>e.text).join('\n'),/world text was NOT resent/);
   assert.equal((await h.cp.load(ROOM)).status,'reply_received');
+});
+test('API room retry timing learns from slow and fast replies across turns',async()=>{
+  const h=harness('Hi'),delays=[];
+  let now=0,failures=2;
+  h.driver.replyClock=()=>now;
+  h.driver.delay=async ms=>{delays.push(ms);now+=ms;};
+  h.driver.request=async path=>{
+    assert.match(path,/\/chat\/request$/);
+    if(failures-->0){
+      const err=Error('NoReply');err.httpStatus=500;err.apiType='NoReply';throw err;
+    }
+    return {replyMessage:{messageText:'Ready'}};
+  };
+  const cp={roomId:ROOM,nomiUuid:NOMI,total:1,confirmed:1,attemptedIndex:null};
+  h.driver.checkpoint={replyAttempt:async()=>{},mark:async()=>{},replyCommitted:async()=>{}};
+  await h.driver.requestReply(cp);
+  await h.driver.requestReply(cp);
+  failures=2;
+  await h.driver.requestReply(cp);
+  assert.deepEqual(delays,[2000,2500,2250,2812.5]);
 });
 test('reply request with ambiguous outcome cannot be retried without operator consent',async()=>{
   const h=harness('Hello'),sent=[];

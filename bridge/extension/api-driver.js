@@ -8,7 +8,9 @@ class NomiApiDriver {
     this.waitCancelled=false;
     this.recoveryScheduled=false;
     this.observer=new WorldObserver();
+    this.replyTiming=null;
   }
+  replyClock() { return performance.now(); }
   delay(ms) { return new Promise(resolve=>setTimeout(resolve,ms)); }
   transient(error) {
     return error.httpStatus == null || [408,409,425,429,500,502,503,504].includes(error.httpStatus) ||
@@ -325,7 +327,11 @@ class NomiApiDriver {
   async requestReply(cp) {
     if(cp.confirmed!==cp.total||cp.attemptedIndex!==null)
       throw Error('Cannot request reply before all content posts are confirmed.');
-    let delay=1000,tryNumber=0;
+    if(this.replyTiming?.roomId!==cp.roomId||this.replyTiming?.nomiUuid!==cp.nomiUuid)
+      this.replyTiming={roomId:cp.roomId,nomiUuid:cp.nomiUuid,average:2000,samples:0};
+    const timing=this.replyTiming;
+    let delay=Math.min(30000,Math.max(250,timing.average)),tryNumber=0;
+    const increment=delay/4,started=this.replyClock();
     await this.transaction(()=>{
       const b=this.getBridge(),s=b?.apiSession;
       if(s?.roomId===cp.roomId) {
@@ -356,7 +362,10 @@ class NomiApiDriver {
       try {
         const text=NomiApiRoom.nomiReplyText(await this.request('/rooms/'+cp.roomId+'/chat/request',
           'POST',{nomiUuid:cp.nomiUuid}));
+        const elapsed=this.replyClock()-started;
         await this.checkpoint.replyCommitted(cp,text);
+        timing.samples++;
+        timing.average+=(elapsed-timing.average)/timing.samples;
         await this.transaction(()=>{
           const b=this.getBridge(),s=b?.apiSession;
           if(s?.roomId===cp.roomId){
@@ -391,7 +400,7 @@ class NomiApiDriver {
             }
           });
           await this.delay(delay);
-          delay=Math.min(delay*2,30000);
+          delay=Math.min(delay+increment,30000);
           continue; // Same prompt in room; request a NEW reply only, never resend content.
         }
         await this.checkpoint.mark(cp,'reply_uncertain','reply_uncertain',

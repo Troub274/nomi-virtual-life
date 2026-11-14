@@ -1,5 +1,7 @@
 # Release notes
 
+- API Room reply retry delays now adapt to the observed average reply time. Stop, ambiguous-error recovery, and content delivery rules are unchanged.
+
 ## 0.4.3 — 2026-10-18
 
 - Adds Heartbeat as the fourth mode: one ChatGPT tab, a user-defined phrase, startup instructions, a configurable 10-second default repeat delay, `[sleep]`, and `[sleep nHRS]`.

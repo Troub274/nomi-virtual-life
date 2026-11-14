@@ -181,7 +181,7 @@ class Bridge {
             (s.replyLastHttpStatus==null?'':' (HTTP '+s.replyLastHttpStatus+')')+
             ', attempt '+(s.replyAttemptsInTurn||1)+
             (s.replyNextRetrySeconds==null?'; requesting a new reply.':
-              '; next retry in '+s.replyNextRetrySeconds+'s (exponential backoff).')+
+              '; next retry in '+s.replyNextRetrySeconds+'s (adaptive backoff).')+
             ' World text was already delivered; it is not being resent.'
           :'Waiting for Nomi API room reply request '+(s.replyAttemptsInTurn||1)+
             ' to finish. World text was already delivered.';
