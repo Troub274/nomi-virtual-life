@@ -277,7 +277,7 @@ The current implementation constructs completed/attempted sets from checkpoint e
 | `Manifest changed` | Inputs/options no longer reproduce original plan | Restore originals; do not bypass validation |
 | `Uncertain send/reply request(s)` | A pending attempt lacks a durable confirmation or approved recovery | Investigate exact `(pass,index)` |
 
-**Observed backoff:** 1, 2, 4, 8, 16, 30, 30, 30 … seconds. `request_reply_with_backoff(..., attempts=None)` currently has **no default retry limit**. Long waits do not prove permanent failure.
+**Retry timing:** The first reply wait starts at 2 seconds, then adds 0.5 seconds per retry, capped at 30 seconds. For later prompts the average elapsed time to a valid reply sets the initial delay (0.25–30 seconds); each retry adds one quarter of that starting delay. The average resets on resume. Retry and wait limits and handling of ambiguous responses are unchanged.
 
 ## 7. Routine interruption and resume
 

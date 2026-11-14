@@ -1,5 +1,8 @@
 # Nomi Uploader 1.3i — Interface Release
 
+Reply retries now adapt to the average time to receive a valid reply during the current upload. The first wait starts at 2 seconds, and each retry adds one quarter of the starting delay, up to 30 seconds. Upload stop rules are unchanged.
+
+
 One version and one download page for Windows, macOS, Linux, and Python CLI.
 
 ## Downloads

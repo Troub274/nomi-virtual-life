@@ -331,7 +331,15 @@ For safe diagnosis, checkpoint evidence, and the real recovery transcript, see [
 
 **Behavior:** The uploader sends document chunks in order. After every `Process Every: N` complete entries (not messages), it sends the reflection prompt and **waits for Nomi's reply before uploading more**. One entry may occupy several messages because of the `--chunk-chars` limit. The final partial group is processed too.
 
-When the API explicitly returns `NoReply`, `RoomNomiNotReadyForMessage`, `RoomStillCreating`, or `TooManyRequests`, the reply request is repeated with exponential backoff: **1, 2, 4, 8, 16, then 30 seconds, capped at 30 seconds thereafter, until a reply arrives**. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
+When the API explicitly returns `NoReply`, `RoomNomiNotReadyForMessage`, `RoomStillCreating`, or `TooManyRequests`, the uploader retries using adaptive backoff. Each API error, attempt number and upcoming delay is printed to stderr. The successful reply is printed in abbreviated form (first 300 characters) and stored in full in the append-only JSONL checkpoint. The human-readable `nomi_uploader_replies.txt` file is built **at completion**, not continuously. Individual backoff attempts are **not yet written** to the checkpoint, only shown in the terminal.
+
+Reply requests start with a 2-second retry delay. During an upload, the
+uploader measures elapsed time until each valid reply, including replies that
+arrive on the first request. The running average sets the next initial delay
+(between 0.25 and 30 seconds). Each explicit not-ready response increases the
+following delay by one quarter of that starting delay, up to 30 seconds.
+Ambiguous errors stop immediately and are excluded from the average. Timing
+starts fresh on each invocation, including resume.
 
 **Safety:** Successful document sends are checkpointed and are not resent on resume. Ambiguous reply failures (transport timeout, unexpected HTTP errors, malformed successful response) stop the upload rather than automatically repeating a possibly successful POST. `NoReply` is an explicit absence of a returned response; it does not prove the model completed internal processing. Waiting for a returned response is the uploader's configured synchronization rule.
 

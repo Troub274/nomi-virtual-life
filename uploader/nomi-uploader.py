@@ -470,14 +470,31 @@ def active_records(path):
                                   "synthetic":True,"reply":{},"prompt":""})
     return [start]+synthetic+history[at+1:]
 
-def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
-                               max_wait=0):
+class ReplyRetryTiming:
+    """Running mean of successful reply wait times in this upload."""
+    def __init__(self, initial=2.0):
+        self.average = initial
+        self.samples = 0
+
+    def observe(self, seconds):
+        self.samples += 1
+        self.average += (seconds - self.average) / self.samples
+
+    @property
+    def initial_delay(self):
+        return min(30.0, max(0.25, self.average))
+
+
+def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=2.0,
+                               max_wait=0, timing=None):
     """Wait through explicit Nomi not-ready responses; stop on ambiguous errors.
 
     max_wait is seconds; 0 means unlimited. Reaching max_wait returns the last
     explicit rejection, which is safe to continue waiting on a later resume.
     """
-    delay=base_delay
+    timing = timing if timing is not None else ReplyRetryTiming(base_delay)
+    delay = timing.initial_delay
+    increment = delay / 4
     n=0
     started=time.monotonic()
     while True:
@@ -485,6 +502,8 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
         status,payload=legacy.api_request("/rooms/"+room+"/chat/request","POST",
                                           {"nomiUuid":nomi_uuid})
         if legacy.ok(status):
+            if isinstance(payload, dict) and isinstance(payload.get("replyMessage"), dict):
+                timing.observe(time.monotonic() - started)
             return status,payload
         error=legacy.err_text("request reply",status,payload)
         if status is not None and legacy.err_type(payload) in KNOWN_WAIT_ERRORS:
@@ -504,7 +523,7 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=1.0,
             print("Nomi API error: %s; %s attempt %d; retry in %.1fs; elapsed %.1fs"%
                   (error,legacy.err_type(payload),n,wait,elapsed),file=sys.stderr,flush=True)
             time.sleep(wait)
-            delay=min(delay*2,30)
+            delay=min(delay+increment,30)
             continue
         print("Nomi API error: %s; request outcome uncertain; not retrying"%error,
               file=sys.stderr,flush=True)
@@ -1009,6 +1028,7 @@ def _upload_locked(args):
         record(cp,{"event":"reply_recovery_authorized","pass":p,"index":i,
                    "reason":"explicit Nomi not-ready response or operator-verified NoReply"})
         print("Resuming reflection after explicit Nomi not-ready response: pass %d message %d"%(p,i),flush=True)
+    reply_timing=ReplyRetryTiming()
     for p in range(1,passes+1):
         for i,m in enumerate(messages,1):
             # Cooperative pause: do not abandon a request mid-flight.
@@ -1069,7 +1089,7 @@ def _upload_locked(args):
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 s,response=request_reply_with_backoff(
                     room,nomi["uuid"],
-                    max_wait=getattr(args,"reply_max_wait",0) or 0)
+                    max_wait=getattr(args,"reply_max_wait",0) or 0, timing=reply_timing)
                 if not legacy.ok(s):
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
                                "http_status":s,"api_response":response})

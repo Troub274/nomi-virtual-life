@@ -120,10 +120,36 @@ class StateMachineTests(unittest.TestCase):
             status,payload=u.request_reply_with_backoff("room-001","beth-id",attempts=8)
         self.assertEqual(status,200)
         self.assertEqual(len(calls),3)
-        self.assertEqual([x.args[0] for x in sleeping.call_args_list],[1.0,2.0])
+        self.assertEqual([x.args[0] for x in sleeping.call_args_list],[2.0,2.5])
         self.assertIn("HTTP 500",output.getvalue())
         self.assertIn("NoReply",output.getvalue())
-        self.assertIn("NoReply attempt 1; retry in 1.0s",output.getvalue())
+        self.assertIn("NoReply attempt 1; retry in 2.0s",output.getvalue())
+
+    def test_reply_backoff_learns_slower_and_faster_replies(self):
+        timing = u.ReplyRetryTiming()
+        now = 0.0
+        waits = []
+        def sleep(seconds):
+            nonlocal now
+            waits.append(seconds)
+            now += seconds
+
+        not_ready = (500, {"type": "NoReply"})
+        ready = (200, {"replyMessage": {"text": "Ready"}})
+        with patch.object(u.time, "monotonic", side_effect=lambda: now), \
+             patch.object(u.time, "sleep", side_effect=sleep), \
+             patch.object(u.legacy, "api_request",
+                          side_effect=[not_ready, not_ready, ready, ready,
+                                       not_ready, not_ready, (502, {})]), \
+             contextlib.redirect_stderr(io.StringIO()):
+            u.request_reply_with_backoff("room", "nomi", timing=timing)
+            self.assertEqual(timing.initial_delay, 4.5)
+            u.request_reply_with_backoff("room", "nomi", timing=timing)
+            self.assertEqual(timing.initial_delay, 2.25)
+            status, _ = u.request_reply_with_backoff("room", "nomi", timing=timing)
+        self.assertEqual(status, 502)
+        self.assertEqual(waits, [2.0, 2.5, 2.25, 2.8125])
+        self.assertEqual(timing.samples, 2)
 
     def test_ambiguous_reply_failure_is_not_retried(self):
         with patch.object(u.legacy,"api_request",
@@ -157,7 +183,7 @@ class StateMachineTests(unittest.TestCase):
             status,_=u.request_reply_with_backoff("room-001","beth-id")
         self.assertEqual(status,200)
         self.assertEqual(api.call_count,3)
-        self.assertEqual([c.args[0] for c in sleeping.call_args_list],[1.0,2.0])
+        self.assertEqual([c.args[0] for c in sleeping.call_args_list],[2.0,2.5])
         self.assertIn("RoomNomiNotReadyForMessage",output.getvalue())
 
     def test_resume_recorded_not_ready_reply(self):
