@@ -220,7 +220,7 @@ class DesktopJavaScriptTests(unittest.TestCase):
             result = subprocess.run(
                 [node, "--check", "-"],
                 input=script,
-                text=True,
+                encoding="utf-8",
                 capture_output=True,
                 check=False,
             )
