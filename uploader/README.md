@@ -373,3 +373,23 @@ This abandons only the pending reply to confirmed prompt 1:499, preserves the ol
 room and checkpoint history, and continues at 500 in a fresh room. Repeating the
 command reuses the recorded migration. See [RECOVERY.md](RECOVERY.md#stuck-reply-recovery-migrate-after-message-499)
 for backups, flag restrictions and interrupted room-creation reconciliation.
+
+### Personalize the default prompts
+
+The built-in defaults work without a settings file. To customize them, copy
+[the sample containing all ten default prompts](prompts.example.json) to
+**prompts.json** in your NomiUploader settings folder:
+
+- Windows: `%LOCALAPPDATA%/NomiUploader/prompts.json`
+- Linux and macOS: `~/.local/share/NomiUploader/prompts.json`
+
+Edit the UTF-8 JSON values under `opening` or `periodic`. You can omit any
+entry you want to keep at its built-in value. Use `[nomi]`, `[source]`, and
+`[user]` for names and `{first}` and `{last}` in periodic prompts for the
+batch range. Use doubled braces for literal braces in periodic prompts.
+Restart the desktop app or re-add an export to refresh the suggested text;
+explicit prompts in saved queues or source files still take precedence.
+
+New runs save the resolved defaults in their checkpoint. Resuming uses the
+saved table, or the historical defaults for checkpoints made before this
+feature. Editing the personalization file affects new uploads only.

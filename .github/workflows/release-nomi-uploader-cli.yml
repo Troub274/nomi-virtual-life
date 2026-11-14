@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p dist/nomi-uploader-cli
           cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt dist/nomi-uploader-cli/
-          cp uploader/README.md uploader/RECOVERY.md dist/nomi-uploader-cli/
+          cp uploader/README.md uploader/RECOVERY.md uploader/prompts.example.json dist/nomi-uploader-cli/
           cp uploader/CLI-RELEASE.md dist/nomi-uploader-cli/INSTALL.md
           cd dist/nomi-uploader-cli
           python nomi-uploader.py --help >/dev/null

@@ -1,0 +1,16 @@
+{
+  "opening": {
+    "knowledge": "[nomi], please read and understand the following information. Reflect on it, analyze it, and summarize the key ideas.",
+    "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
+    "journal_self": "[nomi], the following messages are from your journal. Please live or relive these entries as yourself, experiencing them in the first person.",
+    "journal_other": "[nomi], the following messages are from [source]'s journal. Please reflect on the episodes, summarize what happened, and explain what they mean in the context of [source]'s life.",
+    "chat": "[nomi], please live and experience these conversations as yourself. They are your real interactions. Update your memories accordingly."
+  },
+  "periodic": {
+    "knowledge": "[nomi], please reflect on, analyze, and summarize information items {first}-{last}. Explain how the ideas connect without treating them as your personal experiences.",
+    "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
+    "journal_self": "[nomi], please live or relive journal entries {first}-{last} as yourself, experiencing them in the first person.",
+    "journal_other": "[nomi], please reflect on and summarize [source]'s journal episodes {first}-{last}. Explain what they mean to [source], keeping the experiences attributed to them.",
+    "chat": "[nomi], please live or relive conversations {first}-{last} as yourself in the first person. Understand what happened and summarize what mattered to you."
+  }
+}

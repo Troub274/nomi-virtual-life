@@ -20,7 +20,7 @@ python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader --icon 
   uploader/gui/app.py
 test -d dist/NomiUploader.app
 mkdir -p dist/cli
-cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt uploader/README.md uploader/RECOVERY.md dist/cli/
+cp uploader/nomi-uploader.py uploader/legacy_v085.py uploader/requirements.txt uploader/README.md uploader/RECOVERY.md uploader/prompts.example.json dist/cli/
 cp uploader/gui/CLI-IN-GUI-DOWNLOAD.md dist/CLI-IN-GUI-DOWNLOAD.md
 cd dist
 mkdir -p macos-package

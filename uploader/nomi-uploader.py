@@ -46,6 +46,51 @@ PERIODIC_PROMPTS = {
  "chat": "[nomi], please live and experience the conversations {first}-{last} as yourself."
 }
 
+# Keep the historical defaults above for pre-personalization checkpoints.
+BUILTIN_PROMPTS = json.loads(r'''{
+  "opening": {
+    "knowledge": "[nomi], please read and understand the following information. Reflect on it, analyze it, and summarize the key ideas.",
+    "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
+    "journal_self": "[nomi], the following messages are from your journal. Please live or relive these entries as yourself, experiencing them in the first person.",
+    "journal_other": "[nomi], the following messages are from [source]'s journal. Please reflect on the episodes, summarize what happened, and explain what they mean in the context of [source]'s life.",
+    "chat": "[nomi], please live and experience these conversations as yourself. They are your real interactions. Update your memories accordingly."
+  },
+  "periodic": {
+    "knowledge": "[nomi], please reflect on, analyze, and summarize information items {first}-{last}. Explain how the ideas connect without treating them as your personal experiences.",
+    "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.",
+    "journal_self": "[nomi], please live or relive journal entries {first}-{last} as yourself, experiencing them in the first person.",
+    "journal_other": "[nomi], please reflect on and summarize [source]'s journal episodes {first}-{last}. Explain what they mean to [source], keeping the experiences attributed to them.",
+    "chat": "[nomi], please live or relive conversations {first}-{last} as yourself in the first person. Understand what happened and summarize what mattered to you."
+  }
+}''')
+
+
+def load_prompt_table(directory=None):
+    """Overlay the optional per-user personalization file on the built-ins."""
+    path = (directory if directory is not None else legacy.credential_directory()) / "prompts.json"
+    table = {phase: values.copy() for phase, values in BUILTIN_PROMPTS.items()}
+    try:
+        raw = path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        return table
+    try:
+        overrides = json.loads(raw)
+        if not isinstance(overrides, dict):
+            raise ValueError("expected an object")
+        for phase, values in overrides.items():
+            if phase not in table or not isinstance(values, dict):
+                raise ValueError("expected opening and/or periodic prompt objects")
+            for key, value in values.items():
+                if key not in table[phase] or not isinstance(value, str) or not value.strip():
+                    raise ValueError(f"invalid {phase} prompt: {key}")
+                if phase == "periodic":
+                    value.format(first=1, last=2)
+                table[phase][key] = value
+    except (ValueError, KeyError, IndexError, AttributeError, TypeError) as exc:
+        raise ValueError(f"Invalid prompt file {path}: {exc}") from exc
+    return table
+
+
 def regional_order(override="AUTO"):
     if override != "AUTO": return override
     try:
@@ -274,12 +319,14 @@ def render_prompt(prompt, nomi, user, source):
 
 def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
               entry_range=None, chunk_mode="bytes", export_options=None,
-              header_every=0, header_text="", reply_prompt=""):
+              header_every=0, header_text="", reply_prompt="", prompt_table=None):
     """Create the deterministic message plan.
 
     chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
     compatibility calls. Current new runs use chunk_mode='chars'.
     """
+    opening_defaults = DEFAULT_PROMPTS if prompt_table is None else prompt_table["opening"]
+    periodic_defaults = PERIODIC_PROMPTS if prompt_table is None else prompt_table["periodic"]
     messages=[]
     export_options=export_options or {}
     if chunk_mode not in ("bytes","chars"):
@@ -314,7 +361,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             mode=str(opts.get("mode","Add")).lower()
             if mode not in ("add","replace"): raise ValueError("Export Nomi Mode must be Add or Replace")
             opening=str(opts.get("intro","")).strip()
-            base=DEFAULT_PROMPTS["chat"] if mode=="add" else ""
+            base=opening_defaults["chat"] if mode=="add" else ""
             intro="\n".join(p for p in (base,opening) if p)
             interval=opts.get("process_every")
             interval=process_every if interval in (None,"") else int(interval)
@@ -328,7 +375,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                      "section":"Nomi export","entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
-                    prompt=str(opts.get("periodic") or reply_prompt or PERIODIC_PROMPTS["chat"]).format(first=first,last=idx)
+                    prompt=str(opts.get("periodic") or reply_prompt or periodic_defaults["chat"]).format(first=first,last=idx)
                     add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
                          "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
             continue
@@ -346,7 +393,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             units=select_entry_units(all_units,entry_range) if kind=="journal" else all_units
             if not units or not any(u["text"] for u in units): continue
             default_key="journal_self" if kind=="journal" and source.casefold()==nomi.casefold() else ("journal_other" if kind=="journal" else kind)
-            prompts=[] if section["mode"]=="replace" else [DEFAULT_PROMPTS[default_key]]
+            prompts=[] if section["mode"]=="replace" else [opening_defaults[default_key]]
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
             add({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
@@ -396,7 +443,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                         custom=[p for p in section["prompts"] if not re.search(r"\\b(?:entries|episodes)\\s+\\d+\\s*[-–]\\s*\\d+\\b",p,re.I)]
                     else:
                         custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
-                    template=custom[0] if len(custom)==1 else (rp or PERIODIC_PROMPTS[default_key])
+                    template=custom[0] if len(custom)==1 else (rp or periodic_defaults[default_key])
                     prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
                     msg={"text":prompt,"kind":"prompt","file":filename,
                          "section":section["title"],"entry":idx}
@@ -816,9 +863,10 @@ def _upload_locked(args):
         export_options=init.get("export_options",{})
     else:
         export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if getattr(args,"export_options",None) else {}
+    prompt_table = init.get("prompt_table") if old else load_prompt_table()
     messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
                        args.process_every,entry_range,chunk_mode,export_options,
-                       args.header_every,args.header_text,args.reply_prompt)
+                       args.header_every,args.header_text,args.reply_prompt,prompt_table)
     requested_start = getattr(args, "start_chunk", None)
     requested_end = getattr(args, "end_chunk", None)
     if old and not manual and (requested_start is not None or requested_end is not None):
@@ -847,7 +895,7 @@ def _upload_locked(args):
             "passes":passes,"messages_per_pass":len(messages),"manifest":manifest,
             "user":args.user,"process_every":args.process_every,
             "header_every":args.header_every,"header_text":args.header_text,
-            "reply_prompt":args.reply_prompt,"export_options":export_options,
+            "reply_prompt":args.reply_prompt,"export_options":export_options,"prompt_table":prompt_table,
             "entry_range":entry_range_text(entry_range),"chunk_mode":chunk_mode,
             "chunk_limit":chunk_limit,"chunk_chars":chunk_limit})
         if start_chunk is not None or end_chunk is not None:
@@ -900,7 +948,7 @@ def _upload_locked(args):
                      "room_uuid":room,"year":year,"order":order,"files":files,
                      "passes":passes,"messages_per_pass":len(messages),
                      "manifest":manifest,"user":args.user,
-                     "process_every":args.process_every,"export_options":export_options,
+                     "process_every":args.process_every,"export_options":export_options,"prompt_table":prompt_table,
                      "header_every":args.header_every,"header_text":args.header_text,"reply_prompt":args.reply_prompt,
                      "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
                      "entry_range":entry_range_text(entry_range)}

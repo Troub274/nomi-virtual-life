@@ -154,9 +154,10 @@ class API:
         if source.suffix.lower() in (".zip", ".json"):
             sys.path.insert(0, str(UPLOADER.parent))
             import legacy_v085 as legacy
+            prompts = runpy.run_path(str(UPLOADER))["load_prompt_table"](DATA)
             name, rows=legacy.load_conversation(source)
             preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
-            return {"editable": False, "export": True, "header": {"mode":"Replace","intro":"[nomi], please live and experience these conversations as yourself.","periodic":"[nomi], please live and experience the conversations {first}-{last} as yourself.","process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
+            return {"editable": False, "export": True, "header": {"mode":"Replace","intro":prompts["opening"]["chat"],"periodic":prompts["periodic"]["chat"],"process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
         if source.suffix.lower() != ".txt":
             return {"editable": False, "preview": "Metadata editor is available for TXT and Nomi ZIP/JSON exports."}
         raw = source.read_text(encoding="utf-8-sig")
