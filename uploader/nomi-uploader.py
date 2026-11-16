@@ -29,7 +29,20 @@ ENTRY = re.compile(r"^(?:ENTRY|EPISODE|JOURNAL ENTRY|DIARY ENTRY)\s*#?\s*(\d+)\b
 SPEAKER = re.compile(r"^([^:\n]{1,70}):\s+(.+)$")
 MONTHS = {m.lower():i for i,m in enumerate(("January","February","March","April","May","June","July","August","September","October","November","December"),1)}
 MONTHS.update({m[:3]:i for m,i in list(MONTHS.items())})
-DATE_RX = re.compile(r"\b(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\d{2,4})?|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s*'?\d{2,4})?|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)(?:\s+\d{2,4})?)\b",re.I)
+MONTH_NAME = r"(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.?"
+WRITTEN_DAY = r"\d{1,2}(?:st|nd|rd|th)?"
+WRITTEN_YEAR = r"(?:[ \t]*,[ \t]*|[ \t]+)'?\d{2,4}(?![\d:])"
+DATE_RX = re.compile(
+    rf"\b(?:"
+    rf"(?P<year_first>\d{{4}}[/.\-]\d{{1,2}}[/.\-]\d{{1,2}})(?=\b|T\d{{2}}:)"
+    rf"|(?P<numeric>\d{{1,2}}[/.\-]\d{{1,2}}(?:[/.\-]\d{{2,4}})?)\b"
+    rf"|(?P<month_first>{MONTH_NAME})[ \t]+(?P<month_first_day>{WRITTEN_DAY})"
+    rf"(?P<month_first_year>{WRITTEN_YEAR})?\b"
+    rf"|(?P<day_first_day>{WRITTEN_DAY})[ \t]+(?P<day_first>{MONTH_NAME})(?!\w)"
+    rf"(?P<day_first_year>{WRITTEN_YEAR})?"
+    rf")",
+    re.I,
+)
 DEFAULT_PROMPTS = {
  "knowledge": "[nomi], please learn, summarize, and understand the following information.",
  "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.",
@@ -122,9 +135,9 @@ def parse_date(value, order, session_year):
     m=DATE_RX.search(value)
     if not m: raise ValueError("No recognizable date in: "+value)
     s=m.group()
-    if re.fullmatch(r"\d{4}-\d{1,2}-\d{1,2}",s):
-        y,mo,d=map(int,s.split("-"))
-    elif re.fullmatch(r"\d{1,2}[/.\-]\d{1,2}(?:[/.\-]\d{2,4})?",s):
+    if m["year_first"]:
+        y,mo,d=map(int,re.split(r"[/.\-]",s))
+    elif m["numeric"]:
         p=re.split(r"[/.\-]",s)
         a,b=int(p[0]),int(p[1])
         if a>12 and b<=12: d,mo=a,b
@@ -133,14 +146,17 @@ def parse_date(value, order, session_year):
         else: mo,d=a,b
         y=year_value(p[2] if len(p)>2 else None,session_year)
     else:
-        words=s.replace(","," ").split()
-        if words[0].lower()[:3] in MONTHS:
-            mo=MONTHS[words[0].lower()[:3]]
-            d=int(words[1]); y=year_value(words[2] if len(words)>2 else None,session_year)
+        if m["month_first"]:
+            month,day,year=m["month_first"],m["month_first_day"],m["month_first_year"]
         else:
-            d=int(words[0]); mo=MONTHS[words[1].lower()[:3]]
-            y=year_value(words[2] if len(words)>2 else None,session_year)
-    return dt.date(y,mo,d).isoformat()
+            month,day,year=m["day_first"],m["day_first_day"],m["day_first_year"]
+        mo=MONTHS[month.lower()[:3]]
+        d=int(re.match(r"\d+",day).group())
+        y=year_value(year.strip(" \t,") if year else None,session_year)
+    try:
+        return dt.date(y,mo,d).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"Invalid date {s!r}: {exc}") from exc
 
 def read_text(path):
     if path.suffix.lower()==".docx":
