@@ -168,24 +168,27 @@ class API:
 
     def check_updates(self):
         """Fetch public release metadata outside the local-file webview."""
+        from legacy_v085 import api_ssl_context
+
         request = urllib.request.Request(
             "https://api.github.com/repos/Troub274/nomi-virtual-life/releases?per_page=20",
             headers={"Accept": "application/vnd.github+json", "User-Agent": "NomiUploader"})
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
+            context = api_ssl_context()
+            with urllib.request.urlopen(request, timeout=10, context=context) as response:
                 return {"releases": json.load(response)}
         except urllib.error.HTTPError as exc:
             if exc.code in (403, 429):
-                return self._public_release_fallback()
+                return self._public_release_fallback(context)
             return {"error": str(exc)}
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, RuntimeError) as exc:
             return {"error": str(exc)}
 
     @staticmethod
-    def _public_release_fallback():
+    def _public_release_fallback(context):
         base = "https://github.com/Troub274/nomi-virtual-life/releases/"
         try:
-            with urllib.request.urlopen(base + "latest", timeout=10) as response:
+            with urllib.request.urlopen(base + "latest", timeout=10, context=context) as response:
                 url = response.geturl()
             match = re.fullmatch(re.escape(base) + r"tag/(nomi-uploader-v[0-9][A-Za-z0-9.-]*)", url)
             if match:
