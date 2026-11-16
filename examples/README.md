@@ -35,3 +35,10 @@ Gwen's package spans a baby book and 25 historical notebooks through 2025, with 
 ## Existing checkpoints
 
 Use the original input paths and `--resume --checkpoint ORIGINAL_PATH` for existing uploader runs, rather than starting a package runner session. Standalone importer checkpoints are not uploader checkpoints: keep them unchanged, inspect the original run and remote room, and decide any replay range explicitly to avoid duplicates.
+
+The example inputs use the uploader's built-in prompts unless their headers
+explicitly override them. Beth's journal inputs inherit the first-person journal
+prompts, including the reflections scheduled by `Process Every`. Preview
+`uploader/example.txt` with `--dry-run --nomi Beth` to see the new Knowledge,
+own-journal, other-journal, and Chat prompts. Keep original input files for any
+upload already in progress: changing prompt headers can change its saved plan.

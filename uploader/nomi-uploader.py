@@ -1135,6 +1135,8 @@ def _upload_locked(args):
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
+                print("Prompt at pass %d message %d: %s" %
+                      (p,i," ".join(m["text"].splitlines())),flush=True)
                 s,response=request_reply_with_backoff(
                     room,nomi["uuid"],
                     max_wait=getattr(args,"reply_max_wait",0) or 0, timing=reply_timing)
@@ -1155,8 +1157,8 @@ def _upload_locked(args):
                            "prompt":m["text"],"reply":reply,
                            "reply_api_response":response})
                 body=reply.get("messageText") or reply.get("text") or reply.get("content") or ""
-                print("%s replied after pass %d message %d: %s"%
-                      (nomi["name"],p,i,str(body)))
+                print("Reply at pass %d message %d: %s"%
+                      (p,i," ".join(str(body).splitlines())),flush=True)
     final_events=active_records(cp)
     reply_rows=[r for r in final_events if r.get("event")=="reply_committed" and not r.get("synthetic")]
     transcript=Path(args.replies)

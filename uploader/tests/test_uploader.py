@@ -73,7 +73,7 @@ class UploaderTests(unittest.TestCase):
         self.assertIn("ENTRY 101 — 2005-02-20", converted)
         self.assertIn("I like when Mom doesn't try to repair me.", converted)
         self.assertIn("Process Every: 5", converted)
-        self.assertEqual(converted.count("Nomi:"), 1)
+        self.assertNotIn("Nomi:", converted)  # Use the current default reflection.
         self.assertEqual(diary.count("FICTIONAL BACKSTORY"), 1)
 
     def test_single_custom_reflection_repeats_every_five_entries(self):

@@ -2,7 +2,6 @@
 Type: Journal
 Source: Beth Peterson
 Process Every: 5
-Nomi: [nomi], please relive your own journal episodes {first}-{last} in chronological order. Reflect on the experiences and feelings, and preserve your memories as your own.
 
 BETH PETERSON
 PRIVATE DIARY — VOLUME 2

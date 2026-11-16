@@ -11,11 +11,15 @@ import os
 import runpy
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
+import urllib.error
+import urllib.request
 from pathlib import Path
 
+GUI_VERSION = "1.4i"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -144,9 +148,59 @@ class API:
     def choose(self):
         """Open a file chooser to add source material to the queue."""
         import webview
-        paths = webview.windows[0].create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True,
+        dialog = webview.FileDialog.OPEN if hasattr(webview, "FileDialog") else webview.OPEN_DIALOG
+        paths = webview.windows[0].create_file_dialog(dialog, allow_multiple=True,
                          file_types=("Uploader files (*.txt;*.docx;*.json;*.zip)", "All files (*.*)"))
         return list(paths or [])
+
+    def read_help(self, guide):
+        """Read a bundled guide by name from the source or packaged application."""
+        filename = {"uploader": "README.md", "recovery": "RECOVERY.md"}.get(guide)
+        if filename is None:
+            return {"error": "Unknown help guide."}
+        try:
+            return {"text": UPLOADER.with_name(filename).read_text(encoding="utf-8")}
+        except OSError as exc:
+            return {"error": str(exc)}
+
+    def app_version(self):
+        return GUI_VERSION
+
+    def check_updates(self):
+        """Fetch public release metadata outside the local-file webview."""
+        request = urllib.request.Request(
+            "https://api.github.com/repos/Troub274/nomi-virtual-life/releases?per_page=20",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "NomiUploader"})
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return {"releases": json.load(response)}
+        except urllib.error.HTTPError as exc:
+            if exc.code in (403, 429):
+                return self._public_release_fallback()
+            return {"error": str(exc)}
+        except (OSError, ValueError) as exc:
+            return {"error": str(exc)}
+
+    @staticmethod
+    def _public_release_fallback():
+        base = "https://github.com/Troub274/nomi-virtual-life/releases/"
+        try:
+            with urllib.request.urlopen(base + "latest", timeout=10) as response:
+                url = response.geturl()
+            match = re.fullmatch(re.escape(base) + r"tag/(nomi-uploader-v[0-9][A-Za-z0-9.-]*)", url)
+            if match:
+                return {"releases": [{"tag_name": match[1], "html_url": url, "draft": False}]}
+        except (OSError, ValueError):
+            pass
+        return {"error": "GitHub is limiting update checks. Open the releases page to check manually."}
+
+    def prompt_defaults(self):
+        """Return the same personalized templates that the CLI uses."""
+        sys.path.insert(0, str(UPLOADER.parent))
+        try:
+            return runpy.run_path(str(UPLOADER))["load_prompt_table"](DATA)
+        finally:
+            sys.path.pop(0)
 
     def inspect_file(self, filename):
         """Read TXT metadata and a preview without modifying the source file."""
@@ -154,7 +208,7 @@ class API:
         if source.suffix.lower() in (".zip", ".json"):
             sys.path.insert(0, str(UPLOADER.parent))
             import legacy_v085 as legacy
-            prompts = runpy.run_path(str(UPLOADER))["load_prompt_table"](DATA)
+            prompts = self.prompt_defaults()
             name, rows=legacy.load_conversation(source)
             preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
             return {"editable": False, "export": True, "header": {"mode":"Replace","intro":prompts["opening"]["chat"],"periodic":prompts["periodic"]["chat"],"process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
@@ -225,10 +279,10 @@ class API:
             if prompt.strip(): header.append("Nomi: " + prompt.strip())
         return "\n".join(header) + "\n\n" + body
 
-    def _paths(self, run_dir):
+    def _paths(self, run_dir, queue=None):
         """Resolve checkpoint, completion and reply paths for a run directory."""
         out = []
-        for i, item in enumerate(self.project.get("queue", [])):
+        for i, item in enumerate(self.project.get("queue", []) if queue is None else queue):
             source = Path(item["path"])
             if not source.is_file(): raise ValueError("Missing source file: " + str(source))
             suffix = source.suffix.lower()
@@ -249,6 +303,69 @@ class API:
                 out.append(str(source))
         if not out: raise ValueError("Select at least one file.")
         return out
+
+    @staticmethod
+    def _export_options(queue):
+        return {x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
+                                 "intro":x["export_fields"].get("intro",""),
+                                 "periodic":x["export_fields"].get("periodic",""),
+                                 "process_every":x["export_fields"].get("process",""),
+                                 "header_every":x["export_fields"].get("headerEvery",""),
+                                 "header_text":x["export_fields"].get("headerText",None)}
+                      for x in queue if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
+
+    def preview_file(self, item, options):
+        """Return expected validation failures for inline display in Preview."""
+        try:
+            return self._preview_file(item, options)
+        except (ValueError, OSError) as exc:
+            message = str(exc)
+            if "dated chat content required" in message or "Chat section needs speaker-labelled turns" in message:
+                message += (
+                    "\n\nFor Chat, set a date in Metadata or add a Date: line "
+                    "to each conversation block. Start conversation lines with a speaker name and colon."
+                    "\n\nExample:\n[Conversation]\nType: Chat\nDate: 2026-11-16"
+                    "\n\nSteve: How did your day go?\nTammy: It went well."
+                    "\n\nIf this file is informational prose, choose Knowledge instead of Chat."
+                )
+            elif "dated journal content required" in message:
+                message += (
+                    "\n\nFor Journal, start each entry with an entry number and date. "
+                    "Use YYYY-MM-DD to avoid ambiguity. For a single dated entry, "
+                    "you can also set the date in Metadata."
+                    "\n\nExample:\n[Tammy’s Journal]\nType: Journal"
+                    "\n\nENTRY 001 — 2026-11-16\nI wrote about my first day at work."
+                    "\n\nENTRY 002 — 2026-11-17\nI wrote about my second day."
+                )
+            return {"error": message}
+
+    def _preview_file(self, item, options):
+        """Generate the selected file's upload plan without credentials or API calls."""
+        sys.path.insert(0, str(UPLOADER.parent))
+        try:
+            cli = runpy.run_path(str(UPLOADER))
+        finally:
+            sys.path.pop(0)
+        with tempfile.TemporaryDirectory(prefix="nomi-preview-") as directory:
+            files = self._paths(Path(directory), [item])
+            user = str(options.get("user_name") or "").strip()
+            for path in files:
+                if Path(path).suffix.lower() == ".txt" and not user:
+                    raw = Path(path).read_text(encoding="utf-8-sig")
+                    if "[username]" in raw or "__USER_NAME__" in raw:
+                        raise ValueError("Enter your Nomi.ai user name to preview this file.")
+            plan = cli["plan_text"](
+                files, options.get("nomi") or "Nomi", user,
+                cli["regional_order"](), cli["dt"].date.today().year,
+                cli["DEFAULT_CHUNK_CHARS"], int(options.get("process", 5)),
+                chunk_mode="chars", export_options=self._export_options([item]),
+                header_every=int(options.get("header_every", 0)),
+                header_text=options.get("header_text", ""),
+                reply_prompt=options.get("reply_prompt", ""),
+                prompt_table=cli["load_prompt_table"](DATA))
+        return {"count": len(plan), "text": "\n\n".join(
+            f"── Message {i} · {row['kind']} ──\n{row['text']}"
+            for i, row in enumerate(plan, 1))}
 
     def _cli(self, args):
         """Construct the Python uploader subprocess invocation."""
@@ -332,13 +449,7 @@ class API:
             if not self.project.get("nomi_uuid"): raise ValueError("Load Nomis and choose a Nomi from the list before uploading.")
             args += ["--room", room, "--nomi-uuid", str(self.project["nomi_uuid"])]
         if any(Path(x["path"]).suffix.lower() in (".zip",".json") and x.get("export_fields") for x in self.project.get("queue",[])):
-            settings={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
-                                 "intro":x["export_fields"].get("intro",""),
-                                 "periodic":x["export_fields"].get("periodic",""),
-                                 "process_every":x["export_fields"].get("process",""),
-                                 "header_every":x["export_fields"].get("headerEvery",""),
-                                 "header_text":x["export_fields"].get("headerText",None)}
-                      for x in self.project["queue"] if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
+            settings=self._export_options(self.project["queue"])
             opts=workdir/"export-options.json"
             opts.write_text(json.dumps(settings,ensure_ascii=False,indent=2),encoding="utf-8")
             args += ["--export-options",str(opts)]
@@ -537,8 +648,12 @@ class API:
                 if row.get("event") == "start":
                     total = int(row.get("messages_per_pass",0)) * int(row.get("passes",1))
                 if row.get("event") == "confirmed": confirmed += 1
-                if row.get("event") == "reply_committed":
-                    replies.append({"prompt":row.get("prompt",""),"reply":row.get("reply",{}).get("messageText","")})
+                if row.get("event") == "reply_committed" and not row.get("synthetic"):
+                    reply = row.get("reply") or {}
+                    body = reply.get("messageText") or reply.get("text") or reply.get("content")
+                    replies.append({"pass": row.get("pass"), "index": row.get("index"),
+                                    "prompt": row.get("prompt", ""),
+                                    "reply": body or "No reply text was recorded."})
         with self.lock: recent = self.lines[-250:]
         running = bool(self.proc and self.proc.poll() is None)
         return {"running":running,"exit_code":None if running or not self.proc else self.proc.returncode,

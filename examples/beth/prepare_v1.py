@@ -52,9 +52,7 @@ def convert_document(name,text,reflection_every=5):
         "Type: Journal\n"
         "Source: Beth Peterson\n"
         f"Process Every: {reflection_every}\n"
-        "Nomi: [nomi], please relive your own journal episodes {first}-{last} "
-        "in chronological order. Reflect on the experiences and feelings, "
-        "and preserve your memories as your own.\n\n"
+        "\n"
     )
     return header+text, numbers
 

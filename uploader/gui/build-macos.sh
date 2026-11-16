@@ -16,6 +16,8 @@ python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader --icon 
   --collect-submodules webview \
   --add-data 'uploader/nomi-uploader.py:uploader' \
   --add-data 'uploader/legacy_v085.py:uploader' \
+  --add-data 'uploader/README.md:uploader' \
+  --add-data 'uploader/RECOVERY.md:uploader' \
   --add-data 'uploader/gui/index.html:uploader/gui' \
   uploader/gui/app.py
 test -d dist/NomiUploader.app
