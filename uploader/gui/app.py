@@ -19,7 +19,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-GUI_VERSION = "1.4i"
+GUI_VERSION = "1.4i.1"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"

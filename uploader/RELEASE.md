@@ -1,12 +1,8 @@
-# Nomi Uploader 1.4i — Preview, History and Help
+# Nomi Uploader 1.4i.1
 
-- **Preview the actual upload.** The selected file shows its planned opening, headers, content chunks and reply prompts, including queue edits and fallback settings. Invalid chats and journals show inline formatting help and examples.
-- **See which prompts apply.** Settings lists all opening and periodic prompt templates, including personalization. Per-file views show file prompts and applicable fallbacks. Upload-wide fallback labels explain that file settings take precedence.
-- **Follow a run live.** Filter activity by prompts, replies, or errors and retries. Saved replies display the full text and identify the pass and message, including replies returned using the API's alternate text field.
-- **Read help inside the app.** The quick guide and bundled Uploader and Recovery guides use matching collapsible sections and work offline.
-- **Check for updates.** See the running version and latest published version. If GitHub rate-limits the API, the app checks the public release page. Copy the release URL without calling the system browser or requesting clipboard permission.
-- **Run the Linux GUI from source.** Documented the required Ubuntu Qt WebEngine libraries and updated the file picker to use the current pywebview API.
-- Updated sample inputs to demonstrate the current prompt defaults. Upload stop rules and checkpoint handling are unchanged. Keep the original inputs for any existing upload when resuming.
+- Fixed Windows GUI uploads of Word documents by bundling the uploader's Python dependencies in the executable.
+- Recognize more date formats during upload planning.
+- Use a verified CA bundle for update checks on macOS.
 
 ## Downloads
 
