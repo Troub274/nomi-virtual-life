@@ -554,13 +554,27 @@ class ReplyRetryTiming:
         return min(30.0, max(0.25, self.average))
 
 
+def reply_wait_errors(destination="room"):
+    # A private-chat POST sends a message as well as requesting a reply.
+    # NoReply may follow acceptance, so repeating it could duplicate the prompt.
+    if destination == "private":
+        return {"NomiStillResponding", "NomiNotReady", "TooManyRequests"}
+    return KNOWN_WAIT_ERRORS
+
+
 def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=2.0,
-                               max_wait=0, timing=None):
+                               max_wait=0, timing=None, destination="room", prompt=None):
     """Wait through explicit Nomi not-ready responses; stop on ambiguous errors.
 
     max_wait is seconds; 0 means unlimited. Reaching max_wait returns the last
     explicit rejection, which is safe to continue waiting on a later resume.
     """
+    if destination not in ("room", "private"):
+        raise ValueError("Reply destination must be room or private")
+    if destination == "private" and (not prompt or len(prompt) > MAX_API_CHARS):
+        raise ValueError("Private reflection prompt must contain 1–800 characters")
+    path = "/nomis/"+nomi_uuid+"/chat" if destination == "private" else "/rooms/"+room+"/chat/request"
+    body = {"messageText": prompt} if destination == "private" else {"nomiUuid": nomi_uuid}
     timing = timing if timing is not None else ReplyRetryTiming(base_delay)
     delay = timing.initial_delay
     increment = delay / 4
@@ -568,14 +582,13 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=2.0,
     started=time.monotonic()
     while True:
         n+=1
-        status,payload=legacy.api_request("/rooms/"+room+"/chat/request","POST",
-                                          {"nomiUuid":nomi_uuid})
+        status,payload=legacy.api_request(path,"POST",body)
         if legacy.ok(status):
             if isinstance(payload, dict) and isinstance(payload.get("replyMessage"), dict):
                 timing.observe(time.monotonic() - started)
             return status,payload
         error=legacy.err_text("request reply",status,payload)
-        if status is not None and legacy.err_type(payload) in KNOWN_WAIT_ERRORS:
+        if status is not None and legacy.err_type(payload) in reply_wait_errors(destination):
             elapsed=time.monotonic()-started
             if attempts is not None and n>=attempts:
                 print("Nomi API error: %s; test retry limit reached"%error,
@@ -725,7 +738,7 @@ def checkpoint_summary(path):
         (r.get("pass"),r.get("index")) for r in old
         if r.get("event")=="reply_uncertain"
         and r.get("http_status") is not None
-        and legacy.err_type(r.get("api_response")) in KNOWN_WAIT_ERRORS
+        and legacy.err_type(r.get("api_response")) in reply_wait_errors(init.get("reply_destination", "room"))
     }
     uncertain_sends=attempts-confirmed
     pending_replies=reply_attempts-reply_committed-abandoned
@@ -752,6 +765,7 @@ def checkpoint_summary(path):
     return {
         "state":state,"checkpoint":str(cp),"nomi":init.get("nomi_name"),"nomi_uuid":init.get("nomi_uuid"),
         "room_uuid":migration_room(old),"run_id":init.get("run_id"),
+        "reply_destination":init.get("reply_destination", "room"),
         "confirmed":len(confirmed),"expected":expected,
         "last_confirmed":max(confirmed) if confirmed else None,
         "last_entry":last_event.get("entry_label") if last_event else None,
@@ -775,6 +789,7 @@ def print_checkpoint_status(path):
     print("%s upload"%((info.get("nomi") or "Nomi")))
     print("="*(len(info.get("nomi") or "Nomi")+7))
     print("State:      ",info["state"])
+    print("Replies:    ",info["reply_destination"])
     print("Progress:   %d / %d messages"%(info["confirmed"],info["expected"]))
     if info.get("entry_range"): print("Entries:    ",info["entry_range"])
     if info.get("last_confirmed"):
@@ -822,7 +837,7 @@ def _upload_locked(args):
     # namespace. Keep later optional CLI additions backwards compatible.
     for name, default in (("nomi_uuid", None), ("export_options", None),
                           ("header_every", 0), ("header_text", ""),
-                          ("reply_prompt", "")):
+                          ("reply_prompt", ""), ("reply_destination", None)):
         if not hasattr(args, name):
             setattr(args, name, default)
     migrating=getattr(args,"new_room_on_resume",False)
@@ -836,6 +851,14 @@ def _upload_locked(args):
     if manual and not args.resume: raise ValueError("--manual-restart requires --resume")
     old=active_records(cp) if args.resume else []
     if args.resume and not old: raise ValueError("No checkpoint to resume")
+    saved_destination = old[0].get("reply_destination", "room") if old else None
+    if old and args.reply_destination is not None and args.reply_destination != saved_destination:
+        raise ValueError("Reply destination cannot override checkpoint; start a new upload to change it")
+    args.reply_destination = saved_destination if old else (args.reply_destination or "room")
+    if args.reply_destination not in ("room", "private"):
+        raise ValueError("Reply destination must be room or private")
+    if args.reply_destination == "private" and getattr(args, "recover_noreply", []):
+        raise ValueError("Private NoReply may have sent the prompt; use --recover-uncertain-reply after inspecting private chat")
     if old:
         init=old[0]
         if init.get("event")!="start": raise ValueError("Checkpoint must begin with start event")
@@ -903,6 +926,10 @@ def _upload_locked(args):
         messages = messages[first - 1:last]
         print("Selected original plan chunks %d–%d (checkpoint counts from 1)" % (first, last))
     manifest=digest(messages)
+    if args.reply_destination == "private" and any(
+            not m["text"] or len(m["text"]) > MAX_API_CHARS
+            for m in messages if m["kind"] == "prompt"):
+        raise ValueError("Private reflection prompts must contain 1–800 characters")
     if old and not manual and manifest!=init["manifest"]:
         raise ValueError("Manifest changed: resume requires identical content and options")
     if manual:
@@ -933,6 +960,7 @@ def _upload_locked(args):
         old=active_records(cp)
         init=old[0]
     print("Nomi:",nomi["name"],"Date order:",order,"Year:",year,"Messages per pass:",len(messages),"Passes:",passes)
+    print("Reply destination:", args.reply_destination)
     if args.dry_run:
         for i,m in enumerate(messages,1): print("%4d %-8s %s / %s: %s"%(i,m["kind"],m["file"],m["section"],m["text"][:130].replace("\n"," | ")))
         return
@@ -968,6 +996,7 @@ def _upload_locked(args):
         start_event={"event":"start","version":VERSION,"run_id":str(uuid.uuid4()),
                      "nomi_uuid":nomi["uuid"],"nomi_name":nomi["name"],
                      "room_uuid":room,"year":year,"order":order,"files":files,
+                     "reply_destination":args.reply_destination,
                      "passes":passes,"messages_per_pass":len(messages),
                      "manifest":manifest,"user":args.user,
                      "process_every":args.process_every,"export_options":export_options,"prompt_table":prompt_table,
@@ -1069,7 +1098,7 @@ def _upload_locked(args):
         (r["pass"],r["index"]) for r in old
         if r.get("event")=="reply_uncertain"
         and r.get("http_status") is not None
-        and legacy.err_type(r.get("api_response")) in KNOWN_WAIT_ERRORS
+        and legacy.err_type(r.get("api_response")) in reply_wait_errors(args.reply_destination)
     }
     recovery |= retryable_previous & reply_attempts & confirmed
     recovery -= abandoned
@@ -1091,7 +1120,7 @@ def _upload_locked(args):
 
     uncertain=(uncertain_sends-send_retry_authorized)|(reply_attempts-reply_committed-recovery-abandoned)
     if uncertain:
-        raise RuntimeError("Uncertain send/reply request(s) %s. Inspect room; use GUI recovery authorization or --manual-restart after reviewing duplication risk."%sorted(uncertain))
+        raise RuntimeError("Uncertain send/reply request(s) %s. Inspect the upload room and %s replies; use GUI recovery authorization or --manual-restart after reviewing duplication risk."%(sorted(uncertain), args.reply_destination))
     if migrating or migration_pending: room=migrate_resume(cp,records(cp),nomi,room)
     if any(e.get("event")=="room_migrated" for e in records(cp)): legacy.wait_for_room(room)
     for p,i in sorted(recovery):
@@ -1156,16 +1185,20 @@ def _upload_locked(args):
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
+                           "reply_destination":args.reply_destination,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 print("Prompt at pass %d message %d: %s" %
                       (p,i," ".join(m["text"].splitlines())),flush=True)
+                reply_options = ({"destination": "private", "prompt": m["text"]}
+                                 if args.reply_destination == "private" else {})
                 s,response=request_reply_with_backoff(
                     room,nomi["uuid"],
-                    max_wait=getattr(args,"reply_max_wait",0) or 0, timing=reply_timing)
+                    max_wait=getattr(args,"reply_max_wait",0) or 0, timing=reply_timing,
+                    **reply_options)
                 if not legacy.ok(s):
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
                                "http_status":s,"api_response":response})
-                    if s is not None and legacy.err_type(response) in KNOWN_WAIT_ERRORS:
+                    if s is not None and legacy.err_type(response) in reply_wait_errors(args.reply_destination):
                         raise RuntimeError(
                             "Nomi is still not ready after the reply wait limit; "
                             "the checkpoint is safe to resume.")
@@ -1173,8 +1206,9 @@ def _upload_locked(args):
                                        legacy.err_text("request reply",s,response))
                 reply=response.get("replyMessage") if isinstance(response,dict) else None
                 if not isinstance(reply,dict):
-                    raise RuntimeError("Reply request returned no replyMessage; inspect room and checkpoint")
+                    raise RuntimeError("Reply request returned no replyMessage; inspect %s chat and checkpoint" % args.reply_destination)
                 record(cp,{"event":"reply_committed","pass":p,"index":i,
+                           "reply_destination":args.reply_destination,
                            "room_uuid":room,"nomi_uuid":nomi["uuid"],
                            "prompt":m["text"],"reply":reply,
                            "reply_api_response":response})
@@ -1196,6 +1230,7 @@ def _upload_locked(args):
     Path(args.completion).parent.mkdir(parents=True,exist_ok=True)
     Path(args.completion).write_text(json.dumps({
         "version":VERSION,"room_uuid":room,
+        "reply_destination":args.reply_destination,
         "abandoned_replies":[list(k) for k in sorted(abandoned)],
         "nomi":nomi["name"],"passes":passes,
         "messages_per_pass":len(messages),"manifest":manifest,
@@ -1348,6 +1383,8 @@ def interactive_menu():
             if interval: argv+=["--process-every",interval]
             passes=input("Passes [1]: ").strip()
             if passes: argv+=["--passes",passes]
+            destination=input("Reply destination [room/private; default room]: ").strip().lower()
+            if destination: argv+=["--reply-destination",destination]
         if action=="3": argv+=["--dry-run"]
         main(argv)
 
@@ -1376,6 +1413,8 @@ def main(argv=None):
     parser.add_argument("--nomi",help="Dry-run Nomi name")
     parser.add_argument("--user",default="")
     parser.add_argument("--room",help="Reuse existing room UUID")
+    parser.add_argument("--reply-destination", choices=("room", "private"), default=None,
+                        help="Where reflections appear (default: room; resume keeps checkpoint choice). Private sends the reflection prompt to main chat; uploads stay in the room.")
     parser.add_argument("--start-chunk", type=int, help="First inclusive message in the original upload plan (1-based)")
     parser.add_argument("--end-chunk", type=int, help="Last inclusive message in the original upload plan (1-based)")
     parser.add_argument("--nomi-uuid",help="Select Nomi by API UUID without an interactive prompt")

@@ -42,6 +42,90 @@ class FakeNomi:
 
 
 class StateMachineTests(unittest.TestCase):
+    def private_api(self, fake, error=None):
+        def api(path, method="GET", payload=None):
+            if path == "/nomis/beth-id/chat":
+                fake.calls.append((path, method, payload))
+                return ((503, {"error": {"type": error}}) if error else
+                        (200, {"sentMessage": {"text": payload["messageText"]},
+                               "replyMessage": {"text": "Private reflection"}}))
+            return fake.api(path, method, payload)
+        return api
+
+    def test_private_replies_keep_uploads_in_room_and_persist_destination(self):
+        fake = FakeNomi()
+        delegate = FakeNomi()
+        args = self.args()
+        args.reply_destination = "private"
+        with patch.object(fake, "api", side_effect=self.private_api(delegate)):
+            self.run_upload(fake, args)
+        calls = delegate.calls
+        prompts = [r for r in u.records(self.checkpoint) if r.get("event") == "reply_committed"]
+        private_calls = [c for c in calls if c[0] == "/nomis/beth-id/chat"]
+        self.assertEqual(len(private_calls), len(prompts))
+        self.assertGreater(len(private_calls), 0)
+        self.assertEqual([c[2]["messageText"] for c in private_calls], [r["prompt"] for r in prompts])
+        self.assertFalse(any(c[0].endswith("/chat/request") for c in calls))
+        self.assertTrue(any(c[0] == "/rooms/room-001/chat" for c in calls))
+        self.assertEqual(u.records(self.checkpoint)[0]["reply_destination"], "private")
+        self.assertEqual(u.checkpoint_summary(self.checkpoint)["reply_destination"], "private")
+        self.assertEqual(json.loads(self.completion.read_text())["reply_destination"], "private")
+        self.assertIn("Private reflection", self.replies.read_text())
+        resumed = FakeNomi()
+        self.run_upload(resumed, self.args(resume=True))
+        self.assertEqual(resumed.calls, [])
+        changed = self.args(resume=True)
+        changed.reply_destination = "room"
+        with self.assertRaisesRegex(ValueError, "cannot override checkpoint"):
+            self.run_upload(resumed, changed)
+        restarted, delegate = FakeNomi(), FakeNomi()
+        restart = self.args(resume=True)
+        restart.manual_restart = "1:1"
+        with patch.object(restarted, "api", side_effect=self.private_api(delegate)):
+            self.run_upload(restarted, restart)
+        self.assertEqual(u.active_records(self.checkpoint)[0]["reply_destination"], "private")
+        self.assertTrue(any(c[0] == "/nomis/beth-id/chat" for c in delegate.calls))
+        self.assertFalse(any(c[0].endswith("/chat/request") for c in delegate.calls))
+
+    def test_private_no_reply_requires_explicit_recovery_without_resending_content(self):
+        args = self.args()
+        args.reply_destination = "private"
+        failing = FakeNomi()
+        delegate = FakeNomi()
+        with patch.object(failing, "api", side_effect=self.private_api(delegate, "NoReply")):
+            with self.assertRaisesRegex(RuntimeError, "outcome uncertain"):
+                self.run_upload(failing, args)
+        self.assertEqual(sum(c[0] == "/nomis/beth-id/chat" for c in delegate.calls), 1)
+        info = u.checkpoint_summary(self.checkpoint)
+        self.assertEqual(info["state"], "AMBIGUOUS_REPLY")
+        token = "%d:%d" % tuple(info["ambiguous_replies"][0])
+        retry = self.args(resume=True)
+        retry.recover_noreply = [token]
+        with self.assertRaisesRegex(ValueError, "Private NoReply"):
+            self.run_upload(FakeNomi(), retry)
+        with self.assertRaisesRegex(RuntimeError, "Uncertain"):
+            self.run_upload(FakeNomi(), self.args(resume=True))
+        retry = self.args(resume=True)
+        retry.recover_uncertain_reply = [token]
+        resumed, delegate = FakeNomi(), FakeNomi()
+        with patch.object(resumed, "api", side_effect=self.private_api(delegate)):
+            self.run_upload(resumed, retry)
+        history = u.records(self.checkpoint)
+        first_prompt = next(r for r in history if r.get("event") == "reply_committed")["prompt"]
+        self.assertEqual(delegate.calls[0], ("/nomis/beth-id/chat", "POST", {"messageText": first_prompt}))
+        self.assertFalse(any(c[0].endswith("/chat/request") for c in delegate.calls))
+
+    def test_private_readiness_retries_only_the_private_prompt(self):
+        responses = [(409, {"error": {"type": "NomiStillResponding"}}),
+                     (200, {"replyMessage": {"text": "Ready"}})]
+        with patch.object(u.legacy, "api_request", side_effect=responses) as api, \
+             patch.object(u.time, "sleep"):
+            status, _ = u.request_reply_with_backoff("room", "nomi", destination="private", prompt="Reflect")
+        self.assertEqual(status, 200)
+        self.assertEqual(api.call_count, 2)
+        for call in api.call_args_list:
+            self.assertEqual(call.args, ("/nomis/nomi/chat", "POST", {"messageText": "Reflect"}))
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

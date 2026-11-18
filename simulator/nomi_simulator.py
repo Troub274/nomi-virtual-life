@@ -30,6 +30,16 @@ class Simulator(HTTPServer):
         count = self.counts[kind] = self.counts.get(kind, 0) + 1
         if path == "/nomis" and method == "GET":
             return 200, {"nomis": [{"uuid": NOMI, "name": "Simulator"}]}, False
+        if path == "/nomis/" + NOMI + "/chat" and method == "POST":
+            if self.scenario == "malformed-reply" and count == 1:
+                return 200, {"sentMessage": {"text": body.get("messageText")}}, False
+            if self.scenario == "slow-then-fast" and count <= 3:
+                time.sleep(self.delay)
+                return 409, {"type": "NomiStillResponding"}, False
+            return 200, {
+                "sentMessage": {"uuid": str(uuid.uuid4()), "text": body.get("messageText")},
+                "replyMessage": {"uuid": str(uuid.uuid4()), "text": "Private reply %d." % count}
+            }, self.scenario == "lost-reply" and count == 1
         if path == "/rooms":
             if method == "GET":
                 return 200, {"rooms": list(self.rooms.values())}, False

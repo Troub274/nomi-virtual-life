@@ -1,5 +1,10 @@
 # Nomi Uploader changelog
 
+## Unreleased
+
+- Added Room / Private chat reply destination across desktop platforms, the CLI, and example package runner. Uploads remain in the room; private replies send the reflection prompt to the receiving Nomi's main chat.
+- Persist reply destinations through checkpoint recovery and manual restart. Private-chat timeouts require explicit recovery to avoid silently duplicating prompts.
+
 ## 1.4i.2 — 2026-11-18
 
 - Added ChatGPT JSON and ZIP text imports with selected-branch traversal, speaker labels, conversation titles, and timestamps. Nomi downloader exports remain supported.

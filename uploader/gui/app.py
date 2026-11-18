@@ -33,7 +33,7 @@ class API:
         self.proc = None
         self.lines = []
         self.lock = threading.Lock()
-        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": "", "user_name": ""}
+        self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": "", "reply_destination": "room", "user_name": ""}
         if CONFIG.exists():
             try: self.project.update(json.loads(CONFIG.read_text(encoding="utf-8")))
             except (OSError, ValueError): pass
@@ -433,6 +433,9 @@ class API:
         """Start a new upload or dry run with the current GUI project options."""
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Upload already running")
+        destination = self.project.get("reply_destination", "room")
+        if destination not in ("room", "private"):
+            raise ValueError("Reply destination must be room or private")
         token=uuid.uuid4().hex
         directory=self._active_dir() if restart else DATA / ("previews" if dry else "runs") / token
         if restart:
@@ -480,6 +483,8 @@ class API:
                  "--reply-prompt",str(self.project.get("reply_prompt",""))]
         args += ["--process-every", str(int(self.project.get("process", 5))),
                  "--reply-max-wait", str(float(self.project.get("reply_wait", 900)))]
+        if not restart:
+            args += ["--reply-destination", destination]
         args += ["--checkpoint", str(directory / "upload.jsonl"),
                  "--completion", str(directory / "completed.json"),
                  "--replies", str(directory / "replies.txt")]
