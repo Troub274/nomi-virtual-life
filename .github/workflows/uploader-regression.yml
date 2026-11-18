@@ -1,0 +1,51 @@
+name: Nomi Uploader regression harness
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'uploader/**'
+      - 'simulator/**'
+      - '.github/workflows/uploader-regression.yml'
+  pull_request:
+    paths:
+      - 'uploader/**'
+      - 'simulator/**'
+      - '.github/workflows/uploader-regression.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uploader-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-http:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r uploader/requirements.txt
+      - name: Uploader, GUI controls, and HTTP simulator regressions
+        run: python simulator/run_regressions.py
+
+  windows-package:
+    needs: source-and-http
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build Windows executable
+        shell: pwsh
+        run: ./uploader/gui/build-windows.ps1
+      - name: Check DOCX, Nomi JSON, and ChatGPT JSON and ZIP in the executable
+        run: python simulator/check_packaged_uploader.py dist/NomiUploader.exe
