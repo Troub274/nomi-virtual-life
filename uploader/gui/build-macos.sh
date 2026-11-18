@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 arch="${1:?Specify arm64 or x86_64}"
-python -m pip install --upgrade pyinstaller pywebview certifi cryptography
+python -m pip install --upgrade pyinstaller pywebview -r uploader/requirements.txt
 if [[ -f uploader/assets/icon.icns ]]; then
   icon_flag="uploader/assets/icon.icns"
 else
@@ -11,6 +11,8 @@ else
 fi
 python -m PyInstaller --noconfirm --clean --windowed --name NomiUploader --icon "$icon_flag" \
   --paths uploader \
+  --hidden-import nomi-uploader \
+  --collect-data docx \
   --hidden-import legacy_v085 \
   --collect-data certifi \
   --collect-submodules webview \

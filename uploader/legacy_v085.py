@@ -610,16 +610,77 @@ def prepare_chunks(files,limit,memory_prefix="Your autobiographical memory from 
 
 
 
+def _load_chatgpt_conversations(data):
+    """Read visible text from the selected branch of each ChatGPT conversation."""
+    conversations=data if isinstance(data,list) else [data]
+    if not conversations or any(not isinstance(c,dict) or not isinstance(c.get("mapping"),dict)
+                                for c in conversations):
+        raise ValueError("Expected ChatGPT conversation objects with message mappings")
+    rows=[]
+    for conversation in sorted(conversations,key=lambda c:c.get("create_time") or 0):
+        mapping=conversation["mapping"]
+        current=conversation.get("current_node")
+        if not current:
+            leaves=[key for key,node in mapping.items() if not node.get("children")]
+            if len(leaves)!=1:
+                raise ValueError("ChatGPT conversation needs current_node to select its branch")
+            current=leaves[0]
+        branch=[]; seen=set()
+        while current is not None:
+            if current in seen or current not in mapping:
+                raise ValueError("Invalid ChatGPT message branch")
+            seen.add(current)
+            node=mapping[current]
+            branch.append(node)
+            current=node.get("parent")
+        title=str(conversation.get("title") or "Untitled conversation")
+        session=conversation.get("conversation_id") or conversation.get("id") or title
+        for node in reversed(branch):
+            message=node.get("message") or {}
+            author=message.get("author") or {}
+            role=author.get("role")
+            content=message.get("content") or {}
+            if (role not in ("user","assistant")
+                    or (message.get("metadata") or {}).get("is_visually_hidden_from_conversation")
+                    or message.get("recipient") not in (None,"all")
+                    or message.get("channel") not in (None,"final")
+                    or content.get("content_type") not in ("text","multimodal_text")):
+                continue
+            parts=[part for part in content.get("parts",[]) if isinstance(part,str)]
+            body="".join(parts)
+            if not body.strip():
+                continue
+            timestamp=message.get("create_time") or conversation.get("create_time")
+            # Some ChatGPT exports mix Unix seconds and milliseconds.
+            if timestamp is not None and abs(timestamp)>=100_000_000_000:
+                timestamp/=1000
+            date=datetime.fromtimestamp(timestamp,timezone.utc).isoformat() if timestamp is not None else ""
+            rows.append({"date":date,"sender":author.get("name") or ("ChatGPT" if role=="assistant" else "User"),
+                         "message":body,"source":"chatgpt","session":session,
+                         "conversation_title":title,"ordinal":len(rows)})
+    if not rows:
+        raise ValueError("ChatGPT export contains no visible user or assistant text")
+    for index,row in enumerate(rows,1):
+        row["index"]=index
+    return "ChatGPT",rows
+
+
 def load_conversation(path):
-    """Read Nomi's JSON export, directly or from its ZIP, including voice transcripts."""
+    """Read Nomi or ChatGPT JSON exports, directly or from a ZIP."""
     if path.suffix.lower()=='.zip':
         with zipfile.ZipFile(path) as z:
             names=[n for n in z.namelist() if n.lower().endswith('.json') and not n.startswith('__MACOSX/')]
             if not names: raise ValueError('ZIP contains no JSON export: '+str(path))
             preferred=[n for n in names if n.lower().endswith('_data.json')]
+            if not preferred:
+                preferred=[n for n in names if n.rsplit("/",1)[-1].lower()=="conversations.json"]
             data=json.loads(z.read((preferred or names)[0]).decode('utf-8-sig'))
     else:
         data=json.loads(path.read_text(encoding='utf-8-sig'))
+    if isinstance(data,list) or (isinstance(data,dict) and "mapping" in data):
+        return _load_chatgpt_conversations(data)
+    if not isinstance(data,dict):
+        raise ValueError("Expected a Nomi or ChatGPT export object")
     nomi=data.get('nomi',data)
     if not isinstance(nomi,dict): raise ValueError('Expected a Nomi export object')
     rows=[]
@@ -668,6 +729,9 @@ def prepare_conversation_chunks(files,limit):
             global_index+=1
             header=('Historical conversation transcript | %s | %s | %s | %s\n'
                     %(row['date'],row['source'],row['sender'],nomi_name))
+            if row.get("conversation_title"):
+                title=" ".join(row["conversation_title"].splitlines())
+                header=header.rstrip("\n")+" | "+title+"\n"
             # Preserve exact message text; only the envelope is added.
             available=limit-utf8_len(header)-32
             if available<16: raise ValueError('Increase --chunk-bytes; transcript envelope too long')

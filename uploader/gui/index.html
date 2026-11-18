@@ -47,6 +47,7 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 <label>Selected file content preview (read-only)</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
 <div id="exportEditor" class="stack" style="display:none">
 <h2>ZIP / JSON conversation prompts</h2>
+<p class="small">Supports Nomi downloader and ChatGPT exports. ChatGPT archives import visible text from all included conversations on their selected branches. Reflections count uploaded content chunks.</p>
 <label>Prompt mode<select id="exportMode" onchange="editExport()"><option>Replace</option><option>Add</option></select></label>
 <label>Opening prompt<textarea id="exportIntro" oninput="editExport()" placeholder="Message sent before importing conversations"></textarea></label>
 <label>Periodic reflection prompt<textarea id="exportPeriodic" oninput="editExport()" placeholder="Use {first} and {last} for message numbers"></textarea></label>
@@ -98,6 +99,7 @@ function selectEditorTab(name){
   document.getElementById("tab-"+n)?.setAttribute("aria-selected",String(n===name));
  }
  if(name==="preview")loadUploadPreview();
+ if(name==="prompts")loadPromptDefaults();
 }
 function applyTheme(setting){
  localStorage.setItem("nomi-uploader-theme",setting);
@@ -267,13 +269,18 @@ function showSettingsPromptDefaults(error){
 }
 async function loadPromptDefaults(){
  try{defaultPromptTable=await call("prompt_defaults");showSettingsPromptDefaults();showPromptDefaults();}
- catch(e){defaultPromptTable=null;showSettingsPromptDefaults(e);showPromptDefaults();}
+ catch(e){defaultPromptTable=null;showSettingsPromptDefaults(e);showPromptDefaults(e);}
 }
-function showPromptDefaults(){
+function showPromptDefaults(error){
  const panel=el("promptDefaults"), summary=el("promptDefaultsSummary");
  if(!panel||!summary)return;
  const f=project.queue[active], fields=f?.fields||{};
- if(!f||!defaultPromptTable){panel.textContent=summary.textContent="";return;}
+ if(!f){panel.textContent=summary.textContent="Select a file to see its prompts.";return;}
+ if(!defaultPromptTable){
+  panel.textContent=error?"Could not load prompt defaults: "+String(error):"Loading prompt defaults…";
+  summary.textContent="Open Prompts to load the effective prompts and interval.";
+  return;
+ }
  const isExport=/\.(zip|json)$/i.test(f.path);
  if(!isExport&&!/\.(txt|docx)$/i.test(f.path)){panel.textContent=summary.textContent="";return;}
  const kind=isExport?"chat":String(fields.type||"knowledge").toLowerCase();
@@ -287,10 +294,15 @@ function showPromptDefaults(){
  const openingText=[replace?"":fallback,opening].filter(Boolean).join("\n")||"No opening prompt (Replace mode).";
  const periodicText=periodic||project.reply_prompt||defaultPromptTable.periodic[key]||"";
  const interval=(isExport?f.export_fields?.process:fields.process);
- const enabled=Number(interval==null||interval===""?project.process:interval)>0;
+ const inherited=interval==null||interval==="";
+ const effectiveInterval=Number(inherited?(project.process??5):interval);
+ const enabled=effectiveInterval>0;
+ const intervalText=enabled?"Reflect every "+effectiveInterval+(isExport?" content chunks":" content units")+(inherited?" (from Settings)":" (file setting)"):"Periodic reflections disabled";
+ const intervalControl=el(isExport?"exportProcess":"processField");
+ if(intervalControl)intervalControl.placeholder="Use Settings ("+(project.process??5)+")";
  const openingLabel=opening?(replace?"file or queue":"default + file or queue"):(replace?"disabled":"default");
  const periodicLabel=periodic?"file or queue":project.reply_prompt?"upload setting":"default";
- panel.textContent="Opening ("+openingLabel+"):\n"+openingText+"\n\nPeriodic ("+periodicLabel+(enabled?"":", interval off")+ "):\n"+periodicText+(!isExport&&filePrompts.length?"\n\nNomi prompts from file or queue:\n"+filePrompts.join("\n"):"");
+ panel.textContent=intervalText+"\n\nOpening ("+openingLabel+"):\n"+openingText+"\n\nPeriodic ("+periodicLabel+(enabled?"":", interval off")+ "):\n"+periodicText+(!isExport&&filePrompts.length?"\n\nNomi prompts from file or queue:\n"+filePrompts.join("\n"):"");
  summary.textContent="Prompt wording and its source are shown on the Prompts tab.";
 }
 function draw(){
@@ -449,9 +461,11 @@ async function clearHistory(){
 }
 async function manualRestart(){
  if(!confirm("ADVANCED RECOVERY: This will append a HARD BOUNDARY to the current journal and recalculate all messages using your current files and prompts. Earlier history is preserved; replayed messages may create duplicates. Continue?"))return;
- const p=prompt("Restart pass number:", "1");if(p===null)return;
- const i=prompt("Restart message number in the REVISED plan:", "1");if(i===null)return;
- if(!/^[1-9]\\d*$/.test(p)||!/^[1-9]\\d*$/.test(i)){alert("Enter positive whole numbers.");return}
+ const pass=prompt("Restart pass number:", "1");if(pass===null)return;
+ const p=pass.trim();
+ const message=prompt("Restart message number in the REVISED plan:", "1");if(message===null)return;
+ const i=message.trim();
+ if(!/^[1-9]\d*$/.test(p)||!/^[1-9]\d*$/.test(i)){alert("Enter positive whole numbers.");return}
  try{
    editSettings();
    await save();
@@ -467,7 +481,7 @@ async function advancedCliRecovery(kind){
  };
  const position=prompt(descriptions[kind]+"\\n\\nEnter PASS:INDEX (e.g. 1:499):");
  if(position===null)return;
- if(!/^[1-9]\\d*:[1-9]\\d*$/.test(position.trim())){alert("Use PASS:INDEX with positive integers.");return}
+ if(!/^[1-9]\d*:[1-9]\d*$/.test(position.trim())){alert("Use PASS:INDEX with positive integers.");return}
  if(!confirm("ADVANCED RECOVERY: "+descriptions[kind]+"\\n\\nPosition: "+position.trim()+"\\n\\nThe CLI will validate eligibility. Continue?"))return;
  try{
   await call("advanced_resume",kind,position.trim());

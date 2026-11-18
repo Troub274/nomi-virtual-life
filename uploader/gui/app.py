@@ -19,7 +19,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-GUI_VERSION = "1.4i.1"
+GUI_VERSION = "1.4i.2"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -216,7 +216,7 @@ class API:
             preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
             return {"editable": False, "export": True, "header": {"mode":"Replace","intro":prompts["opening"]["chat"],"periodic":prompts["periodic"]["chat"],"process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
         if source.suffix.lower() != ".txt":
-            return {"editable": False, "preview": "Metadata editor is available for TXT and Nomi ZIP/JSON exports."}
+            return {"editable": False, "preview": "Metadata editor is available for TXT, Nomi exports, and ChatGPT ZIP/JSON exports."}
         raw = source.read_text(encoding="utf-8-sig")
         lines = raw.splitlines(keepends=True)
         header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
@@ -280,7 +280,26 @@ class API:
         header.append("Nomi Mode: " + mode.title())
         for prompt in str(fields.get("prompts") or "").splitlines():
             if prompt.strip(): header.append("Nomi: " + prompt.strip())
-        return "\n".join(header) + "\n\n" + body
+        # Bracketed transcript lines are content unless they introduce an
+        # explicitly typed uploader section. Escape them in the working copy.
+        lines = body.splitlines(keepends=True)
+        for index, line in enumerate(lines):
+            if not re.fullmatch(r"\[[^\]\n]+\]", line.strip()):
+                continue
+            typed = False
+            for following in lines[index + 1:]:
+                value = following.strip()
+                if re.match(r"^Type:", value, re.I):
+                    typed = True
+                    break
+                if value and not re.match(
+                    r"^(Source|Date|Process Every|Header Every|Header Text|Reply Prompt|Nomi Mode|Nomi):",
+                    value, re.I
+                ):
+                    break
+            if not typed:
+                lines[index] = line.replace("[", r"\[", 1)
+        return "\n".join(header) + "\n\n" + "".join(lines)
 
     def _paths(self, run_dir, queue=None):
         """Resolve checkpoint, completion and reply paths for a run directory."""

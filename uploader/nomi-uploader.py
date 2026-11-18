@@ -168,7 +168,12 @@ def parse_sections(text, filename):
     """Parse typed uploader sections and retain their source metadata."""
     sections=[]; current=None; in_header=False
     for line in text.splitlines():
-        match=HEADING.fullmatch(line.strip())
+        # A working copy can escape bracketed transcript content.
+        literal_heading=line.lstrip().startswith("\\[") and HEADING.fullmatch(line.strip()[1:])
+        if literal_heading:
+            line=line.replace("\\[", "[", 1)
+            in_header=False
+        match=None if literal_heading else HEADING.fullmatch(line.strip())
         if match:
             if current: sections.append(current)
             current={"title":match.group(1),"type":"knowledge","source":None,"date":None,
@@ -374,6 +379,7 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             he=header_every if opts.get("header_every") in (None,"") else int(opts["header_every"])
             ht=header_text if opts.get("header_text") is None else str(opts["header_text"])
             rows=legacy.prepare_conversation_chunks([path],reserve_for_header(chunk_limit,ht,he))
+            section_name="ChatGPT export" if rows and rows[0].get("source_channel")=="chatgpt" else "Nomi export"
             mode=str(opts.get("mode","Add")).lower()
             if mode not in ("add","replace"): raise ValueError("Export Nomi Mode must be Add or Replace")
             opening=str(opts.get("intro","")).strip()
@@ -383,17 +389,17 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             interval=process_every if interval in (None,"") else int(interval)
             if interval<0: raise ValueError("Process Every must be >= 0")
             if intro:
-                add({"text":render_prompt(intro,nomi,user,"Nomi export"),
-                 "kind":"intro","file":filename,"section":"Nomi export"})
+                add({"text":render_prompt(intro,nomi,user,section_name),
+                 "kind":"intro","file":filename,"section":section_name})
             for idx,row in enumerate(rows,1):
                 content_count+=1
                 add({"text":framing(row["text"],content_count,he,ht),"kind":"content","file":filename,
-                     "section":"Nomi export","entry":idx})
+                     "section":section_name,"entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
                     prompt=str(opts.get("periodic") or reply_prompt or periodic_defaults["chat"]).format(first=first,last=idx)
-                    add({"text":render_prompt(prompt,nomi,user,"Nomi export"),
-                         "kind":"prompt","file":filename,"section":"Nomi export","entry":idx})
+                    add({"text":render_prompt(prompt,nomi,user,section_name),
+                         "kind":"prompt","file":filename,"section":section_name,"entry":idx})
             continue
         raw_text=read_text(path)
         if "[username]" in raw_text or "__USER_NAME__" in raw_text:

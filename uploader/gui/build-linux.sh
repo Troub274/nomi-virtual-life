@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
-python -m pip install --upgrade pyinstaller "pywebview[qt]" PyQt6-WebEngine cryptography
+python -m pip install --upgrade pyinstaller "pywebview[qt]" PyQt6-WebEngine -r uploader/requirements.txt
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name NomiUploader \
   --paths uploader \
+  --hidden-import nomi-uploader \
+  --collect-data docx \
   --hidden-import legacy_v085 \
   --hidden-import qtpy \
   --collect-all PyQt6.QtWebEngineCore \
