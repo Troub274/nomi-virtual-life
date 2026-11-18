@@ -32,7 +32,7 @@ def check(executable):
             result = subprocess.run(
                 [str(executable), "--uploader-cli", "--dry-run", "--nomi", "Simulator",
                  "--process-every", "10", "--checkpoint", str(root / "checkpoint.jsonl"),
-                 str(source)], cwd=root, env=environment, capture_output=True,
+                 str(source)], cwd=root, env=environment, input="", capture_output=True,
                 text=True, encoding="utf-8", timeout=90)
             if result.returncode:
                 raise RuntimeError(f"{source.name} failed\n{result.stdout}\n{result.stderr}")

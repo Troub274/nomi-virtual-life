@@ -49,7 +49,7 @@ class UploadContractTests(unittest.TestCase):
         command = [sys.executable, str(ROOT / "simulator/run_test_harness.py"),
                    "--port", str(self.server.server_port), "--", "--delay", "0", *args]
         return subprocess.run(command, cwd=self.root, env=self.environment,
-                              capture_output=True, text=True, encoding="utf-8", timeout=45)
+                              input="", capture_output=True, text=True, encoding="utf-8", timeout=45)
 
     def chat_item(self, path, interval=""):
         return {"path": str(path), "export_fields": {

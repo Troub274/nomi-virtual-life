@@ -20,7 +20,7 @@ class RecoveryTests(unittest.TestCase):
                 client = Path(__file__).with_name("run_test_harness.py")
                 command = [sys.executable, str(client), "--port", str(server.server_port), "--", "--delay", "0"]
                 def run(*args):
-                    return subprocess.run(command + list(args), cwd=tmp, capture_output=True, text=True, timeout=15)
+                    return subprocess.run(command + list(args), cwd=tmp, input="", capture_output=True, text=True, timeout=15)
                 failed = run("--nomi-uuid", "22222222-2222-2222-2222-222222222222", "--room", ROOM, "facts.txt")
                 self.assertNotEqual(failed.returncode, 0)
                 self.assertIn("outcome uncertain", failed.stderr)
@@ -48,12 +48,12 @@ class RecoveryTests(unittest.TestCase):
                 command = [sys.executable, str(client), "--port", str(server.server_port),
                            "--", "--delay", "0", "--start-chunk", "2", "--end-chunk", "2"]
                 preview = subprocess.run(command + ["--dry-run", "facts.txt"], cwd=tmp,
-                                         capture_output=True, text=True, timeout=15)
+                                         input="", capture_output=True, text=True, timeout=15)
                 self.assertEqual(preview.returncode, 0, preview.stderr)
                 self.assertFalse(server.events)
                 live = subprocess.run(command + ["--nomi-uuid", "22222222-2222-2222-2222-222222222222",
                                                  "--room", ROOM, "facts.txt"], cwd=tmp,
-                                      capture_output=True, text=True, timeout=15)
+                                      input="", capture_output=True, text=True, timeout=15)
                 self.assertEqual(live.returncode, 0, live.stderr)
                 sends = [e for e in server.events if e["method"] == "POST"]
                 self.assertEqual(len(sends), 1)
@@ -76,7 +76,7 @@ class RecoveryTests(unittest.TestCase):
                                       ("simulator-only-key", None)]:
                     ini.write_text(f"[nomi]\nendpoint = http://127.0.0.1:{server.server_port}/v1\n"
                                    f"api_key = {key}\n", encoding="utf-8")
-                    result = subprocess.run(command, cwd=tmp, capture_output=True, text=True,
+                    result = subprocess.run(command, cwd=tmp, input="", capture_output=True, text=True,
                                             timeout=90, env={**os.environ, "NOMI_API_KEY": "simulator-only-key"})
                     if expected is None:
                         self.assertEqual(result.returncode, 0, result.stderr)
