@@ -540,7 +540,8 @@ function renderActivity(){
  const lines=filter==="all"?activityLines:activityLines.filter(match[filter]);
  el("log").textContent=lines.join("\n")||(filter==="all"?"No messages yet":"No matching activity yet.");
 }
-async function poll(){if(!ready)return;try{
+let polling=false;
+async function poll(){if(!ready||polling)return;polling=true;try{
 let recovery=await call("recovery_status");
 renderRecoveryOptions(recovery);
 el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
@@ -550,7 +551,9 @@ el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
 activityLines=s.log||[];renderActivity();
 el("replies").textContent=(s.replies||[]).map(r=>(r.pass!=null&&r.index!=null?"Pass "+r.pass+" · message "+r.index+" — Reply received\n":"")+"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";
-}catch(e){el("state").textContent=String(e)}}
+ }catch(e){el("state").textContent=String(e)}
+ finally{polling=false;}
+}
 async function changeApiKey(){
  const key=prompt("Enter replacement Nomi API key:");
  if(!key)return;

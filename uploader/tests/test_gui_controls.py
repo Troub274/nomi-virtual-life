@@ -51,3 +51,45 @@ const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)
         result = subprocess.run([node, "-", str(html)], input=script, text=True,
                                 encoding="utf-8", capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+
+    def test_status_timer_never_overlaps_pending_poll_and_recovers_after_error(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js is unavailable")
+        html = Path(__file__).resolve().parents[1] / "gui/index.html"
+        script = r"""
+const fs=require("fs"),vm=require("vm"),assert=require("assert");
+const html=fs.readFileSync(process.argv[2],"utf8");
+const source=html.slice(html.indexOf("async function poll()"),html.indexOf("async function changeApiKey()"));
+(async()=>{
+ const controls={},calls=[];
+ let finish;
+ const pending=new Promise(resolve=>finish=resolve);
+ const recovery={state:"COMPLETE"};
+ const status={total:31000,confirmed:31000,running:false,exit_code:0,replies:[],log:[]};
+ const context={ready:true,activityLines:[],el:id=>(controls[id]??={}),
+  renderRecoveryOptions:()=>{},renderActivity:()=>{},
+  call:async name=>{calls.push(name);return name==="recovery_status"?pending:status;}};
+ vm.createContext(context);
+ vm.runInContext("let polling=false;"+source,context);
+ const first=context.poll();
+ const extra=Array.from({length:1000},()=>context.poll());
+ assert.deepStrictEqual(calls,["recovery_status"]);
+ finish(recovery);
+ await Promise.all([first,...extra]);
+ assert.deepStrictEqual(calls,["recovery_status","status"]);
+ context.call=async name=>{calls.push(name);return name==="recovery_status"?recovery:status;};
+ await context.poll();
+ assert.equal(calls.length,4);
+ context.call=async()=>{throw Error("temporary failure")};
+ await context.poll();
+ assert(controls.state.textContent.includes("temporary failure"));
+ context.call=async name=>name==="recovery_status"?recovery:status;
+ await context.poll();
+ assert.equal(controls.state.textContent,"Uploader exited with code 0");
+})().catch(error=>{console.error(error);process.exit(1)});
+"""
+        result = subprocess.run([node, "-", str(html)], input=script, text=True,
+                                encoding="utf-8", capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)

@@ -1,14 +1,12 @@
-# Nomi Uploader 1.4i.2
+# Nomi Uploader 1.4i.3
 
-- Import ChatGPT conversation JSON and export ZIP files alongside Nomi downloader exports. ChatGPT imports follow the selected branch of each conversation and preserve visible text, speaker labels, UTC timestamps, and conversation titles.
-- ChatGPT archives import all included conversations in chronological order. Images, attachments, tool output, and internal processing messages are omitted.
-- For JSON and ZIP imports, reflections occur after the configured number of uploaded content chunks, including a final partial batch. A blank file interval inherits Settings. Zero disables periodic reflections.
-- The Files Prompts tab shows the effective interval and whether it comes from the file or Settings, and reports prompt-loading errors.
-- Fixed bracketed lines inside TXT conversations being treated as new Knowledge sections. Explicitly typed sections remain supported.
-- Fixed Manual Restart and advanced recovery rejecting valid pass and message numbers.
-- Include the uploader's declared Python dependencies in Windows, Linux, and macOS builds.
+- Fixed GUI freezes and excessive thread and memory growth when monitoring large upload checkpoints, including after an upload finishes.
+- Prevented the status timer from launching overlapping checkpoint scans.
+- Status and recovery now share a cached snapshot that refreshes when the journal changes.
+- Bounded in-memory activity logs and recent replies. Run History reads the opening record of each journal instead of loading the whole file.
+- Added regressions with 31,000-message checkpoints, concurrent status requests, 1,000 overlapping timer ticks, and cache refresh after append and Manual Restart.
 
-Normal Resume retains the saved run's prompts, interval, and prepared inputs. To apply revised files or settings to an existing run, use Manual Restart and inspect the revised plan before choosing the restart position. Restarting at pass 1, message 1 replays from the beginning.
+Install this version and open your existing project or select the saved run in History to inspect its progress and completion.
 
 ## Downloads
 
