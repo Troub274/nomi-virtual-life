@@ -720,10 +720,10 @@ def migrate_resume(cp, old, nomi, room):
     return rid
 
 
-def checkpoint_summary(path):
+def checkpoint_summary(path, events=None):
     """Classify the active checkpoint generation for safe recovery decisions."""
     cp=Path(path)
-    old=active_records(cp)
+    old=active_records(cp) if events is None else events
     if not old:
         return {"state":"NO_CHECKPOINT","checkpoint":str(cp)}
     init=old[0]

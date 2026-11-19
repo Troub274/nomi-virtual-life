@@ -17,9 +17,10 @@ import time
 import uuid
 import urllib.error
 import urllib.request
+from collections import deque
 from pathlib import Path
 
-GUI_VERSION = "1.4i.2"
+GUI_VERSION = "1.4i.3"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -31,8 +32,11 @@ CONFIG = DATA / "settings.json"
 class API:
     def __init__(self):
         self.proc = None
-        self.lines = []
+        self.lines = deque(maxlen=1000)
         self.lock = threading.Lock()
+        self._checkpoint_lock = threading.Lock()
+        self._checkpoint_cache = None
+        self._checkpoint_module = None
         self.project = {"queue": [], "nomi": "", "process": 5, "reply_wait": 900, "header_every": 0, "header_text": "", "reply_prompt": "", "reply_destination": "room", "user_name": ""}
         if CONFIG.exists():
             try: self.project.update(json.loads(CONFIG.read_text(encoding="utf-8")))
@@ -396,7 +400,7 @@ class API:
     def _run(self, args):
         """Start the uploader subprocess while retaining its status output."""
         if self.proc and self.proc.poll() is None: raise RuntimeError("An upload is already running.")
-        self.lines = []
+        self.lines = deque(maxlen=1000)
         env = os.environ.copy()
         import legacy_v085
         env["NOMI_API_KEY"] = legacy_v085.resolved_api_key() or env.get("NOMI_API_KEY", "")
@@ -542,10 +546,11 @@ class API:
             cp=directory/"upload.jsonl"
             if not cp.exists() or not cp.stat().st_size: continue
             start=None
-            for line in cp.read_text(encoding="utf-8").splitlines():
-                try: row=json.loads(line)
-                except ValueError: continue
-                if row.get("event")=="start": start=row; break
+            with cp.open(encoding="utf-8") as history:
+                for line in history:
+                    try: row=json.loads(line)
+                    except ValueError: continue
+                    if row.get("event")=="start": start=row; break
             found.append({"id":token,"nomi":start.get("nomi_name","Unknown") if start else "Not started",
                 "room":start.get("room_uuid","") if start else "",
                 "completed":(directory/"completed.json").exists(),
@@ -563,27 +568,59 @@ class API:
         if not self._has_checkpoint(directory): raise ValueError("Run has no checkpoint")
         self.project["active_run"]=None if run_id=="legacy" else run_id
         self.save(self.project)
-        self.lines=[]
+        self.lines=deque(maxlen=1000)
         self.proc=None
         return True
 
+    def _checkpoint_view(self):
+        """Share one bounded status snapshot for each checkpoint revision."""
+        lock=self.__dict__.setdefault("_checkpoint_lock",threading.Lock())
+        with lock:
+            cp=self._active_dir()/"upload.jsonl"
+            try:
+                stat=cp.stat()
+                signature=(str(cp),stat.st_ino,stat.st_mtime_ns,stat.st_size)
+            except FileNotFoundError:
+                stat=None
+                signature=(str(cp),None)
+            cached=getattr(self,"_checkpoint_cache",None)
+            if cached is not None and cached[0]==signature:
+                return cached[1]
+            view={"confirmed":0,"total":0,"replies":[],
+                  "recovery":{"state":"NO_CHECKPOINT","uncertain_sends":[],"ambiguous_replies":[]}}
+            if stat is not None and stat.st_size:
+                module=getattr(self,"_checkpoint_module",None)
+                if module is None:
+                    import importlib.util
+                    if str(UPLOADER.parent) not in sys.path:
+                        sys.path.insert(0,str(UPLOADER.parent))
+                    spec=importlib.util.spec_from_file_location("nomi_uploader_gui_checkpoint",str(UPLOADER))
+                    module=importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    self._checkpoint_module=module
+                events=module.active_records(cp)
+                recovery=module.checkpoint_summary(cp,events=events)
+                recovery["recommendation"]=(
+                    "Normal Resume" if recovery["state"]=="SAFE_TO_RESUME"
+                    else "Review uncertain operation, then Resume" if recovery["state"] in ("AMBIGUOUS_SEND","AMBIGUOUS_REPLY")
+                    else "No resume needed" if recovery["state"]=="COMPLETE"
+                    else "Manual Restart if you intentionally changed the plan")
+                replies=deque(maxlen=50)
+                for row in events:
+                    if row.get("event")=="reply_committed" and not row.get("synthetic"):
+                        reply=row.get("reply") or {}
+                        body=reply.get("messageText") or reply.get("text") or reply.get("content")
+                        replies.append({"pass":row.get("pass"),"index":row.get("index"),
+                                        "prompt":row.get("prompt",""),
+                                        "reply":body or "No reply text was recorded."})
+                view={"confirmed":recovery.get("confirmed",0),"total":recovery.get("expected",0),
+                      "replies":list(replies),"recovery":recovery}
+            self._checkpoint_cache=(signature,view)
+            return view
+
     def recovery_status(self):
-        """Classify the selected checkpoint using the CLI's authoritative rules."""
-        directory=self._active_dir()
-        if not self._has_checkpoint(directory):
-            return {"state":"NO_CHECKPOINT","uncertain_sends":[],"ambiguous_replies":[]}
-        import importlib.util
-        sys.path.insert(0,str(UPLOADER.parent))
-        spec=importlib.util.spec_from_file_location("nomi_uploader_recovery",str(UPLOADER))
-        module=importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        result=module.checkpoint_summary(directory/"upload.jsonl")
-        result["recommendation"]=(
-            "Normal Resume" if result["state"]=="SAFE_TO_RESUME"
-            else "Review uncertain operation, then Resume" if result["state"] in ("AMBIGUOUS_SEND","AMBIGUOUS_REPLY")
-            else "No resume needed" if result["state"]=="COMPLETE"
-            else "Manual Restart if you intentionally changed the plan")
-        return result
+        """Classify the selected checkpoint using the shared status snapshot."""
+        return self._checkpoint_view()["recovery"]
 
     def recover_resume(self, send_tokens=None, reply_tokens=None):
         """Explicitly authorized recovery; preserve the checkpoint as the source of truth."""
@@ -655,37 +692,16 @@ class API:
                           "--replies",str(directory/"replies.txt")])
 
     def status(self):
-        """Return the GUI's current process state and progress snapshot."""
+        """Return process state and the shared checkpoint snapshot."""
         directory=self._active_dir()
-        cp = directory / "upload.jsonl"
-        confirmed = 0
-        total = 0
-        replies = []
-        recent = []
-        if cp.exists():
-            import importlib.util
-            spec=importlib.util.spec_from_file_location("nomi_uploader_gui_status",str(UPLOADER))
-            module=importlib.util.module_from_spec(spec)
-            sys.path.insert(0,str(UPLOADER.parent))
-            spec.loader.exec_module(module)
-            for row in module.active_records(cp):
-                raw=json.dumps(row)
-                try: row = json.loads(raw)
-                except ValueError: continue
-                if row.get("event") == "start":
-                    total = int(row.get("messages_per_pass",0)) * int(row.get("passes",1))
-                if row.get("event") == "confirmed": confirmed += 1
-                if row.get("event") == "reply_committed" and not row.get("synthetic"):
-                    reply = row.get("reply") or {}
-                    body = reply.get("messageText") or reply.get("text") or reply.get("content")
-                    replies.append({"pass": row.get("pass"), "index": row.get("index"),
-                                    "prompt": row.get("prompt", ""),
-                                    "reply": body or "No reply text was recorded."})
-        with self.lock: recent = self.lines[-250:]
-        running = bool(self.proc and self.proc.poll() is None)
+        view=self._checkpoint_view()
+        with self.lock:
+            recent=list(self.lines)[-250:]
+        running=bool(self.proc and self.proc.poll() is None)
         return {"running":running,"exit_code":None if running or not self.proc else self.proc.returncode,
-                "confirmed":confirmed,"total":total,"log":recent,"replies":replies[-50:],
-                "project":self.project,"can_resume":self._has_checkpoint(directory),
+                "confirmed":view["confirmed"],"total":view["total"],"log":recent,
+                "replies":view["replies"],"project":self.project,
+                "can_resume":self._has_checkpoint(directory),
                 "completed":(directory/"completed.json").exists()}
 
 if __name__ == "__main__":

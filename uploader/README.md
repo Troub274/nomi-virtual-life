@@ -1,4 +1,4 @@
-# Nomi Uploader v1.4i.2
+# Nomi Uploader v1.4i.3
 
 See the [uploader changelog](CHANGELOG.md) for release history.
 
@@ -8,13 +8,13 @@ See the [uploader changelog](CHANGELOG.md) for release history.
 
 **For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
 
-**Current:** Nomi Uploader 1.4i.2 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.4i.3 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
 ## Downloads and setup (all platforms)
 
-[Download Nomi Uploader 1.4i.2](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.2). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
+[Download Nomi Uploader 1.4i.3](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.3). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.
