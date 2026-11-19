@@ -10,9 +10,9 @@ Tools for Nomi.ai virtual environments, autobiographical replay and conversation
 Nomi Uploader handles imports; [Chat Bridge](bridge/README.md) connects live ChatGPT and Nomi conversations. See the [uploader guide](uploader/README.md),
 [recovery guide](uploader/RECOVERY.md), and [tests](uploader/tests/README.md).
 
-## Nomi Uploader 1.4i.5 — Windows GUI (no Python required)
+## Nomi Uploader 1.4i.6 — Windows GUI (no Python required)
 
-**[Download NomiUploader-Windows.zip from GitHub Releases](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5)**
+**[Download NomiUploader-Windows.zip from GitHub Releases](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6)**
 
 Extract it, then double-click `NomiUploader.exe`. For setup, unsigned-app warnings,
 SmartScreen's **More info → Run anyway**, and Smart App Control, see the
@@ -21,7 +21,7 @@ This is experimental software, not code-signed. Do not disable Defender antiviru
 
 ## Linux GUI — x86-64
 
-**[Download the Linux release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5)** (`NomiUploader-Linux-x86_64.tar.gz`).
+**[Download the Linux release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6)** (`NomiUploader-Linux-x86_64.tar.gz`).
 
 Extract `NomiUploader-Linux-x86_64.tar.gz` and launch `NomiUploader` on a supported Linux graphical desktop.
 Linux requires a supported graphical desktop and graphics libraries; the GUI includes Qt WebEngine. See the
@@ -29,18 +29,18 @@ Linux requires a supported graphical desktop and graphics libraries; the GUI inc
 
 ## macOS GUI — Apple Silicon and Intel
 
-**[macOS downloads](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5)**
+**[macOS downloads](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6)**
 
 Download the ZIP for your Mac architecture, extract `NomiUploader.app`, and launch it.
 This app is unsigned and unnotarized; see the [macOS installation and Gatekeeper guide](uploader/gui/README-MACOS.md).
 
 ## Python command-line uploader — cross-platform
 
-**[Download the Python CLI release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5)**.
+**[Download the Python CLI release](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6)**.
 The ZIP contains the authoritative `nomi-uploader.py`, its `legacy_v085.py` dependency,
 and installation / checkpoint recovery instructions. Python 3.10+ required; no GUI.
 
-The **1.4i.5 interface** includes Destination, Files, Upload, History and Settings tabs, Nomi-inspired dark/light/system themes, copyable upload history and diagnostic output, and advanced checkpoint recovery options. All platform downloads are provided on the same [1.4i.5 release page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5).
+The **1.4i.6 interface** includes Destination, Files, Upload, History and Settings tabs, Nomi-inspired dark/light/system themes, copyable upload history and diagnostic output, and advanced checkpoint recovery options. All platform downloads are provided on the same [1.4i.6 release page](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6).
 
 ## Quick start
 

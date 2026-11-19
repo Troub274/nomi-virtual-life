@@ -1,6 +1,6 @@
 # Nomi Uploader changelog
 
-## Unreleased
+## 1.4i.6 — 2026-11-19
 
 - Interactive CLI Resume now asks whether uncertain private replies arrived. Enter confirms without pasted text; paste, wait, and explicitly confirmed retry options are also available. Noninteractive recovery keeps its existing behavior.
 - Add a Resume dialog for uncertain private replies: optionally paste the received reply, press Enter to confirm receipt and continue, keep waiting, or explicitly retry. Empty confirmations never save placeholder text as a reply.
