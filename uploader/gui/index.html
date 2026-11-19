@@ -62,6 +62,8 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 <label>Nomi API key (managed by app)<input id="key" type="password" placeholder="Stored in shared app config" autocomplete="off" oninput="editSettings()"></label>
 <button onclick="changeApiKey()">Change / Reset API Key</button>
 <label>Receiving Nomi<select id="nomi" onchange="editSettings()"><option value="">Enter API key and click Load Nomis</option></select></label>
+<label>Reply destination<select id="replyDestination" onchange="editSettings()"><option value="room">Room (default)</option><option value="private">Private chat</option></select></label>
+<p class="small">Uploads stay in the room. Private chat sends each reflection prompt to your Nomi's main chat and saves its response here too. Resume keeps the run's original choice.</p>
 <div class="row"><button onclick="loadNomis()">Load Nomis</button><span class="small" id="nomiStatus">No account loaded</span></div>
 <label>Nomi.ai user name (required when a file contains [username])<input id="userName" placeholder="Your display name in Nomi.ai" oninput="editSettings()"></label>
 <label>Upload room<select id="roomSelect" onchange="chooseRoom()"><option value="">Select a Nomi and load rooms</option></select></label>
@@ -242,7 +244,7 @@ function buildLayout(){
 document.addEventListener("DOMContentLoaded",buildLayout);
 </script>
 <script>
-let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:"",user_name:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
+let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:"",reply_destination:"room",user_name:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
 let defaultPromptTable=null;
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
@@ -307,7 +309,7 @@ function showPromptDefaults(error){
 }
 function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
-renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";el("userName").value=project.user_name??"";
+renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";el("replyDestination").value=project.reply_destination??"room";el("userName").value=project.user_name??"";
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
 for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",headerEvery:"",headerText:"",replyPrompt:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
 el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"],["exportHeaderEvery","headerEvery"],["exportHeaderText","headerText"]])el(id).value=f.export_fields[key]??"";}
@@ -365,6 +367,7 @@ function editSettings(){
  project.key="";
  project.process=el("process").value.trim()===""?5:Number(el("process").value);
  project.reply_wait=Number(el("wait").value);
+ project.reply_destination=el("replyDestination").value;
  project.header_every=Number(el("headerEvery").value);
  project.header_text=el("headerText").value;
  project.reply_prompt=el("replyPrompt").value;
@@ -495,7 +498,7 @@ async function scopedRecovery(kind){
   const replies=(status.ambiguous_replies||[]).map(p=>p.join(":"));
   const tokens=kind==="send"?sends:replies;
   if(!tokens.length){alert("No eligible "+(kind==="send"?"uncertain content sends":"uncertain reply requests")+" in this checkpoint.");return}
-  const description=kind==="send"?"Resend unconfirmed content? Nomi may already have received it. Duplicates are possible.":"Request a reply again? The original response may already exist. An extra reply is possible.";
+  const description=kind==="send"?"Resend unconfirmed content? Nomi may already have received it. Duplicates are possible.":"Request a reply again? The original response may already exist. Private chat retries also resend the reflection prompt. An extra reply is possible.";
   if(!confirm(description+"\\n\\nAffected positions: "+tokens.join(", ")+"\\n\\nThis action will resume the selected upload."))return;
   await call("recover_resume",kind==="send"?tokens:[],kind==="reply"?tokens:[]);
   el("state").textContent="Authorized "+(kind==="send"?"content resend":"reply retry")+" and resumed checkpoint";
@@ -519,7 +522,7 @@ async function resume(){
      if(!confirm("UNCERTAIN CONTENT SEND(S): "+sendTokens.join(", ")+"\\n\\nThe last message may already be in Nomi. Resending could DUPLICATE content. Inspect the room first.\\n\\nAuthorize resending these exact messages?"))return;
    }
    if(replyTokens.length){
-     if(!confirm("UNCERTAIN REFLECTION REPLY(S): "+replyTokens.join(", ")+"\\n\\nThe source messages were confirmed. Requesting another reply could produce an extra Nomi response. No content will be resent.\\n\\nAuthorize these exact reply requests?"))return;
+     if(!confirm("UNCERTAIN REFLECTION REPLY(S): "+replyTokens.join(", ")+"\\n\\nThe source messages were confirmed. Requesting another reply could produce an extra Nomi response. Private chat retries also resend the reflection prompt. Uploaded source content will not be resent.\\n\\nAuthorize these exact reply requests?"))return;
    }
    if(sendTokens.length||replyTokens.length){
      await call("recover_resume",sendTokens,replyTokens);
@@ -547,7 +550,7 @@ renderRecoveryOptions(recovery);
 el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
 el("recommendedActionText").textContent=(recovery.recommendation||"Select an upload checkpoint.")+"\n"+(recovery.next?"Next message: "+recovery.next.join(":"):"")+"\n"+(recovery.state||"");
 let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
-el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}%`:"No checkpoint yet";
+el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}% · Replies: ${recovery.reply_destination==="private"?"Private chat":"Room"}`:"No checkpoint yet";
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
 activityLines=s.log||[];renderActivity();
 el("replies").textContent=(s.replies||[]).map(r=>(r.pass!=null&&r.index!=null?"Pass "+r.pass+" · message "+r.index+" — Reply received\n":"")+"PROMPT: "+r.prompt+"\nREPLY: "+r.reply).join("\n\n")||"No replies yet";

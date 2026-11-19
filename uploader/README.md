@@ -1,4 +1,4 @@
-# Nomi Uploader v1.4i.3
+# Nomi Uploader v1.4i.4
 
 See the [uploader changelog](CHANGELOG.md) for release history.
 
@@ -8,13 +8,13 @@ See the [uploader changelog](CHANGELOG.md) for release history.
 
 **For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
 
-**Current:** Nomi Uploader 1.4i.3 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.4i.4 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
 ## Downloads and setup (all platforms)
 
-[Download Nomi Uploader 1.4i.3](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.3). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
+[Download Nomi Uploader 1.4i.4](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.4). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.
@@ -32,6 +32,36 @@ For platform-specific instructions, see
 See [Recovery](RECOVERY.md) for expert checkpoint troubleshooting.
 
 ## Easiest way to use it
+
+### Choose where your Nomi replies
+
+In the desktop app's **Destination** tab, set **Reply destination** to **Room**
+(the default) or **Private chat**. The same option is available in every desktop
+platform build, the interactive CLI, and the example package runner:
+
+```bash
+python uploader/nomi-uploader.py --reply-destination private --process-every 5 biography.txt
+python examples/run_package.py beth --reply-destination private
+```
+
+Uploads, headers, and reflection prompts still go to the selected room. With
+**Private chat**, each reflection prompt is also sent to the receiving Nomi's
+main chat to obtain its response; no room reply is requested. This uses Nomi's
+[private-chat API](https://api.nomi.ai/docs/reference/post-v1-nomis-id-chat/).
+It does not move the uploaded material into private chat or guarantee that the
+Nomi will recall all room content there. Replies are saved in the usual local
+history and transcript. With periodic processing disabled, no replies are requested.
+
+The destination is saved in the checkpoint. Resume and Manual Restart retain it;
+start a new upload to change it. Older checkpoints continue replying in the room.
+A private-chat timeout or `NoReply` stops for inspection rather than automatically
+sending the prompt again. Inspect private chat before authorizing a retry through
+the GUI recovery controls or `--recover-uncertain-reply PASS:INDEX`; it may repeat
+both the private prompt and the response. `--recover-noreply` applies only to
+room replies. Private prompts must fit the API's 800-character subscribed-account
+limit (free accounts have a 400-character limit).
+
+### Run a packaged example
 
 For the packaged examples, the normal command is now all a user needs:
 

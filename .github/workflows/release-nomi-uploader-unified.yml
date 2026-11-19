@@ -108,7 +108,7 @@ jobs:
           pattern: uploader-*
           merge-multiple: true
           path: dist
-      - name: Publish 1.4i.3 production release with all platforms
+      - name: Publish 1.4i.4 production release with all platforms
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -123,10 +123,10 @@ jobs:
           test -s dist/NomiUploader-macOS-arm64.zip
           test -s dist/NomiUploader-macOS-x86_64.zip
           test -s dist/NomiUploader-Python-CLI.zip
-          tag=nomi-uploader-v1.4i.3
+          tag=nomi-uploader-v1.4i.4
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/NomiUploader-Windows.zip dist/NomiUploader-Linux-x86_64.tar.gz dist/NomiUploader-macOS-arm64.zip dist/NomiUploader-macOS-x86_64.zip dist/NomiUploader-Python-CLI.zip --clobber
             gh release edit "$tag" --notes-file uploader/RELEASE.md
           else
-            gh release create "$tag" dist/NomiUploader-Windows.zip dist/NomiUploader-Linux-x86_64.tar.gz dist/NomiUploader-macOS-arm64.zip dist/NomiUploader-macOS-x86_64.zip dist/NomiUploader-Python-CLI.zip --target "${{ github.sha }}" --title "Nomi Uploader 1.4i.3" --notes-file uploader/RELEASE.md
+            gh release create "$tag" dist/NomiUploader-Windows.zip dist/NomiUploader-Linux-x86_64.tar.gz dist/NomiUploader-macOS-arm64.zip dist/NomiUploader-macOS-x86_64.zip dist/NomiUploader-Python-CLI.zip --target "${{ github.sha }}" --title "Nomi Uploader 1.4i.4" --notes-file uploader/RELEASE.md
           fi

@@ -18,7 +18,7 @@ def state_paths(root, package):
     return state, state/'checkpoint.jsonl', state/'completed.json', state/'replies.txt'
 
 
-def command(package, dry_run=False, resume=False, restart=False, status=False, delay=None, user=None):
+def command(package, dry_run=False, resume=False, restart=False, status=False, delay=None, user=None, reply_destination=None):
     root = Path(__file__).resolve().parents[1]
     folder = root/'examples'/package
     config = json.loads((folder/'package.json').read_text(encoding='utf-8'))
@@ -43,6 +43,8 @@ def command(package, dry_run=False, resume=False, restart=False, status=False, d
         return args + ['--resume', '--easy']
 
     args += ['--date-format', config['date_format']]
+    if reply_destination is not None:
+        args += ['--reply-destination', reply_destination]
     if user:
         args += ['--user', user]
     if dry_run:
@@ -62,6 +64,8 @@ def main():
     parser.add_argument('--user', default=None, help='Nomi.ai display name of the person uploading (required for Gwen)')
     parser.add_argument('--delay', type=float, default=None,
                         help='Delay in seconds between requests; defaults to uploader setting')
+    parser.add_argument('--reply-destination', choices=('room', 'private'), default=None,
+                        help='Where reflections appear for new uploads; resumed uploads keep their saved choice')
 
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument('--dry-run', action='store_true',
@@ -118,7 +122,7 @@ def main():
         if not selected_user or any(c in selected_user for c in (chr(10), chr(13), '[', ']')):
             parser.error('A valid Nomi.ai user name is required')
     cmd = command(args.package, args.dry_run, args.resume, args.restart, args.status,
-                  delay=args.delay, user=selected_user)
+                  delay=args.delay, user=selected_user, reply_destination=args.reply_destination)
     if not args.dry_run and not args.status:
         state.mkdir(parents=True, exist_ok=True)
     return subprocess.call(cmd)

@@ -1,12 +1,13 @@
-# Nomi Uploader 1.4i.3
+# Nomi Uploader 1.4i.4
 
-- Fixed GUI freezes and excessive thread and memory growth when monitoring large upload checkpoints, including after an upload finishes.
-- Prevented the status timer from launching overlapping checkpoint scans.
-- Status and recovery now share a cached snapshot that refreshes when the journal changes.
-- Bounded in-memory activity logs and recent replies. Run History reads the opening record of each journal instead of loading the whole file.
-- Added regressions with 31,000-message checkpoints, concurrent status requests, 1,000 overlapping timer ticks, and cache refresh after append and Manual Restart.
+- Added a Reply destination selector in Destination. Choose Room (default) or Private chat when starting a new upload.
+- With Private chat selected, upload content, headers, and reflection prompts go to the selected room. Each reflection prompt is also sent to the receiving Nomi's main chat to obtain its reply. The app saves the response in local History and the reply transcript.
+- The option is available in Windows, Linux, both macOS builds, the interactive CLI, and the example package runner. CLI users can pass --reply-destination private.
+- The checkpoint saves the chosen destination. Resume and Manual Restart retain that choice; start a new upload to change it. Older checkpoints use Room.
+- Private-chat timeouts and NoReply results stop for inspection. Explicit recovery can resend the private reflection prompt and produce another response.
+- Added destination controls, persistence, and private-chat routing/recovery regressions.
 
-Install this version and open your existing project or select the saved run in History to inspect its progress and completion.
+To enable it, open Destination, choose Private chat under Reply destination, and start a new upload. Periodic reflections must have an interval above zero.
 
 ## Downloads
 

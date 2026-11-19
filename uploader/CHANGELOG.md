@@ -1,5 +1,10 @@
 # Nomi Uploader changelog
 
+## 1.4i.4 — 2026-11-18
+
+- Added Room / Private chat reply destination across desktop platforms, the CLI, and example package runner. Uploads remain in the room; private replies send the reflection prompt to the receiving Nomi's main chat.
+- Persist reply destinations through checkpoint recovery and manual restart. Private-chat timeouts require explicit recovery to avoid silently duplicating prompts.
+
 ## 1.4i.3 — 2026-11-18
 
 - Prevent overlapping GUI status polls from accumulating threads while large checkpoints are scanned.

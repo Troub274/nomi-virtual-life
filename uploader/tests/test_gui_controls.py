@@ -46,6 +46,29 @@ const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)
   context.defaultPromptTable = null;
   context.showPromptDefaults("Failed");
   assert(controls.promptDefaults.textContent.includes("Could not load prompt defaults"));
+  const inputs = {};
+  const settings = {project:{queue:[]},active:-1,nomiChoices:[],
+    renderNomis:()=>{},renderRooms:()=>{},showPromptDefaults:()=>{},loadRooms:()=>{},
+    el:id=>{
+      if(!inputs[id]) {
+        const input={style:{}};
+        Object.defineProperty(input,"value",{
+          get(){return this._value??""},set(value){this._value=String(value)}
+        });
+        inputs[id]=input;
+      }
+      return inputs[id];
+    }};
+  vm.createContext(settings);
+  vm.runInContext(html.match(/function draw\(\)\{[\s\S]*?\n\}/)[0]+"\n"+
+    html.match(/function editSettings\(\)\{[\s\S]*?\n\}/)[0],settings);
+  settings.draw();
+  assert.equal(inputs.replyDestination.value,"room");
+  inputs.replyDestination.value="private";
+  settings.editSettings();
+  assert.equal(settings.project.reply_destination,"private");
+  settings.draw();
+  assert.equal(inputs.replyDestination.value,"private");
 })().catch(error=>{console.error(error);process.exit(1)});
 """
         result = subprocess.run([node, "-", str(html)], input=script, text=True,

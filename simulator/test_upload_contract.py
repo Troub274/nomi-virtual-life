@@ -19,6 +19,36 @@ sys.path.insert(0, str(ROOT / "uploader"))
 
 
 class UploadContractTests(unittest.TestCase):
+    def test_private_destination_routes_reflections_and_resumes_lost_reply(self):
+        self.start_server("lost-reply")
+        source = self.root / "facts.txt"
+        source.write_text("[Facts]\nType: Knowledge\nProcess Every: 1\n\nOne fact.\n", encoding="utf-8")
+        item = {"path": str(source)}
+        self.api.project.update(queue=[item], reply_destination="private")
+        result = self.api.begin()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("outcome uncertain", result.stderr)
+        status = self.api.recovery_status()
+        self.assertEqual(status["state"], "AMBIGUOUS_REPLY")
+        self.assertEqual(status["reply_destination"], "private")
+        confirmed_posts = [e for e in self.server.events if e["method"] == "POST" and "/rooms/" in e["path"]]
+        token = ":".join(map(str, status["ambiguous_replies"][0]))
+        # A changed desktop selection must not redirect a resumed checkpoint.
+        self.api.project["reply_destination"] = "room"
+        result = self.api.recover_resume([], [token])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.requests(), [])
+        self.assertEqual(confirmed_posts, [e for e in self.server.events
+                                         if e["method"] == "POST" and "/rooms/" in e["path"]])
+        private = [e for e in self.server.events if e["path"] == "/v1/nomis/" + NOMI + "/chat"]
+        self.assertEqual(len(private), 2)
+        self.assertEqual(private[0]["body"], private[1]["body"])
+        self.assertTrue(private[0]["response_dropped"])
+        self.assertEqual(self.api.recovery_status()["state"], "COMPLETE")
+        reply = next(e for e in self.events() if e.get("event") == "reply_committed")
+        self.assertEqual(reply["reply_destination"], "private")
+        self.assertIn("Private reply", reply["reply"]["text"])
+
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
