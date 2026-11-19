@@ -1,5 +1,12 @@
 # Nomi Uploader changelog
 
+## Unreleased
+
+- Prevent overlapping GUI status polls from accumulating threads while large checkpoints are scanned.
+- Share one cached checkpoint snapshot between status and recovery, refreshing it when the journal changes.
+- Bound in-memory activity logs and recent replies, and read only the start record when listing run history.
+- Add large-checkpoint, concurrent polling, and timer-overlap regressions.
+
 ## 1.4i.2 — 2026-11-18
 
 - Added ChatGPT JSON and ZIP text imports with selected-branch traversal, speaker labels, conversation titles, and timestamps. Nomi downloader exports remain supported.
