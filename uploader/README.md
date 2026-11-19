@@ -454,6 +454,12 @@ the plan and its source-date labels.
 
 ## Record an already received private reply
 
+Interactive CLI `--resume` also reviews uncertain private replies. It shows each
+prompt and asks whether a reply arrived: **Enter** confirms receipt without text,
+**P** accepts a pasted multiline reply (finish with a single `.` on its own line),
+**W** keeps the upload paused, and **R** offers an explicit retry confirmation.
+Noninteractive runs keep the existing recovery flags and never prompt.
+
 In the GUI, **Normal Resume** opens a recovery dialog for uncertain private replies.
 It shows the prompt and its memory date, plus the send time when recorded. If you saw
 the reply in private chat, optionally paste it and press **Enter** or **Reply received

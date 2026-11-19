@@ -60,6 +60,48 @@ class VerifiedPrivateReplyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 u.accept_private_reply(self.cp,"1:122","Reply")
 
+    def cli_args(self):
+        from types import SimpleNamespace
+        return SimpleNamespace(checkpoint=self.cp,recover_uncertain_reply=[])
+
+    def test_cli_enter_confirms_without_resending(self):
+        args=self.cli_args()
+        with patch("builtins.input",return_value=""), patch("builtins.print"):
+            self.assertTrue(u.review_private_replies(args))
+        self.assertEqual(u.checkpoint_summary(self.cp)["state"],"SAFE_TO_RESUME")
+        self.assertEqual(u.records(self.cp)[-1]["reply"],{"text":""})
+        self.assertEqual(args.recover_uncertain_reply,[])
+
+    def test_cli_pastes_multiline_reply(self):
+        with patch("builtins.input",side_effect=["p","First line","Second line","."]), patch("builtins.print"):
+            self.assertTrue(u.review_private_replies(self.cli_args()))
+        self.assertEqual(u.records(self.cp)[-1]["reply"]["text"],"First line\nSecond line")
+
+    def test_cli_wait_and_retry_do_not_commit_receipt(self):
+        before=self.cp.read_bytes()
+        args=self.cli_args()
+        with patch("builtins.input",return_value="w"), patch("builtins.print"):
+            self.assertFalse(u.review_private_replies(args))
+        with patch("builtins.input",side_effect=["r","no","r","RETRY"]), patch("builtins.print"):
+            self.assertTrue(u.review_private_replies(args))
+        self.assertEqual(args.recover_uncertain_reply,["1:122"])
+        self.assertEqual(self.cp.read_bytes(),before)
+
+    def test_cli_noninteractive_resume_does_not_prompt(self):
+        with patch.object(u.sys.stdin,"isatty",return_value=False), \
+             patch.object(u.legacy,"resolved_api_key",return_value="test"), \
+             patch.object(u,"review_private_replies") as review, patch.object(u,"upload") as upload:
+            u.main(["--resume","--checkpoint",str(self.cp)])
+        review.assert_not_called()
+        upload.assert_called_once()
+
+    def test_cli_resume_wait_stops_before_upload(self):
+        with patch.object(u.sys.stdin,"isatty",return_value=True), \
+             patch("builtins.input",return_value="w"), patch("builtins.print"), \
+             patch.object(u,"upload") as upload:
+            u.main(["--resume","--checkpoint",str(self.cp)])
+        upload.assert_not_called()
+
     def test_explicit_confirmation_without_text_unblocks_resume(self):
         result=u.accept_private_reply(self.cp,"1:122","",allow_empty=True)
         self.assertEqual(result["state"],"SAFE_TO_RESUME")

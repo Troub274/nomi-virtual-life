@@ -913,6 +913,54 @@ def accept_private_reply(checkpoint, position, reply_text, allow_empty=False):
                 "next":result["next"],"backup":str(backup)}
 
 
+def review_private_replies(args):
+    """Review uncertain private replies in an interactive CLI before resuming."""
+    cp=Path(args.checkpoint)
+    events=active_records(cp)
+    if not events or events[0].get("reply_destination","room")!="private":
+        return True
+    pending=checkpoint_summary(cp,events).get("ambiguous_replies",[])
+    authorized=set(getattr(args,"recover_uncertain_reply",[]) or [])
+    for key in pending:
+        token=":".join(map(str,key))
+        if token in authorized:
+            continue
+        attempt=next((e for e in reversed(events) if e.get("event")=="reply_attempt"
+                      and (e.get("pass"),e.get("index"))==tuple(key)),{})
+        confirmed=next((e for e in reversed(events) if e.get("event")=="confirmed"
+                        and (e.get("pass"),e.get("index"))==tuple(key)),{})
+        sent=(confirmed.get("api_response") or {}).get("sentMessage") or {}
+        print("\nUncertain private reply at "+token)
+        if attempt.get("sent_at"):
+            print("Sent: "+attempt["sent_at"])
+        print(attempt.get("prompt") or sent.get("text") or sent.get("messageText") or "Prompt text unavailable")
+        while True:
+            choice=input("Did your Nomi reply? Enter = reply received, P = paste reply, W = keep waiting, R = retry prompt: ").strip().lower()
+            if choice in ("","y","yes","p"):
+                text=""
+                if choice=="p":
+                    print("Paste reply here (optional). Finish with a single . on its own line:")
+                    lines=[]
+                    while True:
+                        line=input()
+                        if line==".": break
+                        lines.append(line)
+                    text="\n".join(lines).strip()
+                accept_private_reply(cp,token,text,allow_empty=True)
+                print("Reply receipt saved for "+token+". Continuing after this prompt.")
+                break
+            if choice in ("w","n","no"):
+                print("Upload remains paused. Run --resume when ready.")
+                return False
+            if choice=="r":
+                if input("Resend this prompt? A duplicate reply is possible. Type RETRY to confirm: ").strip()=="RETRY":
+                    args.recover_uncertain_reply.append(token)
+                    break
+            else:
+                print("Choose Enter, P, W, or R.")
+    return True
+
+
 def _upload_locked(args):
     """Execute the durable send/reply pipeline under the checkpoint lock."""
     # Programmatic callers and older tests supply only the original v1.0
@@ -1577,6 +1625,15 @@ def main(argv=None):
         parser.error("recovery flags require --resume")
     if args.utility and (args.new_room_on_resume or args.abandon_reply):
         parser.error("migration cannot be combined with --utility")
+    if (args.resume and not args.dry_run and not args.manual_restart
+            and not args.new_room_on_resume and not args.utility
+            and sys.stdin and sys.stdin.isatty()):
+        try:
+            if not review_private_replies(args):
+                return
+        except (EOFError,KeyboardInterrupt):
+            print("\nRecovery review stopped. Upload remains paused.")
+            return
     if not args.dry_run and not legacy.resolved_api_key():
         import getpass
         state=legacy.credential_status()
