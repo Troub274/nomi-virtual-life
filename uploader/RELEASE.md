@@ -1,13 +1,11 @@
-# Nomi Uploader 1.4i.5
+# Nomi Uploader 1.4i.6
 
-- Moved the reflection interval to one consistent field at the top of Files > Prompts for TXT and JSON/ZIP files.
-- Hide controls that do not apply to the selected format. Blank intervals show their Settings default, and explicit 0 is identified as disabled.
-- Renamed header repetition controls to distinguish them from reflection intervals. Word metadata and interval controls identify their document/Settings source.
-- Add source conversation or entry dates to periodic reflection prompts for new standard uploads. Batches spanning multiple dates include a date range.
-- Normal Resume preserves existing saved prompt wording. Manual Restart regenerates the plan with source-date labels.
-- Private-chat logs now identify the send-and-wait operation, returned HTTP status, and elapsed time. Added a delayed private-response simulator check.
-
-Private-chat API NoReply errors continue to stop the run for recovery. These diagnostics help distinguish an API error from a successfully returned reply.
+- Resume now opens a recovery dialog when a private reflection request timed out or returned an uncertain result. It shows the original prompt, its memory date, and the send time when available.
+- If the reply appeared in private chat, press Enter or choose Reply received — Resume. Pasting the reply is optional; Shift+Enter adds a line break.
+- Keep waiting leaves the upload paused. Retry prompt requires explicit confirmation because it may produce a duplicate reply.
+- Interactive CLI --resume offers the same recovery choices: Enter confirms receipt, P accepts a multiline reply, W waits, and R offers a confirmed retry. Noninteractive runs retain their existing recovery flags.
+- Received-reply confirmations back up the checkpoint and append a user-verified receipt, allowing Resume to continue after the completed reflection without resending it. Empty confirmations do not invent reply text.
+- Existing checkpoints and saved upload plans remain compatible. No restart of the upload is required.
 
 ## Downloads
 
@@ -15,8 +13,6 @@ Private-chat API NoReply errors continue to stop the run for recovery. These dia
 - `NomiUploader-Linux-x86_64.tar.gz` — Linux GUI plus source CLI.
 - `NomiUploader-macOS-arm64.zip` — Apple Silicon macOS GUI plus source CLI.
 - `NomiUploader-macOS-x86_64.zip` — Intel macOS GUI plus source CLI.
-- `NomiUploader-Python-CLI.zip` — Python-only distribution (no GUI installation).
+- `NomiUploader-Python-CLI.zip` — Python-only distribution.
 
-Each GUI package includes `CLI-IN-GUI-DOWNLOAD.md` and the Python uploader. The standalone CLI ZIP remains an asset **within the same release**, not a separate version or release.
-
-These unsigned builds are provided for Windows, Linux x86-64, and macOS (Apple Silicon and Intel). Updates are installed manually.
+All five packages are part of this release. GUI packages include the Python CLI and its usage instructions. These unsigned builds are installed manually. Pause an active upload and close the app before replacing the executable, then select the saved run and use Normal Resume.

@@ -20,7 +20,7 @@ import urllib.request
 from collections import deque
 from pathlib import Path
 
-GUI_VERSION = "1.4i.5"
+GUI_VERSION = "1.4i.6"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -621,6 +621,37 @@ class API:
     def recovery_status(self):
         """Classify the selected checkpoint using the shared status snapshot."""
         return self._checkpoint_view()["recovery"]
+
+    def private_reply_recovery(self):
+        status=self.recovery_status()
+        cp=self._active_dir()/"upload.jsonl"
+        module=getattr(self,"_checkpoint_module",None)
+        if module is None:
+            return []
+        events=module.active_records(cp)
+        if not events or events[0].get("reply_destination","room")!="private":
+            return []
+        pending={tuple(p) for p in status.get("ambiguous_replies",[])}
+        result=[]
+        for key in sorted(pending):
+            attempt=next((e for e in reversed(events) if e.get("event")=="reply_attempt"
+                          and (e.get("pass"),e.get("index"))==key),{})
+            confirmed=next((e for e in reversed(events) if e.get("event")=="confirmed"
+                            and (e.get("pass"),e.get("index"))==key),{})
+            sent=(confirmed.get("api_response") or {}).get("sentMessage") or {}
+            result.append({"position":":".join(map(str,key)),"checkpoint":str(cp),
+                           "prompt":attempt.get("prompt") or sent.get("text") or sent.get("messageText") or "Prompt text unavailable",
+                           "time":attempt.get("sent_at") or attempt.get("ts") or attempt.get("timestamp") or ""})
+        return result
+
+    def accept_received_reply(self, checkpoint, position, text=""):
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Stop the active upload before recovery.")
+        cp=self._active_dir()/"upload.jsonl"
+        if str(cp)!=checkpoint:
+            raise ValueError("Selected run changed. Reopen Resume.")
+        self.recovery_status()
+        return self._checkpoint_module.accept_private_reply(cp,position,text.strip(),allow_empty=True)
 
     def recover_resume(self, send_tokens=None, reply_tokens=None):
         """Explicitly authorized recovery; preserve the checkpoint as the source of truth."""

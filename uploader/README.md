@@ -1,4 +1,4 @@
-# Nomi Uploader v1.4i.5
+# Nomi Uploader v1.4i.6
 
 See the [uploader changelog](CHANGELOG.md) for release history.
 
@@ -8,13 +8,13 @@ See the [uploader changelog](CHANGELOG.md) for release history.
 
 **For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
 
-**Current:** Nomi Uploader 1.4i.5 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.4i.6 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
 ## Downloads and setup (all platforms)
 
-[Download Nomi Uploader 1.4i.5](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
+[Download Nomi Uploader 1.4i.6](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.
@@ -450,3 +450,31 @@ New uploads add source conversation or entry dates to periodic reflection
 prompts when valid dates are available. A batch spanning multiple dates includes
 a date range. Normal Resume keeps the saved wording. Manual Restart regenerates
 the plan and its source-date labels.
+
+
+## Record an already received private reply
+
+Interactive CLI `--resume` also reviews uncertain private replies. It shows each
+prompt and asks whether a reply arrived: **Enter** confirms receipt without text,
+**P** accepts a pasted multiline reply (finish with a single `.` on its own line),
+**W** keeps the upload paused, and **R** offers an explicit retry confirmation.
+Noninteractive runs keep the existing recovery flags and never prompt.
+
+In the GUI, **Normal Resume** opens a recovery dialog for uncertain private replies.
+It shows the prompt and its memory date, plus the send time when recorded. If you saw
+the reply in private chat, optionally paste it and press **Enter** or **Reply received
+— Resume**. Leaving the box empty records your confirmation without reply text.
+**Shift+Enter** inserts a line break. **Keep waiting** leaves the upload paused;
+**Retry prompt** asks for confirmation before resending. Each uncertain reply is
+reviewed separately. The checkpoint is backed up before recording a confirmation.
+
+When the API reports an uncertain private reply but the reply is visible in
+Nomi, save that exact reply in a UTF-8 text file. The source CLI can record it
+against the pending reflection:
+
+    python nomi-uploader.py --checkpoint upload.jsonl --accept-private-reply 1:42 --reply-text-file reply.txt
+
+This local recovery action verifies the pending prompt, backs up the journal,
+and appends a user-verified reply receipt. Normal Resume then continues after
+that reflection. The saved receipt identifies its source as user verification.
+An active uploader lock prevents changing its checkpoint concurrently.
