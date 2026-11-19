@@ -106,7 +106,7 @@ class UploadContractTests(unittest.TestCase):
         return cli["plan_text"](paths, "Simulator", "", "US", 2026, 750,
                                 self.api.project["process"], chunk_mode="chars",
                                 export_options=self.api._export_options([item]),
-                                prompt_table=cli["load_prompt_table"](self.gui.DATA))
+                                prompt_table=cli["load_prompt_table"](self.gui.DATA),include_prompt_dates=True)
 
     def assert_cadence(self, expected, interval):
         self.assertEqual([e["body"]["messageText"] for e in self.chat_posts()],
@@ -299,3 +299,20 @@ class UploadContractTests(unittest.TestCase):
                 committed = [e["prompt"] for e in self.events() if e["event"] == "reply_committed"]
                 self.assertTrue(committed)
                 self.assertTrue(all(expected_text in prompt for prompt in committed))
+
+
+    def test_private_call_waits_for_and_records_its_returned_response(self):
+        self.start_server("delayed-private-reply")
+        self.server.delay = 0.2
+        source = self.root / "facts.txt"
+        source.write_text("[Facts]\nType: Knowledge\n\nFirst fact.\n\nSecond fact.\n", encoding="utf-8")
+        self.api.project.update(queue=[{"path":str(source)}], process=1, reply_destination="private")
+        result = self.api.begin()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        private = [e for e in self.server.events if e["path"] == "/v1/nomis/" + NOMI + "/chat"]
+        self.assertEqual(len(private), 2)
+        self.assertEqual(self.requests(), [])
+        committed = [e for e in self.events() if e["event"] == "reply_committed"]
+        self.assertEqual([e["reply"]["text"] for e in committed], ["Private reply 1.", "Private reply 2."])
+        self.assertTrue(all(e["reply_destination"] == "private" for e in committed))
+        self.assertNotIn("reply_uncertain", [e["event"] for e in self.events()])

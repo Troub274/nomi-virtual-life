@@ -340,7 +340,8 @@ def render_prompt(prompt, nomi, user, source):
 
 def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
               entry_range=None, chunk_mode="bytes", export_options=None,
-              header_every=0, header_text="", reply_prompt="", prompt_table=None):
+              header_every=0, header_text="", reply_prompt="", prompt_table=None,
+              include_prompt_dates=False):
     """Create the deterministic message plan.
 
     chunk_mode='bytes' reproduces v1.0 planning for old checkpoints and direct
@@ -362,6 +363,23 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
     def reserve_for_header(limit, header, every):
         if not every or not header: return limit
         return limit-(len(header)+1 if chunk_mode=="chars" else len((header+"\n").encode("utf-8")))
+
+    def reflection(template, first, last, source, dates):
+        text=render_prompt(template.format(first=first,last=last),nomi,user,source)
+        if include_prompt_dates:
+            parsed=[]
+            for value in dates:
+                if not value:
+                    continue
+                try:
+                    parsed.append(parse_date(str(value),order,year))
+                except ValueError:
+                    continue
+            if parsed:
+                dates=sorted(set(parsed))
+                label=dates[0] if len(dates)==1 else dates[0]+" to "+dates[-1]
+                text+="\nMemory date"+("s" if len(dates)>1 else "")+": "+label
+        return text
 
     def add(message):
         if chunk_mode=="chars" and len(message["text"])>chunk_limit:
@@ -397,8 +415,10 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                      "section":section_name,"entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
-                    prompt=str(opts.get("periodic") or reply_prompt or periodic_defaults["chat"]).format(first=first,last=idx)
-                    add({"text":render_prompt(prompt,nomi,user,section_name),
+                    template=str(opts.get("periodic") or reply_prompt or periodic_defaults["chat"])
+                    prompt=reflection(template,first,idx,section_name,
+                                      (r.get("source_date") for r in rows[first-1:idx]))
+                    add({"text":prompt,
                          "kind":"prompt","file":filename,"section":section_name,"entry":idx})
             continue
         raw_text=read_text(path)
@@ -466,7 +486,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                     else:
                         custom=[p for p in section["prompts"] if not re.search(r"\b(?:entries|episodes)\s+\d+\s*[-–]\s*\d+\b",p,re.I)]
                     template=custom[0] if len(custom)==1 else (rp or periodic_defaults[default_key])
-                    prompt=render_prompt(template.format(first=first_label,last=last_label),nomi,user,source)
+                    prompt=reflection(template,first_label,last_label,source,
+                                      (unit.get("date") for unit in units[first-1:idx]))
                     msg={"text":prompt,"kind":"prompt","file":filename,
                          "section":section["title"],"entry":idx}
                     if chunk_mode=="chars" and kind=="journal":
@@ -582,12 +603,19 @@ def request_reply_with_backoff(room, nomi_uuid, attempts=None, base_delay=2.0,
     started=time.monotonic()
     while True:
         n+=1
+        if destination=="private":
+            print("Sending private-chat reflection and waiting for its returned response.",
+                  file=sys.stderr,flush=True)
+        attempt_started=time.monotonic()
         status,payload=legacy.api_request(path,"POST",body)
+        if destination=="private":
+            print("Private-chat call returned HTTP %s after %.1fs."%
+                  (status,time.monotonic()-attempt_started),file=sys.stderr,flush=True)
         if legacy.ok(status):
             if isinstance(payload, dict) and isinstance(payload.get("replyMessage"), dict):
                 timing.observe(time.monotonic() - started)
             return status,payload
-        error=legacy.err_text("request reply",status,payload)
+        error=legacy.err_text("private-chat response" if destination=="private" else "request reply",status,payload)
         if status is not None and legacy.err_type(payload) in reply_wait_errors(destination):
             elapsed=time.monotonic()-started
             if attempts is not None and n>=attempts:
@@ -909,9 +937,12 @@ def _upload_locked(args):
     else:
         export_options=json.loads(Path(args.export_options).read_text(encoding="utf-8")) if getattr(args,"export_options",None) else {}
     prompt_table = init.get("prompt_table") if old else load_prompt_table()
+    include_prompt_dates=chunk_mode=="chars" and (
+        not old or bool(manual) or init.get("include_prompt_dates",False))
     messages=plan_text(files,nomi["name"],args.user,order,year,chunk_limit,
                        args.process_every,entry_range,chunk_mode,export_options,
-                       args.header_every,args.header_text,args.reply_prompt,prompt_table)
+                       args.header_every,args.header_text,args.reply_prompt,prompt_table,
+                       include_prompt_dates=include_prompt_dates)
     requested_start = getattr(args, "start_chunk", None)
     requested_end = getattr(args, "end_chunk", None)
     if old and not manual and (requested_start is not None or requested_end is not None):
@@ -945,6 +976,7 @@ def _upload_locked(args):
             "user":args.user,"process_every":args.process_every,
             "header_every":args.header_every,"header_text":args.header_text,
             "reply_prompt":args.reply_prompt,"export_options":export_options,"prompt_table":prompt_table,
+            "include_prompt_dates":include_prompt_dates,
             "entry_range":entry_range_text(entry_range),"chunk_mode":chunk_mode,
             "chunk_limit":chunk_limit,"chunk_chars":chunk_limit})
         if start_chunk is not None or end_chunk is not None:
@@ -1000,6 +1032,7 @@ def _upload_locked(args):
                      "passes":passes,"messages_per_pass":len(messages),
                      "manifest":manifest,"user":args.user,
                      "process_every":args.process_every,"export_options":export_options,"prompt_table":prompt_table,
+                     "include_prompt_dates":include_prompt_dates,
                      "header_every":args.header_every,"header_text":args.header_text,"reply_prompt":args.reply_prompt,
                      "chunk_mode":chunk_mode,"chunk_limit":chunk_limit,
                      "entry_range":entry_range_text(entry_range)}
@@ -1191,19 +1224,22 @@ def _upload_locked(args):
                       (p,i," ".join(m["text"].splitlines())),flush=True)
                 reply_options = ({"destination": "private", "prompt": m["text"]}
                                  if args.reply_destination == "private" else {})
+                reply_started=time.monotonic()
                 s,response=request_reply_with_backoff(
                     room,nomi["uuid"],
                     max_wait=getattr(args,"reply_max_wait",0) or 0, timing=reply_timing,
                     **reply_options)
                 if not legacy.ok(s):
                     record(cp,{"event":"reply_uncertain","pass":p,"index":i,
-                               "http_status":s,"api_response":response})
+                               "http_status":s,"api_response":response,
+                               "reply_destination":args.reply_destination,
+                               "elapsed_seconds":time.monotonic()-reply_started})
                     if s is not None and legacy.err_type(response) in reply_wait_errors(args.reply_destination):
                         raise RuntimeError(
                             "Nomi is still not ready after the reply wait limit; "
                             "the checkpoint is safe to resume.")
                     raise RuntimeError("Reply request outcome uncertain: "+
-                                       legacy.err_text("request reply",s,response))
+                                       legacy.err_text("private-chat response" if args.reply_destination=="private" else "request reply",s,response))
                 reply=response.get("replyMessage") if isinstance(response,dict) else None
                 if not isinstance(reply,dict):
                     raise RuntimeError("Reply request returned no replyMessage; inspect %s chat and checkpoint" % args.reply_destination)

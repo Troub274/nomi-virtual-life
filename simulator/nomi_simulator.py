@@ -8,7 +8,7 @@ import uuid
 
 NOMI = "22222222-2222-2222-2222-222222222222"
 ROOM = "12345678-1234-1234-1234-123456789012"
-SCENARIOS = ("normal", "slow-then-fast", "outage", "lost-send", "lost-reply", "lost-create", "malformed-reply")
+SCENARIOS = ("normal", "slow-then-fast", "outage", "lost-send", "lost-reply", "lost-create", "malformed-reply", "delayed-private-reply")
 DUMMY_KEY = "simulator-only-key"
 
 
@@ -31,6 +31,8 @@ class Simulator(HTTPServer):
         if path == "/nomis" and method == "GET":
             return 200, {"nomis": [{"uuid": NOMI, "name": "Simulator"}]}, False
         if path == "/nomis/" + NOMI + "/chat" and method == "POST":
+            if self.scenario == "delayed-private-reply":
+                time.sleep(self.delay)
             if self.scenario == "malformed-reply" and count == 1:
                 return 200, {"sentMessage": {"text": body.get("messageText")}}, False
             if self.scenario == "slow-then-fast" and count <= 3:

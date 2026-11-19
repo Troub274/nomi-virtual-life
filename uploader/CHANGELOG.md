@@ -1,5 +1,11 @@
 # Nomi Uploader changelog
 
+## 1.4i.5 — 2026-11-19
+
+- Use one reflection interval field in the same position for TXT and JSON/ZIP files. Hide inapplicable controls and distinguish repeated headers from reflections.
+- Add source dates or date ranges to periodic reflection prompts for new uploads and regenerated plans. Normal Resume preserves the saved wording.
+- Add private-chat request wait/return timing diagnostics and a delayed-response simulator regression.
+
 ## 1.4i.4 — 2026-11-18
 
 - Added Room / Private chat reply destination across desktop platforms, the CLI, and example package runner. Uploads remain in the room; private replies send the reflection prompt to the receiving Nomi's main chat.
