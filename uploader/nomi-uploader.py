@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Nomi Uploader 1.3 — shared CLI/GUI engine with recovery-generation journals."""
+from contextlib import contextmanager
 import argparse
 import datetime as dt
 import hashlib
@@ -838,11 +839,12 @@ def print_checkpoint_status(path):
     return info
 
 
-def upload(args):
-    """Validate run inputs and coordinate the locked upload operation."""
+@contextmanager
+def checkpoint_lock(checkpoint):
+    """Hold the existing uploader lock for an append-only journal operation."""
     # Advisory locks are released by the OS on process termination. Never unlink
     # this file: doing so could allow two processes to lock different inodes.
-    lockpath=Path(str(args.checkpoint)+".lock")
+    lockpath=Path(str(checkpoint)+".lock")
     lockpath.parent.mkdir(parents=True,exist_ok=True)
     with open(lockpath,"a+b") as lock:
         if os.name=="nt":
@@ -856,7 +858,59 @@ def upload(args):
             import fcntl
             try: fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except OSError: raise RuntimeError("Checkpoint in use by another uploader")
+        yield
+
+
+
+def upload(args):
+    """Validate run inputs and coordinate the locked upload operation."""
+    with checkpoint_lock(args.checkpoint):
         return _upload_locked(args)
+
+
+def accept_private_reply(checkpoint, position, reply_text, allow_empty=False):
+    """Record a reply explicitly verified by the operator in private chat."""
+    if not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*",position):
+        raise ValueError("Expected PASS:INDEX with positive integers")
+    if not isinstance(reply_text,str) or (not reply_text.strip() and not allow_empty):
+        raise ValueError("Paste the received private reply")
+    key=tuple(map(int,position.split(":")))
+    cp=Path(checkpoint)
+    with checkpoint_lock(cp):
+        events=active_records(cp)
+        if not events or events[0].get("reply_destination","room")!="private":
+            raise ValueError("The selected checkpoint must use private replies")
+        committed=[e for e in events if e.get("event")=="reply_committed"
+                   and (e.get("pass"),e.get("index"))==key]
+        if committed:
+            prior=committed[-1].get("reply") or {}
+            if prior.get("text")==reply_text and committed[-1].get("operator_verified"):
+                return {"recorded":False,"position":position,"state":checkpoint_summary(cp,events)["state"]}
+            raise ValueError("This reply has already been recorded")
+        summary=checkpoint_summary(cp,events)
+        if key not in {tuple(value) for value in summary.get("ambiguous_replies",[])}:
+            raise ValueError("No ambiguous private reply at "+position)
+        confirmed=next(e for e in reversed(events) if e.get("event")=="confirmed"
+                       and (e.get("pass"),e.get("index"))==key)
+        attempt=next(e for e in reversed(events) if e.get("event")=="reply_attempt"
+                     and (e.get("pass"),e.get("index"))==key)
+        sent=(confirmed.get("api_response") or {}).get("sentMessage") or {}
+        prompt=attempt.get("prompt") or sent.get("text") or sent.get("messageText")
+        message_attempt=next((e for e in reversed(events) if e.get("event")=="attempt"
+                              and (e.get("pass"),e.get("index"))==key),{})
+        expected_hash=message_attempt.get("sha256") or confirmed.get("sha256")
+        if confirmed.get("kind")!="prompt" or not prompt or hashlib.sha256(prompt.encode("utf-8")).hexdigest()!=expected_hash:
+            raise ValueError("Cannot verify the pending reflection prompt from this checkpoint")
+        backup=cp.with_name(cp.name+".before-private-reply-"+uuid.uuid4().hex+".backup")
+        backup.write_bytes(cp.read_bytes())
+        record(cp,{"event":"reply_committed","pass":key[0],"index":key[1],
+                   "room_uuid":summary["room_uuid"],"nomi_uuid":events[0]["nomi_uuid"],
+                   "reply_destination":"private","prompt":prompt,"reply":{"text":reply_text},
+                   "operator_verified":True,"reply_source":"user_verified_private_chat",
+                   "verified_at":dt.datetime.now(dt.timezone.utc).isoformat()})
+        result=checkpoint_summary(cp)
+        return {"recorded":True,"position":position,"state":result["state"],
+                "next":result["next"],"backup":str(backup)}
 
 
 def _upload_locked(args):
@@ -1218,7 +1272,8 @@ def _upload_locked(args):
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 # Reply requests are POSTs too. Never blindly repeat an uncertain request.
                 record(cp,{"event":"reply_attempt","pass":p,"index":i,
-                           "reply_destination":args.reply_destination,
+                           "sent_at":dt.datetime.now(dt.timezone.utc).isoformat(),
+                           "reply_destination":args.reply_destination,"prompt":m["text"],
                            "room_uuid":room,"nomi_uuid":nomi["uuid"]})
                 print("Prompt at pass %d message %d: %s" %
                       (p,i," ".join(m["text"].splitlines())),flush=True)
@@ -1473,8 +1528,20 @@ def main(argv=None):
     parser.add_argument("--checkpoint",default="nomi_uploader_checkpoint.jsonl")
     parser.add_argument("--completion",default="nomi_uploader_completed.json")
     parser.add_argument("--replies",default="nomi_uploader_replies.txt")
+    parser.add_argument("--accept-private-reply",metavar="PASS:INDEX",
+                        help="Record an existing private reply verified by the operator")
+    parser.add_argument("--reply-text-file",type=Path,help="UTF-8 text of the verified private reply")
     if not argv and sys.stdin.isatty(): return interactive_menu()
     args=parser.parse_args(argv)
+    if args.accept_private_reply or args.reply_text_file:
+        if not args.accept_private_reply or not args.reply_text_file:
+            parser.error("--accept-private-reply and --reply-text-file are required together")
+        if args.resume or args.files or args.dry_run or args.status or args.utility or args.config:
+            parser.error("Recording a private reply is a separate local recovery action")
+        result=accept_private_reply(args.checkpoint,args.accept_private_reply,
+                                    args.reply_text_file.read_text(encoding="utf-8-sig"))
+        print(json.dumps(result,ensure_ascii=False))
+        return
     if args.status:
         print_checkpoint_status(args.checkpoint)
         return

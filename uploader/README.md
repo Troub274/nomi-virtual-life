@@ -450,3 +450,25 @@ New uploads add source conversation or entry dates to periodic reflection
 prompts when valid dates are available. A batch spanning multiple dates includes
 a date range. Normal Resume keeps the saved wording. Manual Restart regenerates
 the plan and its source-date labels.
+
+
+## Record an already received private reply
+
+In the GUI, **Normal Resume** opens a recovery dialog for uncertain private replies.
+It shows the prompt and its memory date, plus the send time when recorded. If you saw
+the reply in private chat, optionally paste it and press **Enter** or **Reply received
+— Resume**. Leaving the box empty records your confirmation without reply text.
+**Shift+Enter** inserts a line break. **Keep waiting** leaves the upload paused;
+**Retry prompt** asks for confirmation before resending. Each uncertain reply is
+reviewed separately. The checkpoint is backed up before recording a confirmation.
+
+When the API reports an uncertain private reply but the reply is visible in
+Nomi, save that exact reply in a UTF-8 text file. The source CLI can record it
+against the pending reflection:
+
+    python nomi-uploader.py --checkpoint upload.jsonl --accept-private-reply 1:42 --reply-text-file reply.txt
+
+This local recovery action verifies the pending prompt, backs up the journal,
+and appends a user-verified reply receipt. Normal Resume then continues after
+that reflection. The saved receipt identifies its source as user verification.
+An active uploader lock prevents changing its checkpoint concurrently.

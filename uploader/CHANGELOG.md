@@ -1,5 +1,11 @@
 # Nomi Uploader changelog
 
+## Unreleased
+
+- Add a Resume dialog for uncertain private replies: optionally paste the received reply, press Enter to confirm receipt and continue, keep waiting, or explicitly retry. Empty confirmations never save placeholder text as a reply.
+- Add a local source-CLI recovery action for private replies explicitly verified by the user. Preserve a checkpoint backup and record an append-only receipt so Normal Resume can continue after that reflection.
+
+
 ## 1.4i.5 — 2026-11-19
 
 - Use one reflection interval field in the same position for TXT and JSON/ZIP files. Hide inapplicable controls and distinguish repeated headers from reflections.

@@ -187,6 +187,23 @@ class StateMachineTests(unittest.TestCase):
         self.run_upload(fake,self.args(resume=True))
         self.assertEqual(fake.calls,[])
 
+    def test_verified_existing_private_reply_resumes_without_resending_prompt(self):
+        args=self.args()
+        args.reply_destination="private"
+        failed,delegate=FakeNomi(),FakeNomi()
+        with patch.object(failed,"api",side_effect=self.private_api(delegate,"NoReply")):
+            with self.assertRaisesRegex(RuntimeError,"uncertain"):
+                self.run_upload(failed,args)
+        pending=next(e for e in u.records(self.checkpoint) if e["event"]=="reply_attempt")
+        key=f'{pending["pass"]}:{pending["index"]}'
+        u.accept_private_reply(self.checkpoint,key,"The reply already seen in private chat.")
+        resumed,delegate=FakeNomi(),FakeNomi()
+        with patch.object(resumed,"api",side_effect=self.private_api(delegate)):
+            self.run_upload(resumed,self.args(resume=True))
+        self.assertTrue(self.completion.exists())
+        self.assertFalse(any(call[2].get("messageText")==pending["prompt"] for call in delegate.calls if call[2]))
+        self.assertIn("The reply already seen in private chat.",self.replies.read_text(encoding="utf-8"))
+
     def test_chunk_range_is_inclusive_and_saved_for_resume(self):
         args = self.args()
         args.start_chunk = 2
