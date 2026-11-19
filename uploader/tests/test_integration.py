@@ -158,6 +158,35 @@ class StateMachineTests(unittest.TestCase):
              contextlib.redirect_stdout(io.StringIO()):
             u.upload(args)
 
+    def test_source_dates_persist_for_new_character_plans(self):
+        args=self.args()
+        args.chunk_bytes=None
+        args.chunk_chars=750
+        self.run_upload(FakeNomi(),args)
+        events=u.records(self.checkpoint)
+        self.assertTrue(events[0]["include_prompt_dates"])
+        self.assertTrue(all("Memory date" in e["prompt"] for e in events if e["event"]=="reply_committed"))
+        fake=FakeNomi()
+        self.run_upload(fake,self.args(resume=True))
+        self.assertEqual(fake.calls,[])
+
+    def test_older_checkpoint_without_date_option_resumes_original_plan(self):
+        args=self.args()
+        args.chunk_bytes=None
+        args.chunk_chars=750
+        planner=u.plan_text
+        def old_plan(*args,**kwargs):
+            kwargs["include_prompt_dates"]=False
+            return planner(*args,**kwargs)
+        with patch.object(u,"plan_text",side_effect=old_plan):
+            self.run_upload(FakeNomi(),args)
+        events=u.records(self.checkpoint)
+        events[0].pop("include_prompt_dates",None)
+        self.checkpoint.write_text("".join(json.dumps(e)+"\n" for e in events),encoding="utf-8")
+        fake=FakeNomi()
+        self.run_upload(fake,self.args(resume=True))
+        self.assertEqual(fake.calls,[])
+
     def test_chunk_range_is_inclusive_and_saved_for_resume(self):
         args = self.args()
         args.start_chunk = 2

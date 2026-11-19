@@ -1,13 +1,13 @@
-# Nomi Uploader 1.4i.4
+# Nomi Uploader 1.4i.5
 
-- Added a Reply destination selector in Destination. Choose Room (default) or Private chat when starting a new upload.
-- With Private chat selected, upload content, headers, and reflection prompts go to the selected room. Each reflection prompt is also sent to the receiving Nomi's main chat to obtain its reply. The app saves the response in local History and the reply transcript.
-- The option is available in Windows, Linux, both macOS builds, the interactive CLI, and the example package runner. CLI users can pass --reply-destination private.
-- The checkpoint saves the chosen destination. Resume and Manual Restart retain that choice; start a new upload to change it. Older checkpoints use Room.
-- Private-chat timeouts and NoReply results stop for inspection. Explicit recovery can resend the private reflection prompt and produce another response.
-- Added destination controls, persistence, and private-chat routing/recovery regressions.
+- Moved the reflection interval to one consistent field at the top of Files > Prompts for TXT and JSON/ZIP files.
+- Hide controls that do not apply to the selected format. Blank intervals show their Settings default, and explicit 0 is identified as disabled.
+- Renamed header repetition controls to distinguish them from reflection intervals. Word metadata and interval controls identify their document/Settings source.
+- Add source conversation or entry dates to periodic reflection prompts for new standard uploads. Batches spanning multiple dates include a date range.
+- Normal Resume preserves existing saved prompt wording. Manual Restart regenerates the plan with source-date labels.
+- Private-chat logs now identify the send-and-wait operation, returned HTTP status, and elapsed time. Added a delayed private-response simulator check.
 
-To enable it, open Destination, choose Private chat under Reply destination, and start a new upload. Periodic reflections must have an interval above zero.
+Private-chat API NoReply errors continue to stop the run for recovery. These diagnostics help distinguish an API error from a successfully returned reply.
 
 ## Downloads
 

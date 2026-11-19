@@ -9,6 +9,7 @@ section{border:1px solid var(--border);border-radius:14px;padding:20px;backgroun
 input,select,textarea,button{font:inherit;border-radius:8px;padding:10px;color:var(--text);background:var(--input);border:1px solid var(--border)}input,textarea,select{width:100%}button{cursor:pointer;background:var(--raised);transition:background .15s}button:hover{filter:brightness(1.13)}button.primary{background:linear-gradient(120deg,var(--accent),var(--accent2));border:0;color:white;font-weight:650}button:disabled{opacity:.5;cursor:default}a{color:var(--accent)}
 .row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.row>*{min-width:0}.small{font-size:12px;color:var(--muted)}.stack{display:grid;gap:12px}label{font-size:13px;color:var(--muted);display:block}
 .queue{display:flex;flex-direction:column;gap:7px;min-height:240px;max-height:360px;width:100%;overflow:auto;align-items:stretch}.queue .item{flex:0 0 auto;width:100%}.item{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid var(--border);border-radius:9px}.item.active{border-color:var(--accent)}.item button{padding:5px 9px}.item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+[hidden]{display:none!important}
 pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;background:var(--input);padding:14px;border-radius:9px;font-size:12px;user-select:text}progress{width:100%;height:20px;accent-color:var(--accent)}textarea{min-height:120px;font-family:ui-monospace,monospace}
 .nav{max-width:1350px;margin:18px auto 0;padding:0 22px;display:flex;flex-wrap:wrap;gap:8px}.nav button{background:var(--surface);min-width:130px}.nav button[aria-selected="true"]{border-color:var(--accent);color:var(--text);box-shadow:inset 0 -3px 0 var(--accent)}
 .view{display:none}.view.active{display:block}.two-column{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:16px;align-items:start}.two-column>section{height:100%}.editor-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.editor-tabs button[aria-selected="true"]{border-color:var(--accent)}.edit-panel{display:none}.edit-panel.active{display:block}
@@ -38,22 +39,25 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 <label style="flex:1">Nomi mode<select id="modeField" onchange="updateFields()"><option>Add</option><option>Replace</option></select></label></div>
 <div class="row"><label style="flex:1">Source<input id="sourceField" placeholder="Whose material is this?" oninput="updateFields()"></label>
 <label style="flex:1">Date<input id="dateField" placeholder="October 24, 2026" oninput="updateFields()"></label></div>
-<label>Process Every<input id="processField" type="number" min="0" placeholder="Use global default" oninput="updateFields()"></label>
-<label>Header Every (0 = disabled)<input id="headerEveryField" type="number" min="0" placeholder="Use global setting" oninput="updateFields()"></label>
-<label>Header Text<input id="headerTextField" placeholder="Use global header text" oninput="updateFields()"></label>
+<div id="reflectionControls" class="stack">
+<label><span id="reflectionLabel">Reflection interval</span><input id="processField" type="number" min="0" step="1" placeholder="Use Settings" oninput="editReflectionInterval()"></label>
+<p class="small" id="reflectionHelp">Leave blank to use Settings. Enter 0 to disable reflections for this file. Changes apply to new uploads or Manual Restart.</p>
+</div>
+<label>Repeat header every N content chunks (0 = off)<input id="headerEveryField" type="number" min="0" placeholder="Use global setting" oninput="updateFields()"></label>
+<label>Repeated header text<input id="headerTextField" placeholder="Use global header text" oninput="updateFields()"></label>
 <label>Reply Prompt<input id="replyPromptField" placeholder="Use global reflection prompt" oninput="updateFields()"></label>
 <label>Nomi prompts (one per line)<textarea id="promptsField" placeholder="Please reflect on these entries..." oninput="updateFields()"></textarea></label>
-<div class="small">Prompts are inserted as Nomi: header lines. Choose Replace to replace uploader defaults; Add keeps the defaults as well.</div>
-<label>Selected file content preview (read-only)</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
+<div class="small" id="txtPromptHelp">Prompts are inserted as Nomi: header lines. Choose Replace to replace uploader defaults; Add keeps the defaults as well.</div>
+<label id="previewLabel">Planned upload messages</label><textarea id="preview" readonly spellcheck="false" style="min-height:240px"></textarea>
 <div id="exportEditor" class="stack" style="display:none">
 <h2>ZIP / JSON conversation prompts</h2>
 <p class="small">Supports Nomi downloader and ChatGPT exports. ChatGPT archives import visible text from all included conversations on their selected branches. Reflections count uploaded content chunks.</p>
 <label>Prompt mode<select id="exportMode" onchange="editExport()"><option>Replace</option><option>Add</option></select></label>
 <label>Opening prompt<textarea id="exportIntro" oninput="editExport()" placeholder="Message sent before importing conversations"></textarea></label>
 <label>Periodic reflection prompt<textarea id="exportPeriodic" oninput="editExport()" placeholder="Use {first} and {last} for message numbers"></textarea></label>
-<label>Header Every (0 = disabled)<input id="exportHeaderEvery" type="number" min="0" oninput="editExport()"></label>
-<label>Header Text<input id="exportHeaderText" oninput="editExport()"></label>
-<label>Reflect every N chunks (0 = disabled)<input id="exportProcess" type="number" min="0" oninput="editExport()"></label>
+<label>Repeat header every N content chunks (0 = off)<input id="exportHeaderEvery" type="number" min="0" oninput="editExport()"></label>
+<label>Repeated header text<input id="exportHeaderText" oninput="editExport()"></label>
+
 <div class="small">Replace uses only your opening prompt; Add precedes it with the built-in default. Periodic prompts are sent only when the interval is above zero. Conversation content is unchanged.</div>
 </div>
 <div class="small" id="previewNotice">Select a TXT file. JSON, ZIP, and DOCX metadata controls are not yet supported.</div>
@@ -71,12 +75,12 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 <label>Room name<input id="roomName" maxlength="100" placeholder="Room name"></label>
 <label>Room description<textarea id="roomNote" maxlength="1000" placeholder="Room note / description" style="min-height:75px"></textarea></label>
 <div class="small" id="roomStatus">Select a Nomi to manage its rooms.</div>
-<div class="row"><label style="flex:1">Process every (default)<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
+<div class="row"><label style="flex:1">Default reflection interval<input id="process" type="number" min="0" value="5" oninput="editSettings()"></label>
 <label style="flex:1">Reply wait (seconds)<input id="wait" type="number" min="0" value="900" oninput="editSettings()"></label></div>
 <div class="row"><label style="flex:1">Header Every (0 = disabled)<input id="headerEvery" type="number" min="0" value="0" oninput="editSettings()"></label></div>
 <label>Fallback Header Text<input id="headerText" placeholder="The following is your biography" oninput="editSettings()"></label>
 <label>Fallback Reply Prompt<textarea id="replyPrompt" placeholder="Leave blank to use the periodic prompt for each content type" oninput="editSettings()" style="min-height:75px"></textarea></label>
-<p class="small">A file's own Process Every header overrides this default. Zero disables periodic processing.</p>
+<p class="small">A file's reflection interval can override this default. A blank file interval uses Settings; 0 disables reflections.</p>
 </div></section>
 <section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Normal Resume</button><button onclick="manualRestart()">Manual Restart…</button><button onclick="pauseUpload()">Pause / Stop</button></div>
 <div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button><button onclick="clearHistory()">Clear history</button></div>
@@ -230,13 +234,21 @@ function buildLayout(){
  const edit=editor.querySelector(".stack");edit.id="edit-metadata";edit.classList.add("edit-panel","active");
  const prompts=document.createElement("div");prompts.id="edit-prompts";prompts.className="edit-panel stack";
  const preview=document.createElement("div");preview.id="edit-preview";preview.className="edit-panel stack";
- for(const id of ["promptsField","replyPromptField","headerTextField","headerEveryField","processField"]){const c=document.getElementById(id);if(c?.closest("label"))prompts.append(c.closest("label"))}
- const promptPanel=document.createElement("div");promptPanel.id="promptDefaults";promptPanel.style.whiteSpace="pre-wrap";prompts.prepend(promptPanel);
+ const txtPrompts=document.createElement("div");txtPrompts.id="txtPromptEditor";txtPrompts.className="stack";
+ for(const id of ["promptsField","replyPromptField","headerTextField","headerEveryField"]){const c=document.getElementById(id);if(c?.closest("label"))txtPrompts.append(c.closest("label"))}
+ const txtHelp=document.getElementById("txtPromptHelp");if(txtHelp)txtPrompts.append(txtHelp);
+ prompts.append(document.getElementById("reflectionControls"));
+ const promptPanel=document.createElement("div");promptPanel.id="promptDefaults";promptPanel.style.whiteSpace="pre-wrap";prompts.append(promptPanel,txtPrompts);
  const summary=document.createElement("div");summary.id="promptDefaultsSummary";summary.className="small";edit.append(summary);
  const exportEditor=document.getElementById("exportEditor");if(exportEditor)prompts.append(exportEditor);
+ const previewLabel=document.getElementById("previewLabel");if(previewLabel)preview.append(previewLabel);
  const p=document.getElementById("preview");if(p?.closest("label"))preview.append(p.closest("label"));else if(p)preview.append(p);
  const notice=document.getElementById("previewNotice");if(notice)preview.append(notice);
  const refreshPreview=document.createElement("button");refreshPreview.type="button";refreshPreview.textContent="Refresh upload preview";refreshPreview.onclick=loadUploadPreview;preview.prepend(refreshPreview);
+ const metadataFields=document.createElement("div");metadataFields.id="metadataFields";metadataFields.className="stack";
+ for(const child of [...edit.children])if(child!==summary)metadataFields.append(child);
+ edit.prepend(metadataFields);
+ const metadataNotice=document.createElement("p");metadataNotice.id="metadataNotice";metadataNotice.className="small";edit.prepend(metadataNotice);
  editor.append(prompts,preview);
  applyTheme(localStorage.getItem("nomi-uploader-theme")||"dark");
  // No automatic download; checks are explicitly requested by the user.
@@ -285,6 +297,11 @@ function showPromptDefaults(error){
  }
  const isExport=/\.(zip|json)$/i.test(f.path);
  if(!isExport&&!/\.(txt|docx)$/i.test(f.path)){panel.textContent=summary.textContent="";return;}
+ if(/\.docx$/i.test(f.path)){
+  panel.textContent="Word prompts and reflection intervals are read from document sections and Settings. Use Preview to inspect the planned messages.";
+  summary.textContent="Word metadata is read from the document.";
+  return;
+ }
  const kind=isExport?"chat":String(fields.type||"knowledge").toLowerCase();
  const key=kind!=="journal"?kind:!fields.source||fields.source.toLowerCase()===(project.nomi||"").toLowerCase()?"journal_self":"journal_other";
  const replace=String((isExport?f.export_fields?.mode:fields.mode)||"Add").toLowerCase()==="replace";
@@ -299,8 +316,9 @@ function showPromptDefaults(error){
  const inherited=interval==null||interval==="";
  const effectiveInterval=Number(inherited?(project.process??5):interval);
  const enabled=effectiveInterval>0;
- const intervalText=enabled?"Reflect every "+effectiveInterval+(isExport?" content chunks":" content units")+(inherited?" (from Settings)":" (file setting)"):"Periodic reflections disabled";
- const intervalControl=el(isExport?"exportProcess":"processField");
+ const intervalUnits=isExport?"content chunks":kind==="journal"?"journal entries":kind==="chat"?"conversations":"paragraphs";
+ const intervalText=enabled?"Reflect every "+effectiveInterval+" "+intervalUnits+(inherited?" (from Settings)":" (file setting)"):"Periodic reflections disabled"+(inherited?" (from Settings)":" (file setting 0)");
+ const intervalControl=el("processField");
  if(intervalControl)intervalControl.placeholder="Use Settings ("+(project.process??5)+")";
  const openingLabel=opening?(replace?"file or queue":"default + file or queue"):(replace?"disabled":"default");
  const periodicLabel=periodic?"file or queue":project.reply_prompt?"upload setting":"default";
@@ -311,16 +329,43 @@ function draw(){
 el("queue").innerHTML=project.queue.map((f,i)=>`<div class="item ${active===i?"active":""}"><button class="name" onclick="selectFile(${i})">${i+1}. ${esc(f.path.split(/[\\/]/).pop())}</button><button onclick="move(${i},-1)">↑</button><button onclick="move(${i},1)">↓</button><button onclick="removeFile(${i})">×</button></div>`).join("")||'<p class="small">No files selected.</p>';
 renderNomis();renderRooms();el("key").value=project.key||"";el("process").value=project.process??5;el("wait").value=project.reply_wait??900;el("headerEvery").value=project.header_every??0;el("headerText").value=project.header_text??"";el("replyPrompt").value=project.reply_prompt??"";el("replyDestination").value=project.reply_destination??"room";el("userName").value=project.user_name??"";
 let f=project.queue[active];el("selectedLabel").textContent=f?f.path:"Select a file to edit its header.";
-for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",process:"",headerEvery:"",headerText:"",replyPrompt:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
-el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportProcess","process"],["exportHeaderEvery","headerEvery"],["exportHeaderText","headerText"]])el(id).value=f.export_fields[key]??"";}
+for(const id of ["title","type","mode","source","date","headerEvery","headerText","replyPrompt","prompts"]){const ctrl=el(id+"Field");ctrl.disabled=!f||!f.path.toLowerCase().endsWith(".txt");const defaults={title:"",type:"Knowledge",mode:"Add",source:"",date:"",headerEvery:"",headerText:"",replyPrompt:"",prompts:""};ctrl.value=f?.fields?.[id]??defaults[id];}
+el("exportEditor").style.display=f&&/\.(zip|json)$/i.test(f.path)?"grid":"none";if(f?.export_fields){for(const [id,key] of [["exportMode","mode"],["exportIntro","intro"],["exportPeriodic","periodic"],["exportHeaderEvery","headerEvery"],["exportHeaderText","headerText"]])el(id).value=f.export_fields[key]??"";}
+renderFilePromptControls();
 showPromptDefaults();
 if(!f){el("preview").value="";el("previewNotice").textContent="Select a file to view it."}
 }
 async function selectFile(i){active=i;draw();await loadSelected()}
 function move(i,d){let j=i+d;if(j<0||j>=project.queue.length)return;[project.queue[i],project.queue[j]]=[project.queue[j],project.queue[i]];active=j;draw()}
 function removeFile(i){project.queue.splice(i,1);active=Math.min(active,project.queue.length-1);draw()}
-function editExport(){if(active<0)return;const f=project.queue[active];f.export_fields={mode:el("exportMode").value,intro:el("exportIntro").value,periodic:el("exportPeriodic").value,process:el("exportProcess").value,headerEvery:el("exportHeaderEvery").value,headerText:el("exportHeaderText").value};showPromptDefaults()}
-function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","process","headerEvery","headerText","replyPrompt","prompts"])f.fields[id]=el(id+"Field").value;showPromptDefaults()}
+function renderFilePromptControls(){
+ const f=project.queue[active],isExport=!!f&&/\.(zip|json)$/i.test(f.path),isText=!!f&&/\.txt$/i.test(f.path);
+ const fields=isExport?f.export_fields:f?.fields;
+ const kind=String(f?.fields?.type||"knowledge").toLowerCase();
+ const units=isExport?"content chunks":kind==="journal"?"journal entries":kind==="chat"?"conversations":"paragraphs";
+ el("reflectionLabel").textContent=isText||isExport?"Reflect every N "+units:"Reflection interval";
+ el("processField").value=fields?.process??"";
+ el("processField").disabled=!(isExport||isText);
+ el("processField").placeholder=isText||isExport?"Use Settings ("+(project.process??5)+")":"From document and Settings";
+ el("reflectionControls").hidden=!f;
+ el("txtPromptEditor").hidden=!isText;
+ el("metadataFields").hidden=!isText;
+ el("metadataNotice").hidden=isText;
+ el("metadataNotice").textContent=isExport?"Chat metadata is read from the conversation export.":f?"Word metadata is read from the document.":"Select a file.";
+ el("reflectionHelp").textContent=isExport||isText?
+  "Leave blank to use Settings. Enter 0 to disable reflections for this file. Changes apply to new uploads or Manual Restart.":
+  "Word reflection intervals come from Settings or embedded section headers. Preview shows the actual upload plan.";
+}
+function editReflectionInterval(){
+ const f=project.queue[active];if(!f)return;
+ const isExport=/\.(zip|json)$/i.test(f.path);
+ if(!isExport&&!/\.txt$/i.test(f.path))return;
+ if(isExport){if(!f.export_fields)f.export_fields={mode:"Add"};f.export_fields.process=el("processField").value;}
+ else{if(!f.fields)f.fields={};f.fields.process=el("processField").value;}
+ showPromptDefaults();
+}
+function editExport(){if(active<0)return;const f=project.queue[active];f.export_fields={mode:el("exportMode").value,intro:el("exportIntro").value,periodic:el("exportPeriodic").value,process:f.export_fields?.process??"",headerEvery:el("exportHeaderEvery").value,headerText:el("exportHeaderText").value};showPromptDefaults()}
+function updateFields(){if(active<0)return;const f=project.queue[active];if(!f.fields)f.fields={};for(const id of ["title","type","mode","source","date","headerEvery","headerText","replyPrompt","prompts"])f.fields[id]=el(id+"Field").value;renderFilePromptControls();showPromptDefaults()}
 async function loadSelected(){
  const f=project.queue[active];if(!f)return;const token=++selectionToken;
  try {let info=await call("inspect_file",f.path);if(token!==selectionToken||project.queue[active]!==f)return;

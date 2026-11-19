@@ -20,7 +20,7 @@ import urllib.request
 from collections import deque
 from pathlib import Path
 
-GUI_VERSION = "1.4i.4"
+GUI_VERSION = "1.4i.5"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -388,7 +388,7 @@ class API:
                 header_every=int(options.get("header_every", 0)),
                 header_text=options.get("header_text", ""),
                 reply_prompt=options.get("reply_prompt", ""),
-                prompt_table=cli["load_prompt_table"](DATA))
+                prompt_table=cli["load_prompt_table"](DATA),include_prompt_dates=True)
         return {"count": len(plan), "text": "\n\n".join(
             f"── Message {i} · {row['kind']} ──\n{row['text']}"
             for i, row in enumerate(plan, 1))}

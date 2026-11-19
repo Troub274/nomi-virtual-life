@@ -1,4 +1,4 @@
-# Nomi Uploader v1.4i.4
+# Nomi Uploader v1.4i.5
 
 See the [uploader changelog](CHANGELOG.md) for release history.
 
@@ -8,13 +8,13 @@ See the [uploader changelog](CHANGELOG.md) for release history.
 
 **For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
 
-**Current:** Nomi Uploader 1.4i.4 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.4i.5 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
 ## Downloads and setup (all platforms)
 
-[Download Nomi Uploader 1.4i.4](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.4). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
+[Download Nomi Uploader 1.4i.5](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.5). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.
@@ -433,3 +433,20 @@ The uploader accepts ChatGPT conversations.json, an individual conversation obje
 ChatGPT imports follow the selected branch of each conversation, retain visible user and assistant text with speaker labels and UTC timestamps, and include the conversation title. Images, attachments, tool output, and internal processing messages are omitted. A multi-conversation archive imports all included conversations in chronological order.
 
 For JSON and ZIP imports, Reflect every N chunks controls the number of uploaded content chunks between reflections. Set 10 or 20 for that interval, or 0 to disable periodic reflections. A final partial batch also receives a reflection. Use Preview before starting a new upload.
+
+
+## File reflection controls
+
+In Files, open Prompts. The first field controls the reflection interval for
+TXT and JSON/ZIP files. A blank field uses the default in Settings. Enter 0 to
+disable reflections for that file. The summary shows the effective interval
+and where it comes from.
+
+Repeat header every N content chunks controls repeated header text. Reflections
+use the separate interval above it. Word files use document metadata and Settings;
+Preview shows their actual plan.
+
+New uploads add source conversation or entry dates to periodic reflection
+prompts when valid dates are available. A batch spanning multiple dates includes
+a date range. Normal Resume keeps the saved wording. Manual Restart regenerates
+the plan and its source-date labels.

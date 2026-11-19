@@ -61,7 +61,8 @@ const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)
     }};
   vm.createContext(settings);
   vm.runInContext(html.match(/function draw\(\)\{[\s\S]*?\n\}/)[0]+"\n"+
-    html.match(/function editSettings\(\)\{[\s\S]*?\n\}/)[0],settings);
+    html.match(/function editSettings\(\)\{[\s\S]*?\n\}/)[0]+"\n"+
+    html.match(/function renderFilePromptControls\(\)\{[\s\S]*?\n\}/)[0],settings);
   settings.draw();
   assert.equal(inputs.replyDestination.value,"room");
   inputs.replyDestination.value="private";
@@ -112,6 +113,59 @@ const source=html.slice(html.indexOf("async function poll()"),html.indexOf("asyn
  await context.poll();
  assert.equal(controls.state.textContent,"Uploader exited with code 0");
 })().catch(error=>{console.error(error);process.exit(1)});
+"""
+        result = subprocess.run([node, "-", str(html)], input=script, text=True,
+                                encoding="utf-8", capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
+    def test_one_reflection_control_edits_text_and_exports(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js is unavailable")
+        html = Path(__file__).resolve().parents[1] / "gui/index.html"
+        script = r"""
+const fs=require("fs"),vm=require("vm"),assert=require("assert");
+const html=fs.readFileSync(process.argv[2],"utf8");
+assert.equal((html.match(/id="processField"/g)||[]).length,1);
+assert(!html.includes('id="exportProcess"'));
+const names=["renderFilePromptControls","editReflectionInterval","editExport"];
+const source=names.map(name=>html.match(new RegExp("function "+name+"\\(\\)\\{[\\s\\S]*?\\n\\}"))[0]).join("\n");
+const controls={};
+const model={process:10,queue:[
+ {path:"chat.json",export_fields:{mode:"Replace",process:"0",headerEvery:"10",intro:"Keep opening"}},
+ {path:"journal.txt",fields:{type:"Journal",process:"20"}},
+ {path:"facts.docx"}]};
+const context={active:0,project:model,showPromptDefaults:()=>{},
+ el:id=>(controls[id]??={value:"",textContent:"",hidden:false,disabled:false})};
+vm.createContext(context);vm.runInContext(source,context);
+context.renderFilePromptControls();
+assert.equal(controls.processField.value,"0");
+assert(controls.txtPromptEditor.hidden);
+assert(controls.metadataFields.hidden);
+assert.equal(controls.reflectionLabel.textContent,"Reflect every N content chunks");
+controls.processField.value="10";context.editReflectionInterval();
+assert.equal(model.queue[0].export_fields.process,"10");
+assert.equal(model.queue[0].export_fields.headerEvery,"10");
+controls.exportMode={value:"Replace"};controls.exportIntro={value:"Keep opening"};
+controls.exportPeriodic={value:"Reflect"};controls.exportHeaderEvery={value:"20"};
+controls.exportHeaderText={value:"Header"};context.editExport();
+assert.equal(model.queue[0].export_fields.process,"10");
+controls.processField.value="";context.editReflectionInterval();
+assert.equal(model.queue[0].export_fields.process,"");
+context.active=1;context.renderFilePromptControls();
+assert.equal(controls.processField.value,"20");
+assert(!controls.txtPromptEditor.hidden);
+assert(!controls.metadataFields.hidden);
+assert.equal(controls.reflectionLabel.textContent,"Reflect every N journal entries");
+controls.processField.value="0";context.editReflectionInterval();
+assert.equal(model.queue[1].fields.process,"0");
+context.active=0;context.renderFilePromptControls();
+assert.equal(controls.processField.value,"");
+assert.equal(controls.processField.placeholder,"Use Settings (10)");
+context.active=2;context.renderFilePromptControls();
+assert(controls.processField.disabled);
+assert(controls.txtPromptEditor.hidden);
 """
         result = subprocess.run([node, "-", str(html)], input=script, text=True,
                                 encoding="utf-8", capture_output=True)
