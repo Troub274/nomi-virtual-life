@@ -1,6 +1,6 @@
 # Nomi Uploader changelog
 
-## Unreleased
+## 1.4i.3 — 2026-11-18
 
 - Prevent overlapping GUI status polls from accumulating threads while large checkpoints are scanned.
 - Share one cached checkpoint snapshot between status and recovery, refreshing it when the journal changes.

@@ -20,7 +20,7 @@ import urllib.request
 from collections import deque
 from pathlib import Path
 
-GUI_VERSION = "1.4i.2-pollfix"
+GUI_VERSION = "1.4i.3"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
