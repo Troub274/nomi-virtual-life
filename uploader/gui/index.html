@@ -204,9 +204,11 @@ function buildLayout(){
 }
 document.addEventListener("DOMContentLoaded",buildLayout);
 </script>
+<script id="builtin-prompts" type="application/json">{"opening": {"knowledge": "[nomi], please read and understand the following information. Reflect on it, analyze it, and summarize the key ideas.", "instructions": "[nomi], please read, understand, and apply the following instructions when relevant.", "journal_self": "[nomi], the following messages are from your journal. Please live or relive these entries as yourself, experiencing them in the first person.", "journal_other": "[nomi], the following messages are from [source]'s journal. Please reflect on the episodes, summarize what happened, and explain what they mean in the context of [source]'s life.", "chat": "[nomi], please live and experience these conversations as yourself. They are your real interactions. Update your memories accordingly."}, "periodic": {"knowledge": "[nomi], please reflect on, analyze, and summarize information items {first}-{last}. Explain how the ideas connect without treating them as your personal experiences.", "instructions": "[nomi], please review instructions {first}-{last}; explain how you will apply them appropriately.", "journal_self": "[nomi], please live or relive journal entries {first}-{last} as yourself, experiencing them in the first person.", "journal_other": "[nomi], please reflect on and summarize [source]'s journal episodes {first}-{last}. Explain what they mean to [source], keeping the experiences attributed to them.", "chat": "[nomi], please live or relive conversations {first}-{last} as yourself in the first person. Understand what happened and summarize what mattered to you."}}</script>
 <script>
 let project={queue:[],nomi:"",key:"",process:5,reply_wait:900,header_every:0,header_text:"",reply_prompt:"",reply_destination:"room",user_name:""},active=-1,ready=false,busy=false,selectionToken=0,nomiChoices=[],roomChoices=[];
-let defaultPromptTable=null;
+let defaultPromptTable=JSON.parse(document.getElementById("builtin-prompts").textContent);
+document.addEventListener("DOMContentLoaded",()=>{showSettingsPromptDefaults();el("promptSaveFeedback").textContent="Built-in defaults";});
 const el=id=>document.getElementById(id);
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 const promptKinds={knowledge:"Knowledge",instructions:"Instructions",journal_self:"Nomi’s own journal",journal_other:"Someone else’s journal",chat:"Chat"};
@@ -244,8 +246,8 @@ async function resetPromptDefaults(){
  catch(e){el("promptSaveFeedback").textContent=String(e)}
 }
 async function loadPromptDefaults(){
- try{defaultPromptTable=await call("prompt_defaults");showSettingsPromptDefaults()}
- catch(e){showSettingsPromptDefaults(e)}
+ try{defaultPromptTable=await call("prompt_defaults");showSettingsPromptDefaults();el("promptSaveFeedback").textContent=""}
+ catch(e){showSettingsPromptDefaults();el("promptSaveFeedback").textContent="Could not load saved prompts: "+String(e)}
 }
 function filePromptKey(fields){
  const kind=String(fields.type||"Knowledge").toLowerCase();
@@ -621,8 +623,9 @@ async function configureCredentials(){
 }
 async function init(){if(!window.pywebview?.api){el("state").textContent="Open NomiUploader.exe (not index.html).";return}
 ready=true;
+await loadPromptDefaults();
 const unlocked=await configureCredentials();
 if(!unlocked){el("state").textContent="API key not configured or locked. Restart to configure.";return}
-const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadPromptDefaults();await loadSelected();await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll();await refreshRuns()}
+const s=await call("status");project=s.project||project;active=project.queue.length?0:-1;draw();await loadSelected();await loadNomis();el("state").textContent="Desktop host connected";setInterval(poll,1000);poll();await refreshRuns()}
 window.addEventListener("pywebviewready",init);setTimeout(()=>{if(!ready)init()},1800);
 </script></body></html>

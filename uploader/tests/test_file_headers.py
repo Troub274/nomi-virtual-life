@@ -1,6 +1,8 @@
 """File fields, sidecar headers, Settings defaults, and actual upload plans agree."""
 import copy
 import importlib.util
+import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,6 +16,14 @@ spec.loader.exec_module(gui)
 
 
 class FileHeaderTests(unittest.TestCase):
+    def test_startup_prompts_match_application_defaults_without_api_connection(self):
+        html=(Path(u.__file__).parent/"gui/index.html").read_text(encoding="utf-8")
+        bundled=re.search(r'<script id="builtin-prompts" type="application/json">(.*?)</script>',html,re.S)
+        self.assertIsNotNone(bundled)
+        self.assertEqual(json.loads(bundled[1]),u.BUILTIN_PROMPTS)
+        self.assertLess(html.index("await loadPromptDefaults();",html.index("async function init()")),
+                        html.index("await configureCredentials();",html.index("async function init()")))
+
     def setUp(self):
         temporary=tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
