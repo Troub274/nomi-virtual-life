@@ -1,11 +1,13 @@
-# Nomi Uploader 1.4i.6
+# Nomi Uploader 1.4i.7
 
-- Resume now opens a recovery dialog when a private reflection request timed out or returned an uncertain result. It shows the original prompt, its memory date, and the send time when available.
-- If the reply appeared in private chat, press Enter or choose Reply received — Resume. Pasting the reply is optional; Shift+Enter adds a line break.
-- Keep waiting leaves the upload paused. Retry prompt requires explicit confirmation because it may produce a duplicate reply.
-- Interactive CLI --resume offers the same recovery choices: Enter confirms receipt, P accepts a multiline reply, W waits, and R offers a confirmed retry. Noninteractive runs retain their existing recovery flags.
-- Received-reply confirmations back up the checkpoint and append a user-verified receipt, allowing Resume to continue after the completed reflection without resending it. Empty confirmations do not invent reply text.
-- Existing checkpoints and saved upload plans remain compatible. No restart of the upload is required.
+- Files now has one explicit editor for upload type, source, date, Header prompt, and Reply prompt. Each prompt has a small adjacent count field from 0 to 1000; 0 disables repetition or replies.
+- Changing upload type loads that type's default prompts. The prompt boxes can be edited or pasted over. This version replaces the displayed prompts when you change type, including custom wording.
+- The sample below the fields shows the edited header and source body. An expandable upload preview shows the actual planned messages.
+- Virtual header edits autosave with the project and apply to new uploads without a separate file save. Save header writes a readable sidecar such as journal.txt.upldhdr beside the original file; the original body is unchanged.
+- Loading a source file populates the fields from its saved project settings, matching sidecar, or embedded header. Missing values come from Settings. Old empty project placeholders no longer override an existing file header.
+- Settings exposes editable Header and Reply defaults separately for Knowledge, Instructions, Chat, and both journal variants. Changes persist automatically. Return to defaults restores the application's built-in prompts.
+- Prompt boxes appear immediately, even before API-key setup. The desktop app loads personalized defaults before authentication. Opening the HTML directly allows inspection; saving requires the desktop app.
+- TXT, DOCX, Nomi exports, and ChatGPT JSON/ZIP exports use the same file controls. Existing checkpoints retain their saved plans during Normal Resume; file edits apply to new uploads or Manual Restart.
 
 ## Downloads
 

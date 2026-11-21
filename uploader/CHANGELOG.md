@@ -1,6 +1,6 @@
 # Nomi Uploader changelog
 
-## Unreleased
+## 1.4i.7 — 2026-11-21
 
 - Replace the split file editor with explicit upload type, source, date, Header and Reply prompt boxes, adjacent 0–1000 count fields, and a sample below.
 - Make every existing prompt type editable in Settings with automatic persistence and a Return to defaults button that restores application defaults.
