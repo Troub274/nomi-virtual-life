@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install uploader dependencies
+        run: python -m pip install -r uploader/requirements.txt
       - name: Syntax check
         run: python -m py_compile uploader/nomi-uploader.py uploader/legacy_v085.py examples/beth/prepare_v1.py examples/run_package.py uploader/tests/test_packages.py
       - name: Offline unit and mocked integration tests
