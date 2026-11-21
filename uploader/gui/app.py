@@ -20,7 +20,7 @@ import urllib.request
 from collections import deque
 from pathlib import Path
 
-GUI_VERSION = "1.4i.6"
+GUI_VERSION = "1.4i.7"
 FROZEN = bool(getattr(sys, "frozen", False))
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[2]))
 UPLOADER = ROOT / "uploader" / "nomi-uploader.py"
@@ -209,7 +209,112 @@ class API:
         finally:
             sys.path.pop(0)
 
+    def save_prompt_defaults(self, table=None, reset=False):
+        """Persist editable Settings prompts; reset restores application templates."""
+        if reset:
+            (DATA/"prompts.json").unlink(missing_ok=True)
+        else:
+            builtins=runpy.run_path(str(UPLOADER))["BUILTIN_PROMPTS"]
+            if not isinstance(table,dict) or set(table)!=set(builtins):
+                raise ValueError("Invalid prompt settings")
+            for phase, values in builtins.items():
+                if not isinstance(table[phase],dict) or set(table[phase])!=set(values):
+                    raise ValueError("Invalid prompt types")
+                if any(not isinstance(v,str) for v in table[phase].values()):
+                    raise ValueError("Prompts must be text")
+            with tempfile.TemporaryDirectory(prefix="nomi-prompt-validation-") as directory:
+                self._write_json(Path(directory)/"prompts.json",table)
+                runpy.run_path(str(UPLOADER))["load_prompt_table"](Path(directory))
+            self._write_json(DATA/"prompts.json",table)
+        return self.prompt_defaults()
+
+    @staticmethod
+    def _write_json(path, value):
+        temporary=path.with_name(path.name+"."+uuid.uuid4().hex+".tmp")
+        try:
+            temporary.write_text(json.dumps(value,ensure_ascii=False,indent=2),encoding="utf-8")
+            os.replace(temporary,path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
     def inspect_file(self, filename):
+        info=self._inspect_file(filename)
+        source=Path(filename)
+        sidecar=Path(str(source)+".upldhdr")
+        if sidecar.exists():
+            saved=self._inspect_file(str(sidecar))
+            if not saved.get("existing"):
+                raise ValueError("Invalid upload header: "+str(sidecar))
+            info["header"]=saved["header"]
+        fields=dict(info.get("header") or {})
+        fields.setdefault("type","Chat" if source.suffix.lower() in (".json",".zip") else "Knowledge")
+        fields.setdefault("title",source.stem)
+        for prop in ("source","date"):
+            fields.setdefault(prop,"")
+        kind=str(fields["type"]).lower()
+        key=("journal_other" if fields.get("source") and fields["source"].casefold()!=str(self.project.get("nomi","")).casefold()
+             else "journal_self") if kind=="journal" else kind
+        table=self.prompt_defaults()
+        legacy_export=info.get("export",False)
+        fields.setdefault("headerPrompt",fields.get("intro") if legacy_export else fields.get("headerText") or table["opening"].get(key,""))
+        if not fields.get("replyPrompt"):
+            fields["replyPrompt"]=fields.get("periodic") if legacy_export else fields.get("prompts") or table["periodic"].get(key,"")
+        if fields.get("process") in (None,""):
+            fields["process"]=self.project.get("process",5)
+        if fields.get("headerEvery") in (None,""):
+            fields["headerEvery"]=self.project.get("header_every",0)
+        info.update(header=fields,editable=True,sidecar=str(sidecar))
+        return info
+
+    def save_file_header(self, item):
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Cannot modify a running upload.")
+        source=Path(item["path"])
+        if not source.is_file():
+            raise ValueError("Missing source file: "+str(source))
+        text=self._header_text(source,item["fields"])
+        sidecar=Path(str(source)+".upldhdr")
+        temporary=sidecar.with_name(sidecar.name+"."+uuid.uuid4().hex+".tmp")
+        try:
+            temporary.write_text(text+"\n",encoding="utf-8")
+            os.replace(temporary,sidecar)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return str(sidecar)
+
+    def file_sample(self,item):
+        source=Path(item["path"])
+        body=self._inspect_file(str(source)).get("preview","")
+        return self._header_text(source,item["fields"])+"\n\n"+body[:12000]
+
+    @staticmethod
+    def _header_text(source, fields):
+        kind=str(fields.get("type") or "Knowledge").lower()
+        if kind not in ("knowledge","instructions","journal","chat"):
+            raise ValueError("Invalid content Type")
+        title=str(fields.get("title") or source.stem).strip()
+        if any(c in title for c in "\r\n[]"):
+            raise ValueError("Invalid section title")
+        lines=["["+title+"]","Type: "+kind.title()]
+        for label,prop in (("Source","source"),("Date","date"),("Header Every","headerEvery"),("Process Every","process")):
+            value=str(fields.get(prop,"")).strip()
+            if prop in ("headerEvery","process"):
+                if not value.isdecimal() or not 0<=int(value)<=1000:
+                    raise ValueError(label+" must be a whole number from 0 to 1000")
+            elif "\n" in value or "\r" in value:
+                raise ValueError(label+" must be a single line")
+            lines.append(label+": "+value)
+        lines.append("Nomi Mode: Replace")
+        if int(fields["process"]) and not str(fields.get("replyPrompt","")).strip():
+            raise ValueError("Enter a reply prompt or set Reply every to 0")
+        if int(fields["headerEvery"]) and not str(fields.get("headerPrompt","")).strip():
+            raise ValueError("Enter a header prompt or set Repeat every to 0")
+        for label,prop in (("Header Prompt","headerPrompt"),("Reply Prompt","replyPrompt")):
+            for line in str(fields.get(prop,"")).split("\n"):
+                lines.append(label+": "+line.rstrip("\r"))
+        return "\n".join(lines)
+
+    def _inspect_file(self, filename):
         """Read TXT metadata and a preview without modifying the source file."""
         source = Path(filename)
         if source.suffix.lower() in (".zip", ".json"):
@@ -219,9 +324,11 @@ class API:
             name, rows=legacy.load_conversation(source)
             preview="\n".join(str(x.get("date",""))+" "+str(x.get("sender",""))+": "+str(x.get("message","")) for x in rows[:30])
             return {"editable": False, "export": True, "header": {"mode":"Replace","intro":prompts["opening"]["chat"],"periodic":prompts["periodic"]["chat"],"process":""}, "preview": preview[:12000], "existing": False, "count":len(rows), "nomi_name":name}
-        if source.suffix.lower() != ".txt":
-            return {"editable": False, "preview": "Metadata editor is available for TXT, Nomi exports, and ChatGPT ZIP/JSON exports."}
-        raw = source.read_text(encoding="utf-8-sig")
+        if source.suffix.lower()==".docx":
+            from docx import Document
+            raw="\n".join(p.text for p in Document(str(source)).paragraphs)
+        else:
+            raw = source.read_text(encoding="utf-8-sig")
         lines = raw.splitlines(keepends=True)
         header_start = next((i for i, line in enumerate(lines) if line.strip()), None)
         if header_start is None:
@@ -234,11 +341,13 @@ class API:
             content_start = header_start + 1
             prompts = []
             for i in range(content_start, len(lines)):
-                m = re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Reply Prompt|Nomi Mode|Nomi):\s*(.*)$", lines[i].strip(), re.I)
+                m = re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Header Prompt|Reply Prompt|Nomi Mode|Nomi):\s*(.*)$", lines[i].strip(), re.I)
                 if m:
                     k,v = m.group(1).lower(), m.group(2).strip()
-                    key = {"type":"type","source":"source","date":"date","process every":"process","header every":"headerEvery","header text":"headerText","reply prompt":"replyPrompt","nomi mode":"mode","nomi":"prompts"}[k]
+                    key = {"type":"type","source":"source","date":"date","process every":"process","header every":"headerEvery","header text":"headerText","header prompt":"headerPrompt","reply prompt":"replyPrompt","nomi mode":"mode","nomi":"prompts"}[k]
                     if key == "prompts": prompts.append(v)
+                    elif key in ("headerPrompt","replyPrompt","headerText") and key in header:
+                        header[key]+="\n"+v
                     else: header[key] = v
                     content_start = i + 1
                 elif not lines[i].strip():
@@ -250,11 +359,11 @@ class API:
 
     def _build_txt(self, source, item):
         """Prepare a working TXT copy without modifying the selected original."""
-        info = self.inspect_file(str(source))
+        info = self._inspect_file(str(source))
         if "fields" not in item:
             return source.read_text(encoding="utf-8-sig")
         fields = item["fields"]
-        raw = source.read_text(encoding="utf-8-sig")
+        raw = source.read_text(encoding="utf-8-sig") if source.suffix.lower()==".txt" else "\n".join(p.text for p in __import__("docx").Document(str(source)).paragraphs)
         if info["existing"]:
             # Remove only the first section's existing metadata. Preserve original source.
             lines = raw.splitlines(keepends=True)
@@ -262,18 +371,23 @@ class API:
             pos = first + 1
             while pos < len(lines):
                 line = lines[pos].strip()
-                if not line or re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Reply Prompt|Nomi Mode|Nomi):", line, re.I):
+                if not line or re.match(r"^(Type|Source|Date|Process Every|Header Every|Header Text|Header Prompt|Reply Prompt|Nomi Mode|Nomi):", line, re.I):
                     pos += 1
                 else: break
             body = "".join(lines[pos:])
         else:
             body = raw
+        if "headerPrompt" in fields:
+            header=self._header_text(source,fields).splitlines()
+        else:
+            header=None
         title = str(fields.get("title") or source.stem).strip()
         kind = str(fields.get("type") or "Knowledge").strip().lower()
         if kind not in ("knowledge","instructions","journal","chat"):
             raise ValueError("Invalid content Type")
         mode = str(fields.get("mode") or "Add").strip().lower()
         if mode not in ("add","replace"): raise ValueError("Invalid Nomi Mode")
+        explicit_header=header
         header = ["[" + title + "]", "Type: " + kind.title()]
         for key, prop in (("Source", "source"), ("Date", "date"), ("Process Every", "process"), ("Header Every", "headerEvery"), ("Header Text", "headerText"), ("Reply Prompt", "replyPrompt")):
             v = str(fields.get(prop) or "").strip()
@@ -303,7 +417,7 @@ class API:
                     break
             if not typed:
                 lines[index] = line.replace("[", r"\[", 1)
-        return "\n".join(header) + "\n\n" + "".join(lines)
+        return "\n".join(explicit_header if explicit_header is not None else header) + "\n\n" + "".join(lines)
 
     def _paths(self, run_dir, queue=None):
         """Resolve checkpoint, completion and reply paths for a run directory."""
@@ -314,7 +428,7 @@ class API:
             suffix = source.suffix.lower()
             if suffix not in (".txt", ".docx", ".json", ".zip"):
                 raise ValueError("Unsupported file type: " + str(source))
-            if suffix == ".txt" and item.get("fields"):
+            if suffix in (".txt",".docx") and item.get("fields"):
                 generated = run_dir / ("prepared-%04d.txt" % i)
                 generated.write_text(self._build_txt(source, item), encoding="utf-8")
                 out.append(str(generated))
@@ -332,13 +446,23 @@ class API:
 
     @staticmethod
     def _export_options(queue):
-        return {x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
+        result={x["path"]: {"mode":x["export_fields"].get("mode","Replace"),
                                  "intro":x["export_fields"].get("intro",""),
                                  "periodic":x["export_fields"].get("periodic",""),
                                  "process_every":x["export_fields"].get("process",""),
                                  "header_every":x["export_fields"].get("headerEvery",""),
                                  "header_text":x["export_fields"].get("headerText",None)}
                       for x in queue if x.get("export_fields") and Path(x["path"]).suffix.lower() in (".zip",".json")}
+        for item in queue:
+            if Path(item["path"]).suffix.lower() not in (".zip",".json") or "headerPrompt" not in item.get("fields",{}):
+                continue
+            fields=item["fields"]
+            API._header_text(Path(item["path"]),fields)
+            result[item["path"]]={"mode":"Replace","intro":fields["headerPrompt"],
+                "periodic":fields["replyPrompt"],"process_every":fields["process"],
+                "header_every":fields["headerEvery"],"header_text":fields["headerPrompt"],
+                "type":fields["type"],"source":fields.get("source",""),"date":fields.get("date","")}
+        return result
 
     def preview_file(self, item, options):
         """Return expected validation failures for inline display in Preview."""

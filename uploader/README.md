@@ -1,4 +1,4 @@
-# Nomi Uploader v1.4i.6
+# Nomi Uploader v1.4i.7
 
 See the [uploader changelog](CHANGELOG.md) for release history.
 
@@ -8,13 +8,13 @@ See the [uploader changelog](CHANGELOG.md) for release history.
 
 **For best results, use SOLSTICE. In our testing, Solstice is more "malleable" and "trusting" than Cambrian, and it integrates the uploaded life history more successfully.**
 
-**Current:** Nomi Uploader 1.4i.6 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
+**Current:** Nomi Uploader 1.4i.7 uses the v1.3 recovery and resume engine. `legacy_v085.py` remains an internal compatibility dependency for API access and export parsing. The exact pre-upgrade uploader is preserved at [archive/nomi-uploader-v1.0.py](archive/nomi-uploader-v1.0.py).
 
 Requires Python 3.10+; optional `python-docx` for DOCX. Configure the API key once with `python nomi-uploader.py --config`; environment variables are optional.
 
 ## Downloads and setup (all platforms)
 
-[Download Nomi Uploader 1.4i.6](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.6). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
+[Download Nomi Uploader 1.4i.7](https://github.com/Troub274/nomi-virtual-life/releases/tag/nomi-uploader-v1.4i.7). The release includes Windows, Linux, Intel macOS, Apple Silicon macOS and Python-only CLI packages.
 The Windows, Linux, Intel macOS, and Apple Silicon macOS packages each contain
 the GUI, Python API CLI, and instructions. A Python-only ZIP is also available
 as an asset on that **same release**.
@@ -435,16 +435,33 @@ ChatGPT imports follow the selected branch of each conversation, retain visible 
 For JSON and ZIP imports, Reflect every N chunks controls the number of uploaded content chunks between reflections. Set 10 or 20 for that interval, or 0 to disable periodic reflections. A final partial batch also receives a reflection. Use Preview before starting a new upload.
 
 
-## File reflection controls
+## File headers and prompts
 
-In Files, open Prompts. The first field controls the reflection interval for
-TXT and JSON/ZIP files. A blank field uses the default in Settings. Enter 0 to
-disable reflections for that file. The summary shows the effective interval
-and where it comes from.
+Settings has editable Header and Reply prompt boxes for each content type.
+Changes save automatically. **Return to defaults** restores the application's
+built-in prompts. Existing file-specific edits remain unchanged.
 
-Repeat header every N content chunks controls repeated header text. Reflections
-use the separate interval above it. Word files use document metadata and Settings;
-Preview shows their actual plan.
+In Files, select a file to see its upload type, source, date, Header prompt,
+and Reply prompt together. Existing headers and saved projects populate these
+fields; missing values come from Settings. Choosing a different upload type
+loads that type's prompts, which you can edit or paste over.
+
+The small **Repeat every** and **Reply every** fields accept whole numbers from
+0 to 1000. Repeat every counts content chunks; Reply every counts the type's
+content units (exported conversations use uploaded chunks). Zero disables the
+corresponding repetition or reply. The sample below shows the edited header
+and source body. Expand Upload preview to inspect planned messages.
+
+Edits autosave with the project and apply to new uploads without a separate
+file save. **Save header** writes a readable sidecar such as
+`journal.txt.upldhdr` beside the source. Adding the source again loads this
+header. TXT, DOCX, JSON, and ZIP files use the same prompt fields; the original
+file and its body are unchanged. Saved project fields take precedence over a
+sidecar, which takes precedence over an embedded header and application defaults.
+
+Sidecars use `Header Prompt:` and `Reply Prompt:` lines. Repeated lines preserve
+multiline prompts. The Header prompt supplies both the introduction and repeated
+headers. Existing `Nomi:` headers remain supported by the CLI.
 
 New uploads add source conversation or entry dates to periodic reflection
 prompts when valid dates are available. A batch spanning multiple dates includes

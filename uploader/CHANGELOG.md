@@ -1,5 +1,12 @@
 # Nomi Uploader changelog
 
+## 1.4i.7 — 2026-11-21
+
+- Replace the split file editor with explicit upload type, source, date, Header and Reply prompt boxes, adjacent 0–1000 count fields, and a sample below.
+- Make every existing prompt type editable in Settings with automatic persistence and a Return to defaults button that restores application defaults.
+- Autosave virtual file headers in the project and use them for upload planning. Save header writes a readable `.upldhdr` sidecar without changing the original body. Load existing headers, sidecars, and saved project edits into the fields.
+- Apply the same visible file controls to TXT, DOCX, Nomi exports, and ChatGPT JSON/ZIP exports. Preserve compatibility with existing saved upload plans.
+
 ## 1.4i.6 — 2026-11-19
 
 - Interactive CLI Resume now asks whether uncertain private replies arrived. Enter confirms without pasted text; paste, wait, and explicitly confirmed retry options are also available. Noninteractive recovery keeps its existing behavior.

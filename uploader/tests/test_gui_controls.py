@@ -6,7 +6,32 @@ import unittest
 
 
 class GuiControlTests(unittest.TestCase):
-    def test_restart_validation_and_effective_interval(self):
+    def test_loading_headers_preserves_file_metadata_and_saved_project_edits(self):
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js is unavailable")
+        html=Path(__file__).resolve().parents[1]/"gui/index.html"
+        script=r"""
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync(process.argv[2],'utf8');
+const source=html.slice(html.indexOf('async function loadSelected(){'),html.indexOf('let previewToken='));
+(async()=>{
+ const fileHeader={type:'Chat',headerPrompt:'Opening from header',replyPrompt:'Reply from header',process:0,headerEvery:0,date:'2026-11-21',source:'Ava'};
+ for(const fields of [undefined,{title:'chat',type:'Knowledge',mode:'Add',source:'',date:'',process:'',prompts:''},
+                      {...fileHeader,headerPrompt:'Saved project opening'}]){
+  const item={path:'chat.txt',fields};
+  const context={active:0,selectionToken:0,project:{queue:[item]},
+   call:async()=>({header:fileHeader}),scheduleProjectSave:()=>{},renderFileFields:()=>{},refreshSample:async()=>{},el:()=>({})};
+  vm.createContext(context);vm.runInContext(source,context);await context.loadSelected();
+  assert.equal(item.fields.type,'Chat');assert.equal(item.fields.process,0);
+  assert.equal(item.fields.headerPrompt,fields?.headerPrompt||'Opening from header');
+ }
+})().catch(e=>{console.error(e);process.exit(1)});
+"""
+        result=subprocess.run([node,"-",str(html)],input=script,text=True,encoding="utf-8",capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_restart_validation_and_reply_destination(self):
         node = shutil.which("node")
         if node is None:
             self.skipTest("Node.js is unavailable")
@@ -15,7 +40,6 @@ class GuiControlTests(unittest.TestCase):
 const fs = require("fs"), vm = require("vm"), assert = require("assert");
 const html = fs.readFileSync(process.argv[2], "utf8");
 const manual = html.match(/async function manualRestart\(\)\{[\s\S]*?\n\}/)[0];
-const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)[0];
 (async () => {
   for (const values of [["1","1"],[" 1 "," 1 "],["0","1"],["1.5","1"]]) {
     const input = [...values], calls = [];
@@ -27,28 +51,9 @@ const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)
     if (values[0].trim() === "1") assert.deepStrictEqual(calls, [["manual_restart",1,1]]);
     else assert.equal(calls.length,0);
   }
-  const controls = {};
-  const context = {el:id=>(controls[id]??={}), active:0,
-    project:{process:10,reply_prompt:"",queue:[{path:"conversations.json",
-      export_fields:{mode:"Replace",intro:"Opening from file",periodic:"Reflect from file",process:""}}]},
-    defaultPromptTable:{opening:{chat:"Default opening"},periodic:{chat:"Default reflection"}}};
-  vm.createContext(context);
-  vm.runInContext(display, context);
-  context.showPromptDefaults();
-  assert(controls.promptDefaults.textContent.includes("10 content chunks (from Settings)"));
-  assert(controls.promptDefaults.textContent.includes("Reflect from file"));
-  context.project.queue[0].export_fields.process = "20";
-  context.showPromptDefaults();
-  assert(controls.promptDefaults.textContent.includes("20 content chunks (file setting)"));
-  context.project.queue[0].export_fields.process = "0";
-  context.showPromptDefaults();
-  assert(controls.promptDefaults.textContent.includes("Periodic reflections disabled"));
-  context.defaultPromptTable = null;
-  context.showPromptDefaults("Failed");
-  assert(controls.promptDefaults.textContent.includes("Could not load prompt defaults"));
   const inputs = {};
   const settings = {project:{queue:[]},active:-1,nomiChoices:[],
-    renderNomis:()=>{},renderRooms:()=>{},showPromptDefaults:()=>{},loadRooms:()=>{},
+    renderNomis:()=>{},renderRooms:()=>{},renderFileFields:()=>{},scheduleProjectSave:()=>{},loadRooms:()=>{},
     el:id=>{
       if(!inputs[id]) {
         const input={style:{}};
@@ -61,8 +66,7 @@ const display = html.match(/function showPromptDefaults\(error\)\{[\s\S]*?\n\}/)
     }};
   vm.createContext(settings);
   vm.runInContext(html.match(/function draw\(\)\{[\s\S]*?\n\}/)[0]+"\n"+
-    html.match(/function editSettings\(\)\{[\s\S]*?\n\}/)[0]+"\n"+
-    html.match(/function renderFilePromptControls\(\)\{[\s\S]*?\n\}/)[0],settings);
+    html.match(/function editSettings\(\)\{[\s\S]*?\n\}/)[0],settings);
   settings.draw();
   assert.equal(inputs.replyDestination.value,"room");
   inputs.replyDestination.value="private";
@@ -119,7 +123,7 @@ const source=html.slice(html.indexOf("async function poll()"),html.indexOf("asyn
         self.assertEqual(result.returncode, 0, result.stderr)
 
 
-    def test_one_reflection_control_edits_text_and_exports(self):
+    def test_file_prompt_fields_edit_all_formats_and_load_type_defaults(self):
         node = shutil.which("node")
         if node is None:
             self.skipTest("Node.js is unavailable")
@@ -129,43 +133,30 @@ const fs=require("fs"),vm=require("vm"),assert=require("assert");
 const html=fs.readFileSync(process.argv[2],"utf8");
 assert.equal((html.match(/id="processField"/g)||[]).length,1);
 assert(!html.includes('id="exportProcess"'));
-const names=["renderFilePromptControls","editReflectionInterval","editExport"];
-const source=names.map(name=>html.match(new RegExp("function "+name+"\\(\\)\\{[\\s\\S]*?\\n\\}"))[0]).join("\n");
-const controls={};
-const model={process:10,queue:[
- {path:"chat.json",export_fields:{mode:"Replace",process:"0",headerEvery:"10",intro:"Keep opening"}},
- {path:"journal.txt",fields:{type:"Journal",process:"20"}},
- {path:"facts.docx"}]};
-const context={active:0,project:model,showPromptDefaults:()=>{},
- el:id=>(controls[id]??={value:"",textContent:"",hidden:false,disabled:false})};
+const source=html.slice(html.indexOf("function filePromptKey("),html.indexOf("function scheduleProjectSave("))+
+ html.slice(html.indexOf("function renderFileFields("),html.indexOf("function scheduleSample("));
+const controls={};let saves=0,previews=0;
+const fields={type:"Chat",source:"",date:"2026-11-21",headerPrompt:"Opening",replyPrompt:"Reply",headerEvery:0,process:10};
+const model={nomi:"Ava",queue:[{path:"chat.json",fields},{path:"facts.docx",fields:{...fields,type:"Knowledge",process:0}}]};
+const context={active:0,project:model,scheduleProjectSave:()=>saves++,scheduleSample:()=>previews++,
+ defaultPromptTable:{opening:{journal_self:"Journal header"},periodic:{journal_self:"Journal reply"}},
+ el:id=>(controls[id]??={value:"",textContent:"",disabled:false})};
 vm.createContext(context);vm.runInContext(source,context);
-context.renderFilePromptControls();
-assert.equal(controls.processField.value,"0");
-assert(controls.txtPromptEditor.hidden);
-assert(controls.metadataFields.hidden);
-assert.equal(controls.reflectionLabel.textContent,"Reflect every N content chunks");
-controls.processField.value="10";context.editReflectionInterval();
-assert.equal(model.queue[0].export_fields.process,"10");
-assert.equal(model.queue[0].export_fields.headerEvery,"10");
-controls.exportMode={value:"Replace"};controls.exportIntro={value:"Keep opening"};
-controls.exportPeriodic={value:"Reflect"};controls.exportHeaderEvery={value:"20"};
-controls.exportHeaderText={value:"Header"};context.editExport();
-assert.equal(model.queue[0].export_fields.process,"10");
-controls.processField.value="";context.editReflectionInterval();
-assert.equal(model.queue[0].export_fields.process,"");
-context.active=1;context.renderFilePromptControls();
-assert.equal(controls.processField.value,"20");
-assert(!controls.txtPromptEditor.hidden);
-assert(!controls.metadataFields.hidden);
-assert.equal(controls.reflectionLabel.textContent,"Reflect every N journal entries");
-controls.processField.value="0";context.editReflectionInterval();
-assert.equal(model.queue[1].fields.process,"0");
-context.active=0;context.renderFilePromptControls();
-assert.equal(controls.processField.value,"");
-assert.equal(controls.processField.placeholder,"Use Settings (10)");
-context.active=2;context.renderFilePromptControls();
-assert(controls.processField.disabled);
-assert(controls.txtPromptEditor.hidden);
+context.renderFileFields();
+assert.equal(controls.processField.value,10);
+assert.equal(controls.headerEveryField.value,0);
+controls.typeField.value="Journal";context.changeFileType();
+assert.equal(fields.type,"Journal");assert.equal(fields.headerPrompt,"Journal header");assert.equal(fields.replyPrompt,"Journal reply");
+controls.headerPromptField.value="Custom header\nSecond line";
+controls.replyPromptField.value="Custom reply";controls.processField.value="0";
+context.updateFields();
+assert.equal(fields.headerPrompt,"Custom header\nSecond line");assert.equal(fields.replyPrompt,"Custom reply");assert.equal(fields.process,"0");
+assert.equal(saves,2);assert.equal(previews,2);
+context.active=1;context.renderFileFields();
+assert.equal(controls.processField.value,0);assert(!controls.headerPromptField.disabled);
+assert(/id="headerEveryField" type="number" min="0" max="1000"/.test(html));
+assert(/id="processField" type="number" min="0" max="1000"/.test(html));
+
 """
         result = subprocess.run([node, "-", str(html)], input=script, text=True,
                                 encoding="utf-8", capture_output=True)

@@ -25,7 +25,7 @@ DEFAULT_CHUNK_CHARS = 750
 KNOWN_WAIT_ERRORS = {"NoReply","RoomNomiNotReadyForMessage","RoomStillCreating","TooManyRequests"}
 TYPES = {"knowledge", "instructions", "journal", "chat"}
 HEADING = re.compile(r"^\[([^\]\n]+)\]\s*$")
-META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every|Header Every|Header Text|Reply Prompt):\s*(.*)$", re.I)
+META = re.compile(r"^(Type|Source|Date|Nomi|Nomi Mode|Process Every|Header Every|Header Text|Header Prompt|Reply Prompt):\s*(.*)$", re.I)
 ENTRY = re.compile(r"^(?:ENTRY|EPISODE|JOURNAL ENTRY|DIARY ENTRY)\s*#?\s*(\d+)\b.*$", re.I)
 SPEAKER = re.compile(r"^([^:\n]{1,70}):\s+(.+)$")
 MONTHS = {m.lower():i for i,m in enumerate(("January","February","March","April","May","June","July","August","September","October","November","December"),1)}
@@ -200,8 +200,11 @@ def parse_sections(text, filename):
             elif k=="header every":
                 current["header_every"]=int(v)
                 if current["header_every"]<0: raise ValueError("Header Every must be >= 0")
-            elif k=="header text": current["header_text"]=v
-            elif k=="reply prompt": current["reply_prompt"]=v
+            elif k=="header text":
+                current["header_text"]=(current["header_text"]+"\n"+v) if current.get("header_text") is not None else v
+            elif k in ("header prompt","reply prompt"):
+                prop="opening_prompt" if k=="header prompt" else "reply_prompt"
+                current[prop]=(current[prop]+"\n"+v) if current.get(prop) is not None else v
             elif k=="nomi mode":
                 if v.lower() not in ("add","replace"): raise ValueError("Nomi Mode must be Add or Replace")
                 current["mode"]=v.lower()
@@ -397,18 +400,24 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             opts=export_options.get(str(path),{})
             he=header_every if opts.get("header_every") in (None,"") else int(opts["header_every"])
             ht=header_text if opts.get("header_text") is None else str(opts["header_text"])
+            if "type" in opts:
+                ht=render_prompt(ht,nomi,user,opts.get("source") or "System")
             rows=legacy.prepare_conversation_chunks([path],reserve_for_header(chunk_limit,ht,he))
             section_name="ChatGPT export" if rows and rows[0].get("source_channel")=="chatgpt" else "Nomi export"
             mode=str(opts.get("mode","Add")).lower()
             if mode not in ("add","replace"): raise ValueError("Export Nomi Mode must be Add or Replace")
             opening=str(opts.get("intro","")).strip()
-            base=opening_defaults["chat"] if mode=="add" else ""
+            export_kind=str(opts.get("type","chat")).lower()
+            if export_kind not in TYPES: raise ValueError("Unknown export type: "+export_kind)
+            default_key="journal_self" if export_kind=="journal" else export_kind
+            export_source=opts.get("source") or section_name
+            base=opening_defaults[default_key] if mode=="add" else ""
             intro="\n".join(p for p in (base,opening) if p)
             interval=opts.get("process_every")
             interval=process_every if interval in (None,"") else int(interval)
             if interval<0: raise ValueError("Process Every must be >= 0")
             if intro:
-                add({"text":render_prompt(intro,nomi,user,section_name),
+                add({"text":render_prompt(intro,nomi,user,export_source),
                  "kind":"intro","file":filename,"section":section_name})
             for idx,row in enumerate(rows,1):
                 content_count+=1
@@ -416,9 +425,9 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
                      "section":section_name,"entry":idx})
                 if interval and (idx%interval==0 or idx==len(rows)):
                     first=((idx-1)//interval)*interval+1
-                    template=str(opts.get("periodic") or reply_prompt or periodic_defaults["chat"])
-                    prompt=reflection(template,first,idx,section_name,
-                                      (r.get("source_date") for r in rows[first-1:idx]))
+                    template=str(opts.get("periodic") or reply_prompt or periodic_defaults[default_key])
+                    prompt=reflection(template,first,idx,export_source,
+                                      (r.get("source_date") or opts.get("date") for r in rows[first-1:idx]))
                     add({"text":prompt,
                          "kind":"prompt","file":filename,"section":section_name,"entry":idx})
             continue
@@ -436,7 +445,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             units=select_entry_units(all_units,entry_range) if kind=="journal" else all_units
             if not units or not any(u["text"] for u in units): continue
             default_key="journal_self" if kind=="journal" and source.casefold()==nomi.casefold() else ("journal_other" if kind=="journal" else kind)
-            prompts=[] if section["mode"]=="replace" else [opening_defaults[default_key]]
+            prompts=([section["opening_prompt"]] if section.get("opening_prompt") is not None
+                     else [] if section["mode"]=="replace" else [opening_defaults[default_key]])
             intro="\n".join(render_prompt(p,nomi,user,source) for p in prompts)
             intro += "\nSection: %s\nType: %s\nSource: %s"%(section["title"],kind.title(),source)
             add({"text":intro.strip(),"kind":"intro","file":filename,"section":section["title"]})
@@ -444,6 +454,8 @@ def plan_text(files, nomi, user, order, year, chunk_limit, process_every=0,
             if he is None: he=header_every
             ht=section.get("header_text")
             if ht is None: ht=header_text
+            if section.get("opening_prompt") is not None:
+                ht=render_prompt(section["opening_prompt"],nomi,user,source)
             rp=section.get("reply_prompt")
             if rp is None: rp=reply_prompt
             interval=section.get("process_every")
