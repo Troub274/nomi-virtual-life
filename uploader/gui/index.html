@@ -64,7 +64,7 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;ba
 <label>Fallback Reply Prompt<textarea id="replyPrompt" placeholder="Leave blank to use the periodic prompt for each content type" oninput="editSettings()" style="min-height:75px"></textarea></label>
 <p class="small">A file's reflection interval can override this default. A blank file interval uses Settings; 0 disables reflections.</p>
 </div></section>
-<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Normal Resume</button><button onclick="manualRestart()">Manual Restart…</button><button onclick="pauseUpload()">Pause / Stop</button></div>
+<section><h2>Run controls</h2><div class="row"><button onclick="start(true)">Preview / dry run</button><button class="primary" onclick="start(false)">Start NEW upload</button><button onclick="resume()">Normal Resume</button><button id="continueReceivedReplyButton" disabled onclick="continueReceivedReply()">Reply received — Continue</button><button onclick="manualRestart()">Manual Restart…</button><button onclick="pauseUpload()">Pause / Stop</button></div>
 <div class="row"><select id="runHistory" style="flex:1" aria-label="Previous upload runs"><option value="">Upload history</option></select><button onclick="refreshRuns()">Refresh history</button><button onclick="switchRun()">Select run</button><button onclick="clearHistory()">Clear history</button></div>
 <p class="small" id="recoveryRecommendation">Recovery recommendation: no checkpoint selected</p><p class="small" id="state">Connecting to desktop host…</p><progress id="bar" max="1" value="0"></progress><p id="stats" class="small">No upload yet</p>
 <p class="small">Start NEW upload creates a separate checkpoint, even when changing Nomis. Resume continues the currently selected run. Previous run files are retained locally. Preview never sends messages.</p>
@@ -182,7 +182,7 @@ function buildLayout(){
  action.innerHTML='<h2>Recommended Action</h2><div class="message" id="recommendedActionText">Select an upload checkpoint to see the recommended next action.</div><button onclick="showView(\'history\')">Review History</button>';
  run.prepend(action);
  const advanced=document.createElement("section");
- advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><div class="row"><button onclick="advancedCliRecovery(\'noreply\')">Recover explicit NoReply…</button><button onclick="advancedCliRecovery(\'migrate\')">Migrate pending reply to new room…</button></div><p class="small">These expert options require an exact PASS:INDEX from the checkpoint. The CLI validates eligibility and rejects unsupported recovery. Normal Resume remains the preferred default.</p>';
+ advanced.innerHTML='<h2>Advanced Recovery</h2><p class="small">These controls act only on verified pending checkpoint operations. They may produce duplicates and require confirmation.</p><p id="advancedRecoveryStatus" class="status-line">Select a checkpoint to see available options.</p><div class="row"><button id="recoverSendButton" disabled onclick="scopedRecovery(\'send\')">Retry uncertain content send…</button><button id="recoverReplyButton" disabled onclick="scopedRecovery(\'reply\')">Retry uncertain reply…</button></div><div class="row"><button onclick="advancedCliRecovery(\'noreply\')">Recover explicit NoReply…</button><button onclick="advancedCliRecovery(\'migrate\')">Migrate pending reply to new room…</button></div><p class="small">These expert options require an exact PASS:INDEX from the checkpoint: pass is the upload repetition (usually 1), and index is the planned message number. The CLI validates eligibility. Reply received — Continue selects pending private replies automatically, without typing a position or resending the acknowledged prompt.</p>';
  run.insertBefore(advanced,run.querySelector(".row"));
 
  // Keep output selectable, and provide per-output copy actions even on restrictive webviews.
@@ -505,11 +505,11 @@ function renderRecoveryOptions(status){
  sendBtn.disabled=!sends.length;replyBtn.disabled=!replies.length;
  summary.textContent=sends.length+" uncertain content send(s), "+replies.length+" uncertain reply request(s). Buttons are enabled only when the selected checkpoint records a matching operation.";
 }
-function receivedReplyDialog(item){
+function receivedReplyDialog(item, allowRetry=true){
  return new Promise(resolve=>{
   const dialog=document.createElement("dialog");
   dialog.style.cssText="max-width:650px;width:85%;background:#181c22;color:inherit;border:1px solid #a64dff;border-radius:12px";
-  dialog.innerHTML='<form><h2>Did your Nomi reply to this prompt?</h2><p class="position"></p><pre style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre><p>Confirm only if you saw the reply in private chat. Pasting it is optional.</p><textarea aria-label="Received reply (optional)" placeholder="Paste reply here (optional)" rows="5" style="width:100%;box-sizing:border-box"></textarea><p class="small">Enter confirms and continues. Shift+Enter adds a new line.</p><div class="row"><button type="submit" class="primary">Reply received — Resume</button><button type="button" data-action="wait">Keep waiting</button><button type="button" data-action="retry">Retry prompt…</button></div></form>';
+  dialog.innerHTML='<form><h2>Did your Nomi reply to this prompt?</h2><p class="position"></p><pre style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre><p>Confirm only if you saw the reply in private chat. Pasting it is optional.</p><textarea aria-label="Received reply (optional)" placeholder="Paste reply here (optional)" rows="5" style="width:100%;box-sizing:border-box"></textarea><p class="small">Enter confirms and continues. Shift+Enter adds a new line.</p><div class="row"><button type="submit" class="primary">Reply received — Continue</button><button type="button" data-action="wait">Keep waiting</button><button type="button" data-action="retry">Retry prompt…</button></div></form>';
   dialog.querySelector(".position").textContent="Pass:message "+item.position+(item.time?" · Sent "+item.time:"");
   dialog.querySelector("pre").textContent=item.prompt;
   const text=dialog.querySelector("textarea");
@@ -517,7 +517,10 @@ function receivedReplyDialog(item){
   dialog.querySelector("form").onsubmit=e=>{e.preventDefault();finish("received")};
   text.onkeydown=e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();finish("received")}};
   dialog.querySelector('[data-action="wait"]').onclick=()=>finish("wait");
-  dialog.querySelector('[data-action="retry"]').onclick=()=>{
+  const retryButton=dialog.querySelector('[data-action="retry"]');
+  retryButton.hidden=!allowRetry;
+  retryButton.onclick=()=>{
+   if(!allowRetry)return;
    if(confirm("Resend this reflection prompt? A reply may already exist, so this could produce a duplicate."))finish("retry");
   };
   dialog.oncancel=e=>{e.preventDefault();finish("wait")};
@@ -525,6 +528,22 @@ function receivedReplyDialog(item){
  });
 }
 let resuming=false;
+async function continueReceivedReply(){
+ if(resuming)return;
+ resuming=true;
+ try{
+  const items=await call("private_reply_recovery");
+  if(!items.length)throw Error("No pending private reply to confirm for the selected upload.");
+  for(const item of items){
+   const answer=await receivedReplyDialog(item,false);
+   if(answer.action!=="received"){el("state").textContent="Paused — no prompt was resent.";return}
+   await call("accept_received_reply",item.checkpoint,item.position,answer.text);
+  }
+  await call("continue_after_received_replies");
+  el("state").textContent="Continuing after the received reply; its prompt will not be resent.";
+ }catch(e){el("state").textContent="Continue stopped: "+String(e);alert(String(e))}
+ finally{resuming=false}
+}
 async function resume(){
  if(resuming)return;
  resuming=true;
@@ -575,7 +594,9 @@ let recovery=await call("recovery_status");
 renderRecoveryOptions(recovery);
 el("recoveryRecommendation").textContent="Recommended: "+(recovery.recommendation||"Inspect checkpoint before proceeding");
 el("recommendedActionText").textContent=(recovery.recommendation||"Select an upload checkpoint.")+"\n"+(recovery.next?"Next message: "+recovery.next.join(":"):"")+"\n"+(recovery.state||"");
-let s=await call("status");let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
+let s=await call("status");
+el("continueReceivedReplyButton").disabled=s.running||recovery.reply_destination!=="private"||!(recovery.ambiguous_replies||[]).length;
+let n=s.total||0,done=s.confirmed||0;el("bar").max=Math.max(1,n);el("bar").value=done;
 el("stats").textContent=n?`${done} / ${n} messages · ${(100*done/n).toFixed(1)}% · Replies: ${recovery.reply_destination==="private"?"Private chat":"Room"}`:"No checkpoint yet";
 el("state").textContent=s.running?"Uploader running":s.exit_code!==null?`Uploader exited with code ${s.exit_code}`:"Uploader idle";
 activityLines=s.log||[];renderActivity();

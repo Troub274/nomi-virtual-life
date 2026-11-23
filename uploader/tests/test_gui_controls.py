@@ -6,6 +6,39 @@ import unittest
 
 
 class GuiControlTests(unittest.TestCase):
+    def test_received_reply_continues_only_after_confirmation_without_retry(self):
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js is unavailable")
+        html=Path(__file__).resolve().parents[1]/"gui/index.html"
+        script=r"""
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync(process.argv[2],'utf8');
+const source=html.match(/async function continueReceivedReply\(\)\{[\s\S]*?\n\}/)[0];
+(async()=>{
+ for(const action of ['received','wait']){
+  const calls=[],controls={};let dialogs=0;
+  const context={resuming:false,el:id=>(controls[id]??={}),alert:()=>{},
+   receivedReplyDialog:async(item,allowRetry)=>{assert.equal(allowRetry,false);dialogs++;return {action,text:'Already arrived'}},
+   call:async(name,...args)=>{calls.push([name,...args]);if(name==='private_reply_recovery')return [{checkpoint:'run/upload.jsonl',position:'1:499'}];return true;}};
+  vm.createContext(context);vm.runInContext(source,context);
+  await context.continueReceivedReply();
+  assert.equal(dialogs,1);assert.equal(context.resuming,false);
+  if(action==='received')assert.deepStrictEqual(calls,[['private_reply_recovery'],['accept_received_reply','run/upload.jsonl','1:499','Already arrived'],['continue_after_received_replies']]);
+  else assert.deepStrictEqual(calls,[['private_reply_recovery']]);
+ }
+ const calls=[];
+ const context={resuming:false,el:()=>({}),alert:()=>{},
+  receivedReplyDialog:async()=>({action:'received',text:''}),
+  call:async name=>{calls.push(name);if(name==='private_reply_recovery')return [{checkpoint:'run',position:'1:499'}];throw Error('checkpoint changed')}};
+ vm.createContext(context);vm.runInContext(source,context);
+ await context.continueReceivedReply();
+ assert.deepStrictEqual(calls,['private_reply_recovery','accept_received_reply']);
+})().catch(e=>{console.error(e);process.exit(1)});
+"""
+        result=subprocess.run([node,"-",str(html)],input=script,text=True,encoding="utf-8",capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_loading_headers_preserves_file_metadata_and_saved_project_edits(self):
         node=shutil.which("node")
         if node is None:
