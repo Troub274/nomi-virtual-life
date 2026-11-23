@@ -777,6 +777,18 @@ class API:
         self.recovery_status()
         return self._checkpoint_module.accept_private_reply(cp,position,text.strip(),allow_empty=True)
 
+    def continue_after_received_replies(self):
+        """Continue after receipts, without authorizing any uncertain operation."""
+        if self.proc and self.proc.poll() is None:
+            raise RuntimeError("Upload already running.")
+        status=self.recovery_status()
+        if status["state"]=="NO_CHECKPOINT":
+            raise ValueError("No checkpoint exists for this run.")
+        if (status.get("uncertain_sends") or status.get("ambiguous_replies")
+                or status.get("retryable_replies")):
+            raise ValueError("Another operation is still pending. No resend was authorized.")
+        return self.resume()
+
     def recover_resume(self, send_tokens=None, reply_tokens=None):
         """Explicitly authorized recovery; preserve the checkpoint as the source of truth."""
         if self.proc and self.proc.poll() is None:
@@ -817,7 +829,8 @@ class API:
             raise ValueError("Unsupported advanced recovery operation.")
         if self.proc and self.proc.poll() is None:
             raise RuntimeError("Stop the active upload before recovery.")
-        if not re.fullmatch(r"[1-9]\\d*:[1-9]\\d*", str(position)):
+        position=str(position).strip()
+        if not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*", position):
             raise ValueError("Position must be PASS:INDEX (positive integers).")
         directory=self._active_dir()
         if not self._has_checkpoint(directory):
