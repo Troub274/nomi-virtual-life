@@ -291,6 +291,69 @@ Protection releases automatically after the checkpoint and matching completion r
 
 Use `--process-every N` to ask for an analysis or recollection after every N complete units. A section's `Process Every: N` **overrides** the command-line `--process-every N` default; `0` disables automatic processing for that section. A trailing partial group is also processed. Knowledge and Instructions are grouped by nonempty paragraphs, Journal by dated entries, and Chat by dated conversation episodes. The instruction varies with the type and source: personal journals are autobiographical, third-party journals remain attributed to their authors, conversations preserve speaker attribution, knowledge is summarized, and instructions are reviewed for application.
 
+### Workaround: inconsistent or undated chat transcripts
+
+For a pasted conversation with inconsistent dates, Markdown headings, or long
+speaker-labelled passages, use **Knowledge** with conversation-specific prompts.
+The text remains a conversation; Knowledge supplies paragraph boundaries that
+the uploader can process without requiring dated Chat episodes.
+
+In the desktop interface:
+
+1. Select the TXT file in **Files** and set **Upload type** to **Knowledge**.
+2. Set **Reply every** to **5** (called **Process Every** in older interfaces
+   and TXT headers). An explicit file value overrides the default in Settings;
+   zero disables periodic reflections.
+3. After changing the type, replace the generated **Header prompt** and
+   **Reply prompt** with conversation-specific instructions. Ask the Nomi to
+   preserve speaker attribution and reflect on what happened, rather than using
+   the default Knowledge prompts. **Repeat every** controls header repetition,
+   not replies; leave it at zero if you only want the opening header once.
+4. Use **Refresh upload preview** in **Upload preview** (or **Preview / dry run**
+   in older interfaces) to check the prepared header, reflection prompts, and
+   message sequence before starting the upload.
+
+The equivalent TXT header is:
+
+```text
+[Conversation transcript]
+Type: Knowledge
+Source: Conversation transcript
+Process Every: 5
+Header Prompt: [nomi], read the following as a conversation transcript. Keep each speaker's words and viewpoint attributed to that speaker.
+Reply Prompt: [nomi], review the conversation passages in paragraphs {first}-{last}. Preserve each speaker's identity and viewpoint. Summarize what happened and what you remember.
+
+Speaker A: Good morning.
+
+Speaker B: Morning! How did yesterday go?
+```
+
+Older interfaces without a Header prompt override can use **Nomi Mode: Replace**
+to suppress the default Knowledge opening, with a conversation-specific Reply
+Prompt. Review existing `Nomi:` prompts in older files: a single general `Nomi:`
+prompt takes precedence over Reply Prompt, and scheduled range prompts can add
+extra reflections.
+
+**What five means:** Knowledge requests a reflection after five nonempty
+paragraphs separated by blank lines, plus a final partial group. It does not
+count five speaker turns, five exchanges, or exactly five uploaded chunks. A
+long paragraph can span several chunks, and blank lines within one speaker's
+response create multiple paragraphs. Speaker labels and original wording remain
+in the body; the custom prompts tell the Nomi how to interpret them.
+
+By comparison, TXT Chat processing counts complete dated episodes. A long
+conversation with only one episode can therefore upload many chunks before its
+first reflection. **Header Every** only repeats header text; **Process Every**
+controls reflection requests.
+
+Normal Resume retains the checkpoint's prepared input and settings; changing
+the editor does not alter that saved plan. For an upload already in progress,
+pause first and review the [recovery guide](RECOVERY.md) before applying revised
+inputs through Manual Restart or a separate new upload. Replaying material
+already sent can duplicate it.
+
+### Processing examples
+
 ```text
 [My diary]
 Type: Journal
