@@ -75,6 +75,14 @@ The old `NOMI_API_KEY` environment setting remains optional for automation.
 
 ## API key and recovery
 
+For inconsistent or undated TXT conversation formats, see the
+[Knowledge workaround](../README.md#workaround-inconsistent-or-undated-chat-transcripts).
+Set Type to Knowledge, Process Every to 5, and use a conversation-specific
+Reply Prompt. Knowledge counts blank-line-separated paragraphs, while TXT Chat
+counts dated episodes. The same rules apply to the desktop app and CLI; Header
+Every does not control reflections. Preview first, and remember that Normal
+Resume keeps the saved run's input and settings.
+
 For **live** uploads, set the `NOMI_API_KEY` environment variable in the terminal (PowerShell: `$env:NOMI_API_KEY="..."`; POSIX shells: `export NOMI_API_KEY="..."`). Avoid putting the key in command history or scripts shared with others.
 
 Useful flags:
